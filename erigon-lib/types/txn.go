@@ -85,7 +85,7 @@ func NewTxParseContext(chainID uint256.Int) *TxParseContext {
 // TxSlot contains information extracted from an Ethereum transaction, which is enough to manage it inside the transaction.
 // Also, it contains some auxillary information, like ephemeral fields, and indices within priority queues
 type TxSlot struct {
-	Rlp            []byte      // Is set to nil after flushing to db, frees memory, later we look for it in the db, if needed
+	Rlp            []byte
 	Value          uint256.Int // Value transferred by the transaction
 	Tip            uint256.Int // Maximum tip that transaction is giving to miner/block proposer
 	FeeCap         uint256.Int // Maximum fee that transaction burns and gives to the miner/block proposer
@@ -110,6 +110,8 @@ type TxSlot struct {
 	Commitments []gokzg4844.KZGCommitment
 	Proofs      []gokzg4844.KZGProof
 	BlobTo      common.Address
+
+	IsTxSavedOnDb bool
 }
 
 const (

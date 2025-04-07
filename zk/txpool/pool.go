@@ -1706,7 +1706,8 @@ func (p *TxPool) flushLocked(tx kv.RwTx) (err error) {
 				return err
 			}
 		}
-		metaTx.Tx.Rlp = nil
+		// Comment: Do not delete tx.Rlp from RAM, we bear the memory cost for faster tx yield
+		//metaTx.Tx.Rlp = nil
 	}
 
 	binary.BigEndian.PutUint64(encID, p.pendingBaseFee.Load())
@@ -1791,7 +1792,7 @@ func (p *TxPool) fromDB(ctx context.Context, tx kv.Tx, coreTx kv.Tx) error {
 			continue
 		}
 		// X Layer fix transaction RLP nil
-		txn.Rlp = nil // means that we don't need store it in db anymore
+		txn.IsTxSavedOnDb = true // means that we don't need store it in db anymore
 		txs.Resize(uint(i + 1))
 		txs.Txs[i] = txn
 		txs.IsLocal[i] = isLocalTx
@@ -1918,7 +1919,7 @@ func (p *TxPool) deprecatedForEach(_ context.Context, f func(rlp []byte, sender 
 	p.all.ascendAll(func(mt *metaTx) bool {
 		slot := mt.Tx
 		slotRlp := slot.Rlp
-		if slot.Rlp == nil {
+		if slot.IsTxSavedOnDb {
 			v, err := tx.GetOne(kv.PoolTransaction, slot.IDHash[:])
 			if err != nil {
 				log.Warn("[txpool] foreach: get tx from db", "err", err)
