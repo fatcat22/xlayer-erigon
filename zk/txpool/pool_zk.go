@@ -211,7 +211,7 @@ func (p *TxPool) best(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableG
 	_ = isLondon
 	best := p.pending.best
 
-	txs.Resize(uint(cmp.Min(int(n), len(best.ms))))
+	txs.Initialize(uint(cmp.Min(int(n), len(best.ms))))
 	var toRemove []*metaTx
 	count := 0
 

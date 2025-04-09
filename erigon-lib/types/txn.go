@@ -875,7 +875,15 @@ type TxsRlp struct {
 	IsLocal    []bool
 }
 
-// TODO [cliff]: we can init TxsRlp to be size of yieldsize, no need to resize everytime which is costly
+// Note: this is much faster than Resize
+func (s *TxsRlp) Initialize(targetSize uint) {
+	s.Txs = make([][]byte, targetSize)
+	s.DecodedTxs = make([]interface{}, targetSize)
+	s.Senders = make([]byte, length.Addr*targetSize)
+	s.IsLocal = make([]bool, targetSize)
+	s.TxIds = make([]common.Hash, targetSize)
+}
+
 // Resize internal arrays to len=targetSize, shrinks if need. It rely on `append` algorithm to realloc
 func (s *TxsRlp) Resize(targetSize uint) {
 	for uint(len(s.Txs)) < targetSize {
