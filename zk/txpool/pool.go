@@ -1777,8 +1777,8 @@ func (p *TxPool) fromDB(ctx context.Context, tx kv.Tx, coreTx kv.Tx) error {
 		}
 		addr, txRlp := *(*[20]byte)(v[:20]), v[20:]
 		txn := &types.TxSlot{}
-
-		_, err = parseCtx.ParseTransaction(txRlp, 0, txn, nil, false /* hasEnvelope */, false, nil)
+		// TODO [cliff]: check whether sig recovery can be skipped
+		_, err = parseCtx.ParseTransaction(txRlp, 0, txn, nil, false /* hasEnvelope */, false, false, nil)
 		if err != nil {
 			err = fmt.Errorf("err: %w, rlp: %x", err, txRlp)
 			log.Warn("[txpool] fromDB: parseTransaction", "err", err)

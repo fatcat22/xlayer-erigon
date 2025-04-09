@@ -196,11 +196,12 @@ func (s *GrpcServer) Add(ctx context.Context, in *txpool_proto.AddRequest) (*txp
 	j := 0
 	for i := 0; i < len(in.RlpTxs); i++ { // some incoming txs may be rejected, so - need secnod index
 		txSlot := &types.TxSlot{}
-		sender := common.Address{}
+		sender := in.RecoveredSender[i]
 		senderSlice := sender[:]
 		//txn := in.DecodedTx[i].(*types3.LegacyTx)
-		// TODO: this could take txn as input
-		if _, err := parseCtx.ParseTransaction(in.RlpTxs[i], 0, txSlot, senderSlice, false /* hasEnvelope */, false, func(hash []byte) error {
+		// TODO [cliff]: this could take txn as input
+		// Note: we can skip sender recovery because we cat get it from gprc request input
+		if _, err := parseCtx.ParseTransaction(in.RlpTxs[i], 0, txSlot, senderSlice, false /* hasEnvelope */, false, true, func(hash []byte) error {
 			if known, _ := s.txPool.IdHashKnown(tx, hash); known {
 				return types.ErrAlreadyKnown
 			}

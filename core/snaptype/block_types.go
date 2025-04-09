@@ -250,7 +250,8 @@ var (
 							slot.IDHash = common.Hash{}
 							binary.BigEndian.PutUint64(slot.IDHash[:], firstTxID+i)
 						} else {
-							if _, err = parseCtx.ParseTransaction(word[firstTxByteAndlengthOfAddress:], 0, &slot, nil, true /* hasEnvelope */, false /* wrappedWithBlobs */, nil /* validateHash */); err != nil {
+							// TODO [cliff]: check whether sig recovery can be skipped
+							if _, err = parseCtx.ParseTransaction(word[firstTxByteAndlengthOfAddress:], 0, &slot, nil, true /* hasEnvelope */, false /* wrappedWithBlobs */, false, nil /* validateHash */); err != nil {
 								return fmt.Errorf("ParseTransaction: %w, blockNum: %d, i: %d", err, blockNum, i)
 							}
 						}

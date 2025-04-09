@@ -469,7 +469,8 @@ func (f *Fetch) handleStateChanges(ctx context.Context, client StateChangesClien
 				for i := range change.Txs {
 					minedTxs.Txs[oldSize+i] = &types2.TxSlot{}
 					if err = f.threadSafeParseStateChangeTxn(func(parseContext *types2.TxParseContext) error {
-						_, err := parseContext.ParseTransaction(change.Txs[i], 0, minedTxs.Txs[oldSize+i], minedTxs.Senders.At(oldSize+i), false /* hasEnvelope */, false, nil)
+						// TODO [cliff]: check whether sig recovery can be skipped
+						_, err := parseContext.ParseTransaction(change.Txs[i], 0, minedTxs.Txs[oldSize+i], minedTxs.Senders.At(oldSize+i), false /* hasEnvelope */, false, false, nil)
 						return err
 					}); err != nil {
 						log.Warn("stream.Recv", "err", err)
@@ -483,7 +484,8 @@ func (f *Fetch) handleStateChanges(ctx context.Context, client StateChangesClien
 				for i := range change.Txs {
 					unwindTxs.Txs[oldSize+i] = &types2.TxSlot{}
 					if err = f.threadSafeParseStateChangeTxn(func(parseContext *types2.TxParseContext) error {
-						_, err = parseContext.ParseTransaction(change.Txs[i], 0, unwindTxs.Txs[oldSize+i], unwindTxs.Senders.At(oldSize+i), false /* hasEnvelope */, false, nil)
+						// TODO [cliff]: check whether sig recovery can be skipped
+						_, err = parseContext.ParseTransaction(change.Txs[i], 0, unwindTxs.Txs[oldSize+i], unwindTxs.Senders.At(oldSize+i), false /* hasEnvelope */, false, false, nil)
 						return err
 					}); err != nil {
 						log.Warn("stream.Recv", "err", err)

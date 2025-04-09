@@ -158,7 +158,7 @@ func PeekTransactionType(serialized []byte) (byte, error) {
 // It also performs syntactic validation of the transactions.
 // wrappedWithBlobs means that for blob (type 3) transactions the full version with blobs/commitments/proofs is expected
 // (see https://eips.ethereum.org/EIPS/eip-4844#networking).
-func (ctx *TxParseContext) ParseTransaction(payload []byte, pos int, slot *TxSlot, sender []byte, hasEnvelope, wrappedWithBlobs bool, validateHash func([]byte) error) (p int, err error) {
+func (ctx *TxParseContext) ParseTransaction(payload []byte, pos int, slot *TxSlot, sender []byte, hasEnvelope, wrappedWithBlobs bool, skipRecoverSender bool, validateHash func([]byte) error) (p int, err error) {
 	if len(payload) == 0 {
 		return 0, fmt.Errorf("%w: empty rlp", ErrParseTxn)
 	}
@@ -218,7 +218,7 @@ func (ctx *TxParseContext) ParseTransaction(payload []byte, pos int, slot *TxSlo
 		slot.Rlp = payload[pos : dataPos+dataLen]
 	}
 
-	p, err = ctx.parseTransactionBody(payload, pos, p, slot, sender, validateHash)
+	p, err = ctx.parseTransactionBody(payload, pos, p, slot, sender, skipRecoverSender, validateHash)
 	if err != nil {
 		return p, err
 	}
@@ -298,7 +298,7 @@ func (ctx *TxParseContext) ParseTransaction(payload []byte, pos int, slot *TxSlo
 	return p, err
 }
 
-func (ctx *TxParseContext) parseTransactionBody(payload []byte, pos, p0 int, slot *TxSlot, sender []byte, validateHash func([]byte) error) (p int, err error) {
+func (ctx *TxParseContext) parseTransactionBody(payload []byte, pos, p0 int, slot *TxSlot, sender []byte, skipSenderRecovery bool, validateHash func([]byte) error) (p int, err error) {
 	p = p0
 	legacy := slot.Type == LegacyTxType
 
@@ -608,19 +608,21 @@ func (ctx *TxParseContext) parseTransactionBody(payload []byte, pos, p0 int, slo
 	binary.BigEndian.PutUint64(ctx.Sig[56:64], ctx.S[0])
 	ctx.Sig[64] = vByte
 	// recover sender
-	if _, err = secp256k1.RecoverPubkeyWithContext(secp256k1.DefaultContext, ctx.Sighash[:], ctx.Sig[:], ctx.buf[:0]); err != nil {
-		return 0, fmt.Errorf("%w: recovering sender from signature: %s", ErrParseTxn, err) //nolint
+	if !skipSenderRecovery {
+		if _, err = secp256k1.RecoverPubkeyWithContext(secp256k1.DefaultContext, ctx.Sighash[:], ctx.Sig[:], ctx.buf[:0]); err != nil {
+			return 0, fmt.Errorf("%w: recovering sender from signature: %s", ErrParseTxn, err) //nolint
+		}
+		//apply keccak to the public key
+		ctx.Keccak2.Reset()
+		if _, err = ctx.Keccak2.Write(ctx.buf[1:65]); err != nil {
+			return 0, fmt.Errorf("%w: computing sender from public key: %s", ErrParseTxn, err) //nolint
+		}
+		// squeeze the hash of the public key
+		//ctx.keccak2.Sum(ctx.buf[:0])
+		_, _ = ctx.Keccak2.(io.Reader).Read(ctx.buf[:32])
+		//take last 20 bytes as address
+		copy(sender, ctx.buf[12:32])
 	}
-	//apply keccak to the public key
-	ctx.Keccak2.Reset()
-	if _, err = ctx.Keccak2.Write(ctx.buf[1:65]); err != nil {
-		return 0, fmt.Errorf("%w: computing sender from public key: %s", ErrParseTxn, err) //nolint
-	}
-	// squeeze the hash of the public key
-	//ctx.keccak2.Sum(ctx.buf[:0])
-	_, _ = ctx.Keccak2.(io.Reader).Read(ctx.buf[:32])
-	//take last 20 bytes as address
-	copy(sender, ctx.buf[12:32])
 
 	if validateHash != nil {
 		if err := validateHash(slot.IDHash[:32]); err != nil {
