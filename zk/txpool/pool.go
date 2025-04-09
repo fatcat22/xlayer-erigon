@@ -24,6 +24,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	types2 "github.com/ledgerwatch/erigon/core/types"
 	"math"
 	"math/big"
 	"runtime"
@@ -627,25 +628,27 @@ func (p *TxPool) processRemoteTxs(ctx context.Context) error {
 	//log.Info("[txpool] on new txs", "amount", len(newPendingTxs.txs), "in", time.Since(t))
 	return nil
 }
-func (p *TxPool) getRlpLocked(tx kv.Tx, hash []byte) (rlpTxn []byte, sender common.Address, isLocal bool, err error) {
+func (p *TxPool) getRlpLocked(tx kv.Tx, hash []byte) (rlpTxn []byte, decodedTx types2.Transaction, sender common.Address, isLocal bool, err error) {
 	txn, ok := p.byHash[string(hash)]
-	if ok && txn.Tx.Rlp != nil {
-		return txn.Tx.Rlp, p.senders.senderID2Addr[txn.Tx.SenderID], txn.subPool&IsLocal > 0, nil
+	if ok && txn.Tx.Rlp != nil && txn.Tx.DecodedTx != nil {
+		// TODO [cliff]: needs to handle other cases
+		decodeTx := txn.Tx.DecodedTx.(*types2.LegacyTx)
+		return txn.Tx.Rlp, decodeTx, p.senders.senderID2Addr[txn.Tx.SenderID], txn.subPool&IsLocal > 0, nil
 	}
 	v, err := tx.GetOne(kv.PoolTransaction, hash)
 	if err != nil {
-		return nil, common.Address{}, false, err
+		return nil, nil, common.Address{}, false, err
 	}
 	if v == nil {
-		return nil, common.Address{}, false, nil
+		return nil, nil, common.Address{}, false, nil
 	}
-	return v[20:], *(*[20]byte)(v[:20]), txn != nil && txn.subPool&IsLocal > 0, nil
+	return v[20:], nil, *(*[20]byte)(v[:20]), txn != nil && txn.subPool&IsLocal > 0, nil
 }
 func (p *TxPool) GetRlp(tx kv.Tx, hash []byte) ([]byte, error) {
 	// For X Layer, optimize tx pool
 	p.lock.RLock()
 	defer p.lock.RUnlock()
-	rlpTx, _, _, err := p.getRlpLocked(tx, hash)
+	rlpTx, _, _, _, err := p.getRlpLocked(tx, hash)
 	return common.Copy(rlpTx), err
 }
 func (p *TxPool) AppendLocalAnnouncements(types []byte, sizes []uint32, hashes []byte) ([]byte, []uint32, []byte) {

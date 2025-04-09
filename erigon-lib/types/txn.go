@@ -111,6 +111,7 @@ type TxSlot struct {
 	Proofs      []gokzg4844.KZGProof
 	BlobTo      common.Address
 
+	DecodedTx     interface{}
 	IsTxSavedOnDb bool
 }
 
@@ -860,16 +861,21 @@ func (s *TxSlots) Append(slot *TxSlot, sender []byte, isLocal bool) {
 }
 
 type TxsRlp struct {
-	TxIds   []common.Hash
-	Txs     [][]byte
-	Senders Addresses
-	IsLocal []bool
+	TxIds      []common.Hash
+	Txs        [][]byte
+	DecodedTxs []interface{}
+	Senders    Addresses
+	IsLocal    []bool
 }
 
+// TODO [cliff]: we can init TxsRlp to be size of yieldsize, no need to resize everytime which is costly
 // Resize internal arrays to len=targetSize, shrinks if need. It rely on `append` algorithm to realloc
 func (s *TxsRlp) Resize(targetSize uint) {
 	for uint(len(s.Txs)) < targetSize {
 		s.Txs = append(s.Txs, nil)
+	}
+	for uint(len(s.DecodedTxs)) < targetSize {
+		s.DecodedTxs = append(s.DecodedTxs, nil)
 	}
 	for uint(s.Senders.Len()) < targetSize {
 		s.Senders = append(s.Senders, addressesGrowth...)
@@ -882,6 +888,7 @@ func (s *TxsRlp) Resize(targetSize uint) {
 	}
 	//todo: set nil to overflow txs
 	s.Txs = s.Txs[:targetSize]
+	s.DecodedTxs = s.DecodedTxs[:targetSize]
 	s.Senders = s.Senders[:length.Addr*targetSize]
 	s.IsLocal = s.IsLocal[:targetSize]
 	s.TxIds = s.TxIds[:targetSize]

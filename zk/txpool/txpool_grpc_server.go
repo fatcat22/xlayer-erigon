@@ -193,13 +193,13 @@ func (s *GrpcServer) Add(ctx context.Context, in *txpool_proto.AddRequest) (*txp
 	parseCtx.ValidateRLP(s.txPool.ValidateSerializedTxn)
 
 	reply := &txpool_proto.AddReply{Imported: make([]txpool_proto.ImportResult, len(in.RlpTxs)), Errors: make([]string, len(in.RlpTxs))}
-
 	j := 0
 	for i := 0; i < len(in.RlpTxs); i++ { // some incoming txs may be rejected, so - need secnod index
 		txSlot := &types.TxSlot{}
 		sender := common.Address{}
 		senderSlice := sender[:]
-
+		//txn := in.DecodedTx[i].(*types3.LegacyTx)
+		// TODO: this could take txn as input
 		if _, err := parseCtx.ParseTransaction(in.RlpTxs[i], 0, txSlot, senderSlice, false /* hasEnvelope */, false, func(hash []byte) error {
 			if known, _ := s.txPool.IdHashKnown(tx, hash); known {
 				return types.ErrAlreadyKnown
@@ -218,6 +218,8 @@ func (s *GrpcServer) Add(ctx context.Context, in *txpool_proto.AddRequest) (*txp
 			}
 			continue
 		}
+
+		txSlot.DecodedTx = in.DecodedTx[i]
 
 		slots.Resize(uint(j + 1))
 		slots.Txs[j] = txSlot

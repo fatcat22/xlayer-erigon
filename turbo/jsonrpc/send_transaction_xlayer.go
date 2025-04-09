@@ -179,9 +179,10 @@ func (api *APIImpl) processBulk(bulk []txRequest) error {
 	signer := types.MakeSigner(cc, latestBlockNumber, header.Time())
 
 	var rlpTxs [][]byte
+	var decodedTxs []interface{}
 	var results []txResult
 	for _, req := range bulk {
-		hash, err := api.validateTransaction(req.ctx, req.encodedTx, tx, cc, signer, chainId, header)
+		hash, decodedTx, err := api.validateTransaction(req.ctx, req.encodedTx, tx, cc, signer, chainId, header)
 		if err != nil {
 			log.Error("validateTransaction failed", "err", err)
 			if req.resultChan != nil {
@@ -190,11 +191,12 @@ func (api *APIImpl) processBulk(bulk []txRequest) error {
 			continue
 		}
 		rlpTxs = append(rlpTxs, req.encodedTx)
+		decodedTxs = append(decodedTxs, decodedTx)
 		results = append(results, txResult{hash: hash, err: nil})
 	}
 
 	if len(rlpTxs) > 0 {
-		res, err := api.txPool.Add(ctx, &txPoolProto.AddRequest{RlpTxs: rlpTxs})
+		res, err := api.txPool.Add(ctx, &txPoolProto.AddRequest{RlpTxs: rlpTxs, DecodedTx: decodedTxs})
 		if err != nil {
 			for i := range rlpTxs {
 				if results[i].err == nil && results[i].hash != (common.Hash{}) {
@@ -220,15 +222,15 @@ func (api *APIImpl) processBulk(bulk []txRequest) error {
 	return nil
 }
 
-func (api *APIImpl) validateTransaction(ctx context.Context, encodedTx hexutility.Bytes, tx kv.Tx, cc *chain.Config, signer *types.Signer, chainId *big.Int, header *types.Block) (common.Hash, error) {
+func (api *APIImpl) validateTransaction(ctx context.Context, encodedTx hexutility.Bytes, tx kv.Tx, cc *chain.Config, signer *types.Signer, chainId *big.Int, header *types.Block) (common.Hash, interface{}, error) {
 	txn, err := types.DecodeWrappedTransaction(encodedTx)
 	if err != nil {
-		return common.Hash{}, err
+		return common.Hash{}, nil, err
 	}
 
 	sender, err := txn.Sender(*signer)
 	if err != nil {
-		return common.Hash{}, err
+		return common.Hash{}, nil, err
 	}
 	api.SenderLocks.AddLock(sender)
 	defer api.SenderLocks.ReleaseLock(sender)
@@ -236,13 +238,13 @@ func (api *APIImpl) validateTransaction(ctx context.Context, encodedTx hexutilit
 	if txn.Type() != types.LegacyTxType {
 		latestBlock, err := api.blockByNumber(ctx, rpc.LatestBlockNumber, tx)
 		if err != nil {
-			return common.Hash{}, err
+			return common.Hash{}, nil, err
 		}
 		if !cc.IsLondon(latestBlock.NumberU64()) {
-			return common.Hash{}, errors.New("only legacy transactions are supported")
+			return common.Hash{}, nil, errors.New("only legacy transactions are supported")
 		}
 		if txn.Type() == types.BlobTxType {
-			return common.Hash{}, errors.New("blob transactions are not supported")
+			return common.Hash{}, nil, errors.New("blob transactions are not supported")
 		}
 	}
 
@@ -253,22 +255,22 @@ func (api *APIImpl) validateTransaction(ctx context.Context, encodedTx hexutilit
 			api.gasTracker.GetLowestPrice(),
 			api.RejectLowGasPriceTolerance,
 		) {
-		return common.Hash{}, errors.New("transaction price is too low")
+		return common.Hash{}, nil, errors.New("transaction price is too low")
 	}
 
 	// If the transaction fee cap is already specified, ensure the
 	// fee of the given transaction is _reasonable_.
 	if err := checkTxFee(txn.GetPrice().ToBig(), txn.GetGas(), api.FeeCap); err != nil {
-		return common.Hash{}, err
+		return common.Hash{}, nil, err
 	}
 	if !api.AllowPreEIP155Transactions && !txn.Protected() && !api.AllowUnprotectedTxs {
-		return common.Hash{}, errors.New("only replay-protected (EIP-155) transactions allowed over RPC")
+		return common.Hash{}, nil, errors.New("only replay-protected (EIP-155) transactions allowed over RPC")
 	}
 
 	if txn.Protected() {
 		txnChainId := txn.GetChainID()
 		if chainId.Cmp(txnChainId.ToBig()) != 0 {
-			return common.Hash{}, fmt.Errorf("invalid chain id, expected: %d got: %d", chainId, *txnChainId)
+			return common.Hash{}, nil, fmt.Errorf("invalid chain id, expected: %d got: %d", chainId, *txnChainId)
 		}
 	}
 
@@ -277,15 +279,15 @@ func (api *APIImpl) validateTransaction(ctx context.Context, encodedTx hexutilit
 	hermezDb := hermez_db.NewHermezDbReader(tx)
 	badTxHashCounter, err := hermezDb.GetBadTxHashCounter(hash)
 	if err != nil {
-		return common.Hash{}, err
+		return common.Hash{}, nil, err
 	}
 	if badTxHashCounter >= api.BadTxAllowance {
-		return common.Hash{}, errors.New("transaction uses too many counters to fit into a bulk")
+		return common.Hash{}, nil, errors.New("transaction uses too many counters to fit into a bulk")
 	}
 
 	if len(api.PreRunList) > 0 && utils2.CheckAddressExists(api.PreRunList, sender) {
 		api.preRun(txn, chainId)
 	}
 
-	return hash, nil
+	return hash, txn, nil
 }

@@ -181,7 +181,8 @@ type AddRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	RlpTxs [][]byte `protobuf:"bytes,1,rep,name=rlp_txs,json=rlpTxs,proto3" json:"rlp_txs,omitempty"`
+	DecodedTx []interface{} `protobuf:"bytes,1,opt,name=decoded_tx,json=decodedTx,proto3" json:"decoded_tx,omitempty"`
+	RlpTxs    [][]byte      `protobuf:"bytes,1,rep,name=rlp_txs,json=rlpTxs,proto3" json:"rlp_txs,omitempty"`
 }
 
 func (x *AddRequest) Reset() {
