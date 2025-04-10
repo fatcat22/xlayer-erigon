@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	types3 "github.com/ledgerwatch/erigon/core/types"
 	"math"
 	"net"
 	"sync"
@@ -197,11 +198,13 @@ func (s *GrpcServer) Add(ctx context.Context, in *txpool_proto.AddRequest) (*txp
 	for i := 0; i < len(in.RlpTxs); i++ { // some incoming txs may be rejected, so - need secnod index
 		txSlot := &types.TxSlot{}
 		sender := in.RecoveredSender[i]
-		senderSlice := sender[:]
-		//txn := in.DecodedTx[i].(*types3.LegacyTx)
-		// TODO [cliff]: this could take txn as input
+		txn := in.DecodedTx[i].(*types3.LegacyTx)
+		txHash := txn.Hash()
+
 		// Note: we can skip sender recovery because we cat get it from gprc request input
-		if _, err := parseCtx.ParseTransaction(in.RlpTxs[i], 0, txSlot, senderSlice, false /* hasEnvelope */, false, true, func(hash []byte) error {
+		parseCtx.WithSender(false)
+		parseCtx.WithoutTxHash(txHash)
+		if _, err := parseCtx.ParseTransaction(in.RlpTxs[i], 0, txSlot, sender[:], false /* hasEnvelope */, false, func(hash []byte) error {
 			if known, _ := s.txPool.IdHashKnown(tx, hash); known {
 				return types.ErrAlreadyKnown
 			}
@@ -224,7 +227,7 @@ func (s *GrpcServer) Add(ctx context.Context, in *txpool_proto.AddRequest) (*txp
 
 		slots.Resize(uint(j + 1))
 		slots.Txs[j] = txSlot
-		copy(slots.Senders.At(j), senderSlice)
+		copy(slots.Senders.At(j), sender[:])
 		slots.IsLocal[j] = true
 		j++
 	}

@@ -1507,8 +1507,7 @@ func DumpTxs(ctx context.Context, db kv.RoDB, chainConfig *chain.Config, blockFr
 		var sender [20]byte
 		slot := types2.TxSlot{}
 
-		// TODO [cliff]: check whether sig recovery can be skipped
-		if _, err := ctx.ParseTransaction(v, 0, &slot, sender[:], false /* hasEnvelope */, false /* wrappedWithBlobs */, false, nil); err != nil {
+		if _, err := ctx.ParseTransaction(v, 0, &slot, sender[:], false /* hasEnvelope */, false /* wrappedWithBlobs */, nil); err != nil {
 			return valueBuf, err
 		}
 		if len(senders) > 0 {
