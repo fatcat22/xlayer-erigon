@@ -60,13 +60,13 @@ type TxParseContext struct {
 	buf             [65]byte // buffer needs to be enough for hashes (32 bytes) and for public key (65 bytes)
 	Sig             [65]byte
 	Sighash         [32]byte
-	withSender      bool
+	withSender      bool // if true, need to recover sender
 	allowPreEip2s   bool // Allow s > secp256k1n/2; see EIP-2
 	chainIDRequired bool
 	IsProtected     bool
 
-	withTxHash bool
-	txHash     [32]byte // sometimes, we already know the tx hash, do not need to recalculate
+	withTxHash bool     // if true, need to calculate txHash
+	txHash     [32]byte // sometimes, we already know the tx hash, store in this buffer; in this case, withTxHash = false
 }
 
 func NewTxParseContext(chainID uint256.Int) *TxParseContext {
@@ -82,7 +82,7 @@ func NewTxParseContext(chainID uint256.Int) *TxParseContext {
 	// behave as of London enabled
 	ctx.cfg.ChainID.Set(&chainID)
 	ctx.ChainIDMul.Mul(&chainID, u256.N2)
-	ctx.withTxHash = true
+	ctx.withTxHash = true // by default, need to calculate txHash
 	return ctx
 }
 
@@ -557,6 +557,8 @@ func (ctx *TxParseContext) parseTransactionBody(payload []byte, pos, p0 int, slo
 		}
 		//ctx.keccak1.Sum(slot.IdHash[:0])
 		_, _ = ctx.Keccak1.(io.Reader).Read(slot.IDHash[:32])
+	} else {
+		copy(slot.IDHash[:32], ctx.txHash[:])
 	}
 
 	if !ctx.withSender {

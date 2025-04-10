@@ -159,8 +159,8 @@ func (api *APIImpl) sendRawTransactionSingle(ctx context.Context, encodedTx hexu
 	if len(api.PreRunList) > 0 && utils2.CheckAddressExists(api.PreRunList, sender) {
 		api.preRun(txn, chainId)
 	}
-
-	res, err := api.txPool.Add(ctx, &txPoolProto.AddRequest{RlpTxs: [][]byte{encodedTx}})
+	legacyTx := txn.(*types.LegacyTx)
+	res, err := api.txPool.Add(ctx, &txPoolProto.AddRequest{RlpTxs: [][]byte{encodedTx}, DecodedTx: []interface{}{legacyTx}, RecoveredSender: [][20]byte{sender}})
 	if err != nil {
 		return common.Hash{}, err
 	}
