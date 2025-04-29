@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/compatible_rocksdb"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -13,7 +14,7 @@ import (
 	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon-lib/kv/mdbx"
 	"github.com/ledgerwatch/erigon-lib/kv/rocksdb"
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/rdb/common"
+	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/common"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/linxGnu/grocksdb"
 	"golang.org/x/sync/semaphore"
@@ -77,7 +78,7 @@ func main() {
 	memDstDB := openMemRDB(logger)
 	defer memDstDB.Close()
 	totalRecords += convertTables(specialTables, srcDB, memDstDB, logger, func() {
-		memDatas := memDstDB.(*rocksdb.RocksDB).GetMemStorage()
+		memDatas := memDstDB.(*compatible_rocksdb.RocksDB).GetMemStorage()
 		writeDeduplicatedDirect(memDatas, *rocksdbPath, logger)
 	})
 	memDstDB.Close()
@@ -147,7 +148,7 @@ func openRocksDB(path string, rdbType rocksdb.RDBType, logger log.Logger) kv.RwD
 	readTxLimit := int64(32)
 	roTxsLimiter := semaphore.NewWeighted(readTxLimit)
 
-	db, err := rocksdb.NewRocksDB(path, logger, kv.ChaindataTablesCfg, kv.ChainDB, roTxsLimiter, false, rdbType)
+	db, err := compatible_rocksdb.NewRocksDB(path, logger, kv.ChaindataTablesCfg, kv.ChainDB, roTxsLimiter, false, rdbType)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to open rocksdb. path=%s. err=%v", path, err))
 	}

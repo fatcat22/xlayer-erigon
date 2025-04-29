@@ -1,13 +1,13 @@
-package memrdb
+package mock_rocksdb
 
 import (
 	"errors"
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/rdb/common"
+	common2 "github.com/ledgerwatch/erigon-lib/kv/rocksdb/common"
 )
 
 // ascend order map
 type OrderedMap struct {
-	data       map[string]*common.DBValue
+	data       map[string]*common2.DBValue
 	sortedKeys []string
 }
 
@@ -24,12 +24,12 @@ type OrderedMapIterator struct {
 
 func NewOrderedMap() *OrderedMap {
 	return &OrderedMap{
-		data:       make(map[string]*common.DBValue),
+		data:       make(map[string]*common2.DBValue),
 		sortedKeys: make([]string, 0),
 	}
 }
 
-func (m *OrderedMap) Put(key []byte, value *common.DBValue) {
+func (m *OrderedMap) Put(key []byte, value *common2.DBValue) {
 	sKey := string(key)
 
 	if _, exists := m.data[sKey]; exists {
@@ -48,12 +48,12 @@ func (m *OrderedMap) Put(key []byte, value *common.DBValue) {
 }
 
 func (m *OrderedMap) sortedSeek(key string) (int, bool) {
-	return common.SortedSeek(m.sortedKeys, key, func(k1 string, k2 string) bool {
+	return common2.SortedSeek(m.sortedKeys, key, func(k1 string, k2 string) bool {
 		return k1 >= k2
 	})
 }
 
-func (m *OrderedMap) Get(key []byte) (*common.DBValue, bool) {
+func (m *OrderedMap) Get(key []byte) (*common2.DBValue, bool) {
 	sKey := string(key)
 
 	val, ok := m.data[sKey]
@@ -191,7 +191,7 @@ func (iter *OrderedMapIterator) Key() []byte {
 	return []byte(curKey)
 }
 
-func (iter *OrderedMapIterator) Value() *common.DBValue {
+func (iter *OrderedMapIterator) Value() *common2.DBValue {
 	if !iter.Valid() {
 		return nil
 	}

@@ -1,4 +1,4 @@
-package rocksdb
+package compatible_rocksdb
 
 import (
 	"bytes"
@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/erigontech/mdbx-go/mdbx"
 	"github.com/ledgerwatch/erigon-lib/kv"
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/rdb/common"
+	common2 "github.com/ledgerwatch/erigon-lib/kv/rocksdb/common"
 )
 
 type RocksDbCursor struct {
@@ -52,7 +52,7 @@ func (c *RocksDbCursor) Seek(seek []byte) (k []byte, v []byte, err error) { // S
 		k, v, err = c.setRange(seek)
 	}
 	if err != nil {
-		if errors.Is(err, common.ErrNotFound) || errors.Is(err, common.ErrInvalidIter) {
+		if errors.Is(err, common2.ErrNotFound) || errors.Is(err, common2.ErrInvalidIter) {
 			return nil, nil, nil
 		}
 		err = fmt.Errorf("failed rocksdb cursor.Seek(): %w, bucket: %s,  key: %x", err, c.table, seek)
@@ -68,7 +68,7 @@ func (c *RocksDbCursor) SeekExact(key []byte) ([]byte, []byte, error) { // SeekE
 		from, to := b.DupFromLen, b.DupToLen
 		v, err := c.getBothRange(key[:to], key[to:])
 		if err != nil {
-			if errors.Is(err, common.ErrNotFound) {
+			if errors.Is(err, common2.ErrNotFound) {
 				return nil, nil, nil
 			}
 			return []byte{}, nil, err
@@ -81,7 +81,7 @@ func (c *RocksDbCursor) SeekExact(key []byte) ([]byte, []byte, error) { // SeekE
 
 	k, v, err := c.set(key)
 	if err != nil {
-		if errors.Is(err, common.ErrNotFound) {
+		if errors.Is(err, common2.ErrNotFound) {
 			return nil, nil, nil
 		}
 		return []byte{}, nil, err
@@ -92,7 +92,7 @@ func (c *RocksDbCursor) SeekExact(key []byte) ([]byte, []byte, error) { // SeekE
 func (c *RocksDbCursor) Next() (k []byte, v []byte, err error) { // Next - position at next key/value (can iterate over DupSort key/values automatically)
 	k, v, err = c.it.Next()
 	if err != nil {
-		if errors.Is(err, common.ErrInvalidIter) {
+		if errors.Is(err, common2.ErrInvalidIter) {
 			return nil, nil, nil
 		}
 		return []byte{}, nil, fmt.Errorf("failed rocksdb cursor.Next(): %w", err)
@@ -114,7 +114,7 @@ func (c *RocksDbCursor) Next() (k []byte, v []byte, err error) { // Next - posit
 func (c *RocksDbCursor) Prev() (k []byte, v []byte, err error) { // Prev - position at previous key
 	k, v, err = c.it.Prev()
 	if err != nil {
-		if errors.Is(err, common.ErrInvalidIter) {
+		if errors.Is(err, common2.ErrInvalidIter) {
 			return nil, nil, nil
 		}
 		return []byte{}, nil, fmt.Errorf("failed MdbxKV cursor.Prev(): %w", err)
@@ -133,7 +133,7 @@ func (c *RocksDbCursor) Prev() (k []byte, v []byte, err error) { // Prev - posit
 func (c *RocksDbCursor) Last() ([]byte, []byte, error) { // Last - position at last key and last possible value
 	k, v, err := c.it.Last()
 	if err != nil {
-		if errors.Is(err, common.ErrInvalidIter) {
+		if errors.Is(err, common2.ErrInvalidIter) {
 			return nil, nil, nil
 		}
 		err = fmt.Errorf("failed MdbxKV cursor.Last(): %w, bucket: %s", err, c.table)
@@ -229,7 +229,7 @@ func (c *RocksDbCursor) Delete(k []byte) error {
 
 	_, _, err := c.set(k)
 	if err != nil {
-		if errors.Is(err, common.ErrNotFound) {
+		if errors.Is(err, common2.ErrNotFound) {
 			return nil
 		}
 		return err
@@ -314,7 +314,7 @@ func (c *RocksDbCursor) putDupSort(key []byte, value []byte) error {
 	if len(key) != from {
 		err := c.putNoOverwrite(key, value)
 		if err != nil {
-			if errors.Is(err, common.ErrKeyExist) {
+			if errors.Is(err, common2.ErrKeyExist) {
 				return c.putCurrent(key, value)
 			}
 			return fmt.Errorf("putNoOverwrite, table: %s, key: %x, val: %x, err: %w", c.table, key, value, err)
@@ -326,7 +326,7 @@ func (c *RocksDbCursor) putDupSort(key []byte, value []byte) error {
 	key = key[:to]
 	v, err := c.getBothRange(key, value[:from-to])
 	if err != nil { // if key not found, or found another one - then just insert
-		if errors.Is(err, common.ErrNotFound) {
+		if errors.Is(err, common2.ErrNotFound) {
 			return c.put(key, value)
 		}
 		return err
@@ -353,7 +353,7 @@ func (c *RocksDbCursor) putCurrent(k, v []byte) error {
 		return err
 	}
 	if !bytes.Equal(curK, k) {
-		return common.ErrKeyMismatch
+		return common2.ErrKeyMismatch
 	}
 
 	dbv, err := c.rtx.get(c.table, curK)
@@ -377,7 +377,7 @@ func (c *RocksDbCursor) putNoOverwrite(k, v []byte) error {
 
 	_, _, err := c.it.SeekExact(k)
 	if err == nil {
-		return common.ErrKeyExist
+		return common2.ErrKeyExist
 	}
 
 	return c.put(k, v)
@@ -388,7 +388,7 @@ func (c *RocksDbCursor) put(k, v []byte) error {
 	if c.tableCfg.Flags&kv.DupSort != 0 {
 		err = c.rtx.putSorted(c.table, k, v)
 	} else {
-		err = c.rtx.putOverwrite(c.table, k, common.DBValueWithOneValue(v))
+		err = c.rtx.putOverwrite(c.table, k, common2.DBValueWithOneValue(v))
 	}
 	if err != nil {
 		return err
@@ -404,7 +404,7 @@ func (c *RocksDbCursor) seekDupSort(seek []byte) (k, v []byte, err error) {
 	if len(seek) == 0 {
 		k, v, err = c.it.First()
 		if err != nil {
-			if errors.Is(err, common.ErrNotFound) {
+			if errors.Is(err, common2.ErrNotFound) {
 				return nil, nil, nil
 			}
 			return []byte{}, nil, err
@@ -427,7 +427,7 @@ func (c *RocksDbCursor) seekDupSort(seek []byte) (k, v []byte, err error) {
 	}
 	k, v, err = c.setRange(seek1)
 	if err != nil {
-		if errors.Is(err, common.ErrNotFound) {
+		if errors.Is(err, common2.ErrNotFound) {
 			return nil, nil, nil
 		}
 
@@ -436,10 +436,10 @@ func (c *RocksDbCursor) seekDupSort(seek []byte) (k, v []byte, err error) {
 
 	if seek2 != nil && bytes.Equal(seek1, k) {
 		v, err = c.getBothRange(seek1, seek2)
-		if err != nil && errors.Is(err, common.ErrNotFound) {
+		if err != nil && errors.Is(err, common2.ErrNotFound) {
 			k, v, err = c.it.Next()
 			if err != nil {
-				if errors.Is(err, common.ErrInvalidIter) {
+				if errors.Is(err, common2.ErrInvalidIter) {
 					return nil, nil, nil
 				}
 				return []byte{}, nil, err
@@ -481,7 +481,7 @@ func (c *RocksDbCursor) putAppendDup(k, v []byte) (err error) {
 
 	_, _, err = c.it.SeekExact(k)
 	if err != nil {
-		if errors.Is(err, common.ErrNotFound) {
+		if errors.Is(err, common2.ErrNotFound) {
 			return c.put(k, v)
 		}
 		return err
@@ -492,7 +492,7 @@ func (c *RocksDbCursor) putAppendDup(k, v []byte) (err error) {
 		return err
 	}
 	if bytes.Compare(lastV, v) >= 0 {
-		return common.ErrValueLeLatest
+		return common2.ErrValueLeLatest
 	}
 
 	return c.put(k, v)
@@ -512,14 +512,14 @@ func (c *RocksDbCursor) putAppend(k, v []byte) (err error) {
 
 	lastK, _, err := c.it.Last()
 	if err != nil {
-		if errors.Is(err, common.ErrInvalidIter) {
+		if errors.Is(err, common2.ErrInvalidIter) {
 			// this is the first k/v in the db, insert it.
 			return c.put(k, v)
 		}
 		return err
 	}
 	if bytes.Compare(k, lastK) <= 0 {
-		return common.ErrKeyMismatch
+		return common2.ErrKeyMismatch
 	}
 
 	return c.putNoOverwrite(k, v)
@@ -535,7 +535,7 @@ func (c *RocksDbCursor) deleteDupSort(key []byte) error {
 	if len(key) == from {
 		v, err := c.getBothRange(key[:to], key[to:])
 		if err != nil { // if key not found, or found another one - then nothing to delete
-			if errors.Is(err, common.ErrNotFound) {
+			if errors.Is(err, common2.ErrNotFound) {
 				return nil
 			}
 			return err
@@ -548,7 +548,7 @@ func (c *RocksDbCursor) deleteDupSort(key []byte) error {
 
 	_, _, err := c.set(key)
 	if err != nil {
-		if errors.Is(err, common.ErrNotFound) {
+		if errors.Is(err, common2.ErrNotFound) {
 			return nil
 		}
 		return err
@@ -564,7 +564,7 @@ func (c *RocksDbCursor) delAllDupData() (err error) {
 		return err
 	}
 	if err := c.it.NextKey(); err != nil {
-		if !errors.Is(err, common.ErrInvalidIter) {
+		if !errors.Is(err, common2.ErrInvalidIter) {
 			return err
 		}
 		c.it.invalidCurrent()
@@ -607,16 +607,16 @@ func (c *RocksDbCursor) nextDup() ([]byte, []byte, error) {
 func (c *RocksDbCursor) nextNoDup() ([]byte, []byte, error) {
 	// return c.c.Get(nil, nil, mdbx.NextNoDup)
 	if err := c.it.NextKey(); err != nil {
-		if errors.Is(err, common.ErrInvalidIter) {
-			return nil, nil, common.ErrNotFound
+		if errors.Is(err, common2.ErrInvalidIter) {
+			return nil, nil, common2.ErrNotFound
 		}
 		return nil, nil, err
 	}
 
 	k, v, err := c.it.Current()
 	if err != nil {
-		if errors.Is(err, common.ErrInvalidIter) {
-			return nil, nil, common.ErrNotFound
+		if errors.Is(err, common2.ErrInvalidIter) {
+			return nil, nil, common2.ErrNotFound
 		}
 	}
 	return k, v, nil

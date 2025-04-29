@@ -1,7 +1,8 @@
-package rocksdb
+package compatible_rocksdb
 
 import (
 	"context"
+	"github.com/ledgerwatch/erigon-lib/kv/rocksdb"
 	"golang.org/x/sync/semaphore"
 	"gotest.tools/v3/assert"
 	"os"
@@ -84,7 +85,7 @@ func rocksdbBaseCaseDB(t *testing.T) kv.RwDB {
 		},
 	}
 
-	db, err := NewRocksDB(rdbPath, log.New("test"), buckets, kv.ChainDB, semaphore.NewWeighted(10), false, RealRDB)
+	db, err := NewRocksDB(rdbPath, log.New("test"), buckets, kv.ChainDB, semaphore.NewWeighted(10), false, rocksdb.RealRDB)
 	assert.NilError(t, err)
 	t.Cleanup(db.Close)
 

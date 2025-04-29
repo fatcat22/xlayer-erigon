@@ -1,9 +1,9 @@
-package rocksdb
+package compatible_rocksdb
 
 import (
 	"errors"
 	"fmt"
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/rdb/common"
+	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/common"
 )
 
 type RocksDbDupSortCursor struct {

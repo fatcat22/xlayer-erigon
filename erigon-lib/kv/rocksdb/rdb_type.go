@@ -2,9 +2,8 @@ package rocksdb
 
 import (
 	"fmt"
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/rdb"
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/rdb/memrdb"
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/rdb/realdb"
+	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/native_rocksdb"
+	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/native_rocksdb/mock_rocksdb"
 	"github.com/linxGnu/grocksdb"
 )
 
@@ -15,12 +14,12 @@ const (
 	RealRDB
 )
 
-func (rt RDBType) NewRDB(opts *grocksdb.Options, txopts *grocksdb.TransactionDBOptions, dbPath string) (rdb.RDB, error) {
+func (rt RDBType) NewRDB(opts *grocksdb.Options, txopts *grocksdb.TransactionDBOptions, dbPath string) (native_rocksdb.RDB, error) {
 	switch rt {
 	case MemRDB:
-		return memrdb.NewMemoryRDB(), nil
+		return mock_rocksdb.NewMemoryRDB(), nil
 	case RealRDB:
-		return realdb.NewRealRDB(opts, txopts, dbPath)
+		return native_rocksdb.NewRealRDB(opts, txopts, dbPath)
 	default:
 		panic(fmt.Sprintf("unknown RDB type: %v", rt))
 	}

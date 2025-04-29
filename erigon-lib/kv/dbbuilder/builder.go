@@ -7,6 +7,7 @@ import (
 	"github.com/ledgerwatch/erigon-lib/kv/combinedb"
 	"github.com/ledgerwatch/erigon-lib/kv/mdbx"
 	"github.com/ledgerwatch/erigon-lib/kv/rocksdb"
+	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/compatible_rocksdb"
 )
 
 type DatabseType int
@@ -35,7 +36,7 @@ func NewDB(dbType DatabseType, ctx context.Context, opts mdbx.MdbxOpts, tableCfg
 	case DatabseTypeMdbx:
 		return opts.Open(ctx)
 	case DatabaseTypeRocksDB:
-		return rocksdb.NewRocksDB(opts.GetPath(), opts.GetLogger(), tableCfg, opts.GetLabel(), opts.GetRoTxsLimiter(), opts.IsReadonly(), rocksdb.RealRDB)
+		return compatible_rocksdb.NewRocksDB(opts.GetPath(), opts.GetLogger(), tableCfg, opts.GetLabel(), opts.GetRoTxsLimiter(), opts.IsReadonly(), rocksdb.RealRDB)
 	case DatabaseTypeCombine:
 		return combinedb.NewCombinDB(ctx, opts, tableCfg, enableCombineLog)
 	default:

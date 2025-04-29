@@ -1,8 +1,8 @@
-package memrdb
+package mock_rocksdb
 
 import (
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/rdb"
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/rdb/common"
+	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/common"
+	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/native_rocksdb"
 	"github.com/linxGnu/grocksdb"
 )
 
@@ -37,7 +37,7 @@ func (rtx *MemoryRTX) Rollback() error {
 	return nil
 }
 
-func (rtx *MemoryRTX) NewIterator(beginPrefix, endPrefix []byte) rdb.RDBIterator {
+func (rtx *MemoryRTX) NewIterator(beginPrefix, endPrefix []byte) native_rocksdb.RDBIterator {
 	return rtx.db.storage.NewIterator(beginPrefix, endPrefix)
 }
 

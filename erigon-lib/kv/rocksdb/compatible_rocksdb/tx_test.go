@@ -1,4 +1,4 @@
-package rocksdb
+package compatible_rocksdb
 
 import (
 	"encoding/binary"

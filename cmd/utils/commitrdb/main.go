@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/compatible_rocksdb"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -76,7 +77,7 @@ func openRocksDB(path string, logger log.Logger) (kv.RwDB, error) {
 	readTxLimit := int64(32)
 	roTxsLimiter := semaphore.NewWeighted(readTxLimit)
 
-	return rocksdb.NewRocksDB(path, logger, kv.ChaindataTablesCfg, kv.ChainDB, roTxsLimiter, false, rocksdb.RealRDB)
+	return compatible_rocksdb.NewRocksDB(path, logger, kv.ChaindataTablesCfg, kv.ChainDB, roTxsLimiter, false, rocksdb.RealRDB)
 }
 
 func loadDataFromFile(filename string) ([]dataPair, error) {

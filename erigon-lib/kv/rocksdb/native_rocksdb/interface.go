@@ -1,7 +1,7 @@
-package rdb
+package native_rocksdb
 
 import (
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/rdb/common"
+	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/common"
 	"github.com/linxGnu/grocksdb"
 )
 

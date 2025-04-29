@@ -1,7 +1,7 @@
-package realdb
+package native_rocksdb
 
 import (
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/rdb/common"
+	common2 "github.com/ledgerwatch/erigon-lib/kv/rocksdb/common"
 	"github.com/linxGnu/grocksdb"
 )
 
@@ -46,15 +46,15 @@ func (iter *RealIterator) Key() []byte {
 	if !k.Exists() {
 		return nil
 	}
-	return common.MoveSliceToBytes(k)
+	return common2.MoveSliceToBytes(k)
 }
 
-func (iter *RealIterator) Value() *common.DBValue {
+func (iter *RealIterator) Value() *common2.DBValue {
 	v := iter.it.Value()
 	if !v.Exists() {
 		return nil
 	}
-	return common.DeserializeDBValue(common.MoveSliceToBytes(v))
+	return common2.DeserializeDBValue(common2.MoveSliceToBytes(v))
 }
 
 func (iter *RealIterator) Close() {

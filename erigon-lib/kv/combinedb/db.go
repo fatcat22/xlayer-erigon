@@ -3,6 +3,7 @@ package combinedb
 import (
 	"context"
 	"fmt"
+	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/compatible_rocksdb"
 	"path"
 	"sync"
 	"sync/atomic"
@@ -41,7 +42,7 @@ func NewCombinDB(ctx context.Context, opts mdbx.MdbxOpts, tableCfg kv.TableCfg, 
 
 	rocksdbDir := path.Join(dbDir, "rocksdb")
 	opts.GetLogger().Info("Set rocksdb path", "new path", rocksdbDir)
-	rocksdb, err := rocksdb.NewRocksDB(rocksdbDir, opts.GetLogger(), tableCfg, opts.GetLabel(), opts.GetRoTxsLimiter(), opts.IsReadonly(), rocksdb.RealRDB)
+	rocksdb, err := compatible_rocksdb.NewRocksDB(rocksdbDir, opts.GetLogger(), tableCfg, opts.GetLabel(), opts.GetRoTxsLimiter(), opts.IsReadonly(), rocksdb.RealRDB)
 	if err != nil {
 		return nil, err
 	}

@@ -1,29 +1,30 @@
-package rocksdb
+package compatible_rocksdb
 
 import (
 	"context"
 	"fmt"
+	"github.com/ledgerwatch/erigon-lib/kv/rocksdb"
+	rdbcommon "github.com/ledgerwatch/erigon-lib/kv/rocksdb/common"
+	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/native_rocksdb"
+	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/native_rocksdb/mock_rocksdb"
 	"runtime"
 	"unsafe"
 
 	"github.com/ledgerwatch/erigon-lib/common/dbg"
 	"github.com/ledgerwatch/erigon-lib/kv"
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/rdb"
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/rdb/common"
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/rdb/memrdb"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/linxGnu/grocksdb"
 	"golang.org/x/sync/semaphore"
 )
 
 type RocksDB struct {
-	db       rdb.RDB
+	db       native_rocksdb.RDB
 	lruCache *grocksdb.Cache
 	bbto     *grocksdb.BlockBasedTableOptions
 	opts     *grocksdb.Options
 	txopts   *grocksdb.TransactionDBOptions
 
-	closeGuard *CloseGuard
+	closeGuard *rdbcommon.CloseGuard
 
 	readOnly  bool // todo: not used
 	tablesCfg kv.TableCfg
@@ -35,7 +36,7 @@ type RocksDB struct {
 	leakDetector   *dbg.LeakDetector
 }
 
-func NewRocksDB(dbPath string, logger log.Logger, tablesCfg kv.TableCfg, label kv.Label, readTxLimiter *semaphore.Weighted, readOnly bool, rdbType RDBType) (kv.RwDB, error) {
+func NewRocksDB(dbPath string, logger log.Logger, tablesCfg kv.TableCfg, label kv.Label, readTxLimiter *semaphore.Weighted, readOnly bool, rdbType rocksdb.RDBType) (kv.RwDB, error) {
 	if readTxLimiter == nil {
 		targetSemCount := int64(runtime.GOMAXPROCS(-1)) - 1
 		readTxLimiter = semaphore.NewWeighted(targetSemCount) // 1 less than max to allow unlocking to happen
@@ -64,7 +65,7 @@ func NewRocksDB(dbPath string, logger log.Logger, tablesCfg kv.TableCfg, label k
 		bbto:           bbto,
 		opts:           opts,
 		txopts:         txopts,
-		closeGuard:     newCloseGuard(),
+		closeGuard:     rdbcommon.NewCloseGuard(),
 		readOnly:       readOnly,
 		tablesCfg:      tablesCfg,
 		label:          label,
@@ -74,13 +75,13 @@ func NewRocksDB(dbPath string, logger log.Logger, tablesCfg kv.TableCfg, label k
 	}, nil
 }
 
-func (db *RocksDB) GetMemStorage() map[string]*common.DBValue {
-	return db.db.(*memrdb.MemoryRDB).GetMemStorage()
+func (db *RocksDB) GetMemStorage() map[string]*rdbcommon.DBValue {
+	return db.db.(*mock_rocksdb.MemoryRDB).GetMemStorage()
 }
 
 // impl Closer interface
 func (db *RocksDB) Close() {
-	firstClose := db.closeGuard.close()
+	firstClose := db.closeGuard.Close()
 	if firstClose {
 		db.db.Close()
 		db.db = nil
@@ -99,8 +100,8 @@ func (db *RocksDB) Close() {
 	}
 }
 
-func (db *RocksDB) Get(table string, k []byte) (*common.DBValue, error) {
-	return db.db.Get(common.MergeKey(table, k))
+func (db *RocksDB) Get(table string, k []byte) (*rdbcommon.DBValue, error) {
+	return db.db.Get(rdbcommon.MergeKey(table, k))
 }
 
 // impl Ro interface
@@ -207,19 +208,19 @@ func (db *RocksDB) beginTx(ctx context.Context, txLimiter *semaphore.Weighted) (
 		}
 	}()
 
-	if !db.closeGuard.reference() {
+	if !db.closeGuard.Reference() {
 		return nil, fmt.Errorf("db closed")
 	}
 	defer func() {
 		if tx == nil {
-			db.closeGuard.deReference()
+			db.closeGuard.DeReference()
 		}
 	}()
 
 	id := db.leakDetector.Add()
 	// todo: yztodo: not a real read only tx yet
 	return newRocksDbTx(db, ctx, func() {
-		db.closeGuard.deReference()
+		db.closeGuard.DeReference()
 		txLimiter.Release(1)
 		db.leakDetector.Del(id)
 	})

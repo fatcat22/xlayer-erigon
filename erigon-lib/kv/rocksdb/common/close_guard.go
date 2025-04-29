@@ -1,4 +1,4 @@
-package rocksdb
+package common
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ type CloseGuard struct {
 	allDoneCh chan struct{}
 }
 
-func newCloseGuard() *CloseGuard {
+func NewCloseGuard() *CloseGuard {
 	var closed atomic.Bool
 	closed.Store(false)
 
@@ -28,8 +28,8 @@ func newCloseGuard() *CloseGuard {
 	}
 }
 
-// return true if reference success
-func (cg *CloseGuard) reference() bool {
+// return true if Reference success
+func (cg *CloseGuard) Reference() bool {
 	cg.lock.Lock()
 	defer cg.lock.Unlock()
 
@@ -49,7 +49,7 @@ func (cg *CloseGuard) reference() bool {
 	return true
 }
 
-func (cg *CloseGuard) deReference() {
+func (cg *CloseGuard) DeReference() {
 	cg.lock.Lock()
 	defer cg.lock.Unlock()
 
@@ -58,8 +58,8 @@ func (cg *CloseGuard) deReference() {
 	}
 }
 
-// return true if this is the first time call close
-func (cg *CloseGuard) close() bool {
+// return true if this is the first time call Close
+func (cg *CloseGuard) Close() bool {
 	cg.lock.Lock()
 	defer cg.lock.Unlock()
 

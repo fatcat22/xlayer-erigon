@@ -1,4 +1,4 @@
-package rocksdb
+package compatible_rocksdb
 
 import (
 	"bytes"
@@ -6,20 +6,20 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	common2 "github.com/ledgerwatch/erigon-lib/kv/rocksdb/common"
+	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/native_rocksdb"
 	"time"
 	"unsafe"
 
 	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon-lib/kv/iter"
 	"github.com/ledgerwatch/erigon-lib/kv/order"
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/rdb"
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/rdb/common"
 	"github.com/linxGnu/grocksdb"
 )
 
 type RocksDbTx struct {
 	db    *RocksDB
-	tx    rdb.RDBTransaction
+	tx    native_rocksdb.RDBTransaction
 	ropts *grocksdb.ReadOptions
 	wopts *grocksdb.WriteOptions
 	txopt *grocksdb.TransactionOptions
@@ -67,9 +67,9 @@ func (rtx *RocksDbTx) UpdateSnapshot() {
 
 // impl kv.Has interface
 func (rtx *RocksDbTx) Has(table string, key []byte) (bool, error) {
-	_, err := rtx.tx.Get(rtx.ropts, common.MergeKey(table, key))
+	_, err := rtx.tx.Get(rtx.ropts, common2.MergeKey(table, key))
 	if err != nil {
-		if errors.Is(err, common.ErrKeyNotExist) {
+		if errors.Is(err, common2.ErrKeyNotExist) {
 			return false, nil
 		}
 		return false, err
@@ -176,7 +176,7 @@ func (rtx *RocksDbTx) Rollback() { // Rollback - abandon all the operations of t
 // Starts from 0.
 func (rtx *RocksDbTx) ReadSequence(table string) (uint64, error) {
 	dbv, err := rtx.get(kv.Sequence, []byte(table))
-	notExist := errors.Is(err, common.ErrKeyNotExist)
+	notExist := errors.Is(err, common2.ErrKeyNotExist)
 	if err != nil && !notExist {
 		return 0, err
 	}
@@ -314,7 +314,7 @@ func (rtx *RocksDbTx) IncrementSequence(table string, amount uint64) (uint64, er
 	newV := currentV + amount
 	newVBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(newVBytes, newV)
-	dbv := common.DBValueWithOneValue(newVBytes)
+	dbv := common2.DBValueWithOneValue(newVBytes)
 
 	return currentV, rtx.putOverwrite(kv.Sequence, []byte(table), dbv)
 }
@@ -352,7 +352,7 @@ func (rtx *RocksDbTx) ExistsBucket(string) (bool, error) {
 	panic("not supported")
 }
 func (rtx *RocksDbTx) ClearBucket(table string) error {
-	beginPrefix := common.MergeKey(table, []byte{})
+	beginPrefix := common2.MergeKey(table, []byte{})
 	endPrefix, _ := kv.NextSubtree(beginPrefix)
 
 	iterateBatch := func() ([][]byte, bool) {
@@ -503,8 +503,8 @@ func (rtx *RocksDbTx) CollectMetrics() {
 	// yztodo: not implemented
 }
 
-func (rtx *RocksDbTx) get(table string, k []byte) (*common.DBValue, error) {
-	dbv, err := rtx.tx.Get(rtx.ropts, common.MergeKey(table, k))
+func (rtx *RocksDbTx) get(table string, k []byte) (*common2.DBValue, error) {
+	dbv, err := rtx.tx.Get(rtx.ropts, common2.MergeKey(table, k))
 	if err != nil {
 		return nil, err
 	}
@@ -515,13 +515,13 @@ func (rtx *RocksDbTx) get(table string, k []byte) (*common.DBValue, error) {
 
 func (rtx *RocksDbTx) putSorted(table string, k, v []byte) error {
 	dbv, err := rtx.get(table, k)
-	notExist := errors.Is(err, common.ErrKeyNotExist)
+	notExist := errors.Is(err, common2.ErrKeyNotExist)
 	if err != nil && !notExist {
 		return err
 	}
 
 	if notExist {
-		dbv = common.DBValueWithOneValue(v)
+		dbv = common2.DBValueWithOneValue(v)
 	} else {
 		dbv.SortedInsert(v)
 	}
@@ -529,8 +529,8 @@ func (rtx *RocksDbTx) putSorted(table string, k, v []byte) error {
 }
 
 // putOverwrite will overwrite the key if it has exist
-func (rtx *RocksDbTx) putOverwrite(table string, k []byte, v *common.DBValue) error {
-	return rtx.tx.Put(common.MergeKey(table, k), v)
+func (rtx *RocksDbTx) putOverwrite(table string, k []byte, v *common2.DBValue) error {
+	return rtx.tx.Put(common2.MergeKey(table, k), v)
 }
 
 // iterWithStop iterate data until `walker` return error or true
@@ -571,7 +571,7 @@ func (rtx *RocksDbTx) dropEvenIfBucketIsNotDeprecated(name string) error {
 }
 
 func (rtx *RocksDbTx) delete(table string, k []byte) error {
-	return rtx.tx.Delete(common.MergeKey(table, k))
+	return rtx.tx.Delete(common2.MergeKey(table, k))
 }
 
 type cursor2iter struct {

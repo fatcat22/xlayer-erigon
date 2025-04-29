@@ -1,8 +1,7 @@
-package realdb
+package native_rocksdb
 
 import (
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/rdb"
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/rdb/common"
+	common2 "github.com/ledgerwatch/erigon-lib/kv/rocksdb/common"
 	"github.com/linxGnu/grocksdb"
 )
 
@@ -17,19 +16,19 @@ func newRealRtx(tx *grocksdb.Transaction, latestSnapshotCreator func() *grocksdb
 	return &RealRtx{tx: tx, latestSnapshotCreator: latestSnapshotCreator}
 }
 
-func (rtx *RealRtx) Get(opts *grocksdb.ReadOptions, key []byte) (*common.DBValue, error) {
+func (rtx *RealRtx) Get(opts *grocksdb.ReadOptions, key []byte) (*common2.DBValue, error) {
 	s, err := rtx.tx.Get(opts, key)
 	if err != nil {
 		return nil, err
 	}
 	if !s.Exists() {
-		return nil, common.ErrKeyNotExist
+		return nil, common2.ErrKeyNotExist
 	}
 
-	return common.DeserializeDBValue(common.MoveSliceToBytes(s)), nil
+	return common2.DeserializeDBValue(common2.MoveSliceToBytes(s)), nil
 }
 
-func (rtx *RealRtx) Put(key []byte, value *common.DBValue) error {
+func (rtx *RealRtx) Put(key []byte, value *common2.DBValue) error {
 	return rtx.tx.Put(key, value.Serialize())
 }
 
@@ -45,7 +44,7 @@ func (rtx *RealRtx) Rollback() error {
 	return rtx.tx.Rollback()
 }
 
-func (rtx *RealRtx) NewIterator(beginPrefix, endPrefix []byte) rdb.RDBIterator {
+func (rtx *RealRtx) NewIterator(beginPrefix, endPrefix []byte) RDBIterator {
 	// todo: combinedb need update snapshot in some situation.
 	//   if combinedb isn't used, code here could ignore call `ropts.SetSnapshot`
 	ss := rtx.latestSnapshotCreator()
