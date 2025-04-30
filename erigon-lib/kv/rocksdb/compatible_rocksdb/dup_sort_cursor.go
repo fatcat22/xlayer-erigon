@@ -7,7 +7,7 @@ import (
 )
 
 type RocksDbDupSortCursor struct {
-	*RocksDbCursor
+	*compatibleCursor
 }
 
 // DeleteExact - delete 1 value from given key

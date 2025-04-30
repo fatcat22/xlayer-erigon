@@ -1,13 +1,13 @@
-package mock_rocksdb
+package mock
 
 import (
 	"errors"
-	common2 "github.com/ledgerwatch/erigon-lib/kv/rocksdb/common"
+	rdbcommon "github.com/ledgerwatch/erigon-lib/kv/rocksdb/common"
 )
 
 // ascend order map
 type OrderedMap struct {
-	data       map[string]*common2.DBValue
+	data       map[string]*rdbcommon.DBValue
 	sortedKeys []string
 }
 
@@ -24,12 +24,12 @@ type OrderedMapIterator struct {
 
 func NewOrderedMap() *OrderedMap {
 	return &OrderedMap{
-		data:       make(map[string]*common2.DBValue),
+		data:       make(map[string]*rdbcommon.DBValue),
 		sortedKeys: make([]string, 0),
 	}
 }
 
-func (m *OrderedMap) Put(key []byte, value *common2.DBValue) {
+func (m *OrderedMap) Put(key []byte, value *rdbcommon.DBValue) {
 	sKey := string(key)
 
 	if _, exists := m.data[sKey]; exists {
@@ -48,12 +48,12 @@ func (m *OrderedMap) Put(key []byte, value *common2.DBValue) {
 }
 
 func (m *OrderedMap) sortedSeek(key string) (int, bool) {
-	return common2.SortedSeek(m.sortedKeys, key, func(k1 string, k2 string) bool {
+	return rdbcommon.SortedSeek(m.sortedKeys, key, func(k1 string, k2 string) bool {
 		return k1 >= k2
 	})
 }
 
-func (m *OrderedMap) Get(key []byte) (*common2.DBValue, bool) {
+func (m *OrderedMap) Get(key []byte) (*rdbcommon.DBValue, bool) {
 	sKey := string(key)
 
 	val, ok := m.data[sKey]
@@ -84,6 +84,8 @@ func (m *OrderedMap) NewIterator(beginPrefix, endPrefix []byte) *OrderedMapItera
 
 	return iter
 }
+
+////////////// implement NativeIteratorBase //////////////
 
 func (iter *OrderedMapIterator) Valid() bool {
 	return iter.valid
@@ -166,13 +168,23 @@ func (iter *OrderedMapIterator) Prev() {
 	}
 }
 
-func (iter *OrderedMapIterator) Seek(key []byte) {
+func (iter *OrderedMapIterator) Close() {
+	// do nothing
+}
+
+func (iter *OrderedMapIterator) Err() error {
+	return iter.err
+}
+
+//////////// implement CompatibleBackendIterator //////////////
+
+func (iter *OrderedMapIterator) CompatibleSeek(table string, key []byte) {
 	iter.SeekToFirst()
 	if !iter.Valid() {
 		return
 	}
 
-	seekKey := string(key)
+	seekKey := string(rdbcommon.MergeKey(table, key))
 	idx, ok := iter.omap.sortedSeek(seekKey)
 	if !ok {
 		iter.setInvalid("Seek: dont find seek key")
@@ -182,16 +194,21 @@ func (iter *OrderedMapIterator) Seek(key []byte) {
 	iter.setValid(idx)
 }
 
-func (iter *OrderedMapIterator) Key() []byte {
+func (iter *OrderedMapIterator) CompatibleKey() (string, []byte) {
 	if !iter.Valid() {
-		return nil
+		return "", nil
 	}
 
 	curKey := iter.currentKey()
-	return []byte(curKey)
+	return rdbcommon.SplitKey([]byte(curKey))
 }
 
-func (iter *OrderedMapIterator) Value() *common2.DBValue {
+func (iter *OrderedMapIterator) Value() []byte {
+	dbv := iter.CompatibleValue()
+	return dbv.Serialize()
+}
+
+func (iter *OrderedMapIterator) CompatibleValue() *rdbcommon.DBValue {
 	if !iter.Valid() {
 		return nil
 	}
@@ -200,13 +217,7 @@ func (iter *OrderedMapIterator) Value() *common2.DBValue {
 	return iter.omap.data[curKey]
 }
 
-func (iter *OrderedMapIterator) Close() {
-	// do nothing
-}
-
-func (iter *OrderedMapIterator) Err() error {
-	return iter.err
-}
+////////////// internal methods //////////////
 
 func (iter *OrderedMapIterator) currentKey() string {
 	return iter.omap.sortedKeys[iter.current]

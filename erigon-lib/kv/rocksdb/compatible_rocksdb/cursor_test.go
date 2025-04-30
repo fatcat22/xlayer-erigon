@@ -728,7 +728,7 @@ func TestRocksDbCursor_putNoOverwrite(t *testing.T) {
 	// check empty table
 	csi, err := tx.RwCursor(kv.Sequence)
 	require.NoError(t, err)
-	cs := csi.(*RocksDbCursor)
+	cs := csi.(*compatibleCursor)
 	err = cs.putNoOverwrite([]byte("key0"), []byte("value0"))
 	require.NoError(t, err)
 	k, v, err := cs.First()
@@ -773,7 +773,7 @@ func TestRocksDBCursor_putCurrent(t *testing.T) {
 	// check empty table
 	csi, err := tx.RwCursor(kv.Sequence)
 	require.NoError(t, err)
-	cs := csi.(*RocksDbCursor)
+	cs := csi.(*compatibleCursor)
 	require.EqualError(t, cs.putCurrent([]byte("key0"), []byte("value0")), common2.ErrInvalidIter.Error())
 
 	c := ci.(*RocksDbDupSortCursor)
@@ -886,7 +886,7 @@ func TestRocksDBCursor_put(t *testing.T) {
 		_, tx, _ := rocksdbBaseCase(t)
 		ci, err := tx.RwCursor(rocksdbNotDupSortTestTable)
 		require.NoError(t, err)
-		c := ci.(*RocksDbCursor)
+		c := ci.(*compatibleCursor)
 		defer c.Close()
 
 		require.NoError(t, c.put([]byte("key1"), []byte("value1.3")))
@@ -917,7 +917,7 @@ func TestRocksDBCursor_setRange(t *testing.T) {
 	// check empty table
 	csi, err := tx.RwCursor(kv.Sequence)
 	require.NoError(t, err)
-	cs := csi.(*RocksDbCursor)
+	cs := csi.(*compatibleCursor)
 	k, v, err := cs.setRange([]byte("key1"))
 	require.EqualError(t, err, common2.ErrNotFound.Error())
 
@@ -950,7 +950,7 @@ func TestRocksDBCursor_set(t *testing.T) {
 
 	csi, err := tx.RwCursor(kv.Sequence)
 	require.NoError(t, err)
-	cs := csi.(*RocksDbCursor)
+	cs := csi.(*compatibleCursor)
 	k, v, err := cs.set([]byte("key1"))
 	require.EqualError(t, err, common2.ErrNotFound.Error())
 
@@ -980,7 +980,7 @@ func TestRocksDBCursor_putAppendDup(t *testing.T) {
 	// check empty table
 	csi, err := tx.RwCursor(kv.Sequence)
 	require.NoError(t, err)
-	cs := csi.(*RocksDbCursor)
+	cs := csi.(*compatibleCursor)
 	require.NoError(t, cs.putAppendDup([]byte("key0"), []byte("value0")))
 	k, v, err := cs.Current()
 	require.NoError(t, err)
@@ -1045,7 +1045,7 @@ func TestRocksDBCursor_putAppend(t *testing.T) {
 	// check empty table
 	csi, err := tx.RwCursor(kv.Sequence)
 	require.NoError(t, err)
-	cs := csi.(*RocksDbCursor)
+	cs := csi.(*compatibleCursor)
 	err = cs.putAppend([]byte("key0"), []byte("value0.1"))
 	require.NoError(t, err)
 	k, v, err := cs.Current()
@@ -1111,7 +1111,7 @@ func TestRocksDBCursor_delAllDupData(t *testing.T) {
 	// check empty table
 	csi, err := tx.RwCursor(kv.Sequence)
 	require.NoError(t, err)
-	cs := csi.(*RocksDbCursor)
+	cs := csi.(*compatibleCursor)
 	require.EqualError(t, cs.delAllDupData(), common2.ErrInvalidIter.Error())
 
 	c := ci.(*RocksDbDupSortCursor)
@@ -1206,7 +1206,7 @@ func TestRocksDBCursor_delCurrent(t *testing.T) {
 	// check empty table
 	csi, err := tx.RwCursor(kv.Sequence)
 	require.NoError(t, err)
-	cs := csi.(*RocksDbCursor)
+	cs := csi.(*compatibleCursor)
 	require.EqualError(t, cs.delCurrent(), common2.ErrInvalidIter.Error())
 
 	c := ci.(*RocksDbDupSortCursor)
@@ -1296,7 +1296,7 @@ func TestRocksDBCursor_lastDup(t *testing.T) {
 	// check empty table
 	csi, err := tx.RwCursor(kv.Sequence)
 	require.NoError(t, err)
-	cs := csi.(*RocksDbCursor)
+	cs := csi.(*compatibleCursor)
 	_, err = cs.lastDup()
 	require.EqualError(t, err, common2.ErrInvalidIter.Error())
 
@@ -1333,7 +1333,7 @@ func TestRocksDBCursor_firstDup(t *testing.T) {
 	// check empty table
 	csi, err := tx.RwCursor(kv.Sequence)
 	require.NoError(t, err)
-	cs := csi.(*RocksDbCursor)
+	cs := csi.(*compatibleCursor)
 	_, err = cs.firstDup()
 	require.EqualError(t, err, common2.ErrInvalidIter.Error())
 
@@ -1363,7 +1363,7 @@ func TestRocksDbCursor_nextDup(t *testing.T) {
 	// check empty table
 	csi, err := tx.RwCursor(kv.Sequence)
 	require.NoError(t, err)
-	cs := csi.(*RocksDbCursor)
+	cs := csi.(*compatibleCursor)
 	_, _, err = cs.nextDup()
 	require.EqualError(t, err, common2.ErrNotFound.Error())
 
@@ -1390,7 +1390,7 @@ func TestRocksDbCursor_prevDup(t *testing.T) {
 	// check empty table
 	csi, err := tx.RwCursor(kv.Sequence)
 	require.NoError(t, err)
-	cs := csi.(*RocksDbCursor)
+	cs := csi.(*compatibleCursor)
 	_, _, err = cs.prevDup()
 	require.EqualError(t, err, common2.ErrNotFound.Error())
 
@@ -1428,7 +1428,7 @@ func TestRocksDbCursor_getBoth(t *testing.T) {
 	// check empty table
 	csi, err := tx.RwCursor(kv.Sequence)
 	require.NoError(t, err)
-	cs := csi.(*RocksDbCursor)
+	cs := csi.(*compatibleCursor)
 	_, err = cs.getBoth([]byte("key0"), []byte("value0"))
 	require.Error(t, err)
 
@@ -1489,7 +1489,7 @@ func TestRocksDbCursor_nextNoDup(t *testing.T) {
 	// check empty table
 	csi, err := tx.RwCursor(kv.Sequence)
 	require.NoError(t, err)
-	cs := csi.(*RocksDbCursor)
+	cs := csi.(*compatibleCursor)
 	_, _, err = cs.nextNoDup()
 	require.EqualError(t, err, common2.ErrNotFound.Error())
 

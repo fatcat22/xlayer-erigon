@@ -1,5 +1,7 @@
 package dbutils
 
+import "strings"
+
 // NextNibblesSubtree does []byte++. Returns false if overflow.
 func NextNibblesSubtree(in []byte, out *[]byte) bool {
 	r := (*out)[:len(in)]
@@ -15,4 +17,12 @@ func NextNibblesSubtree(in []byte, out *[]byte) bool {
 	}
 	*out = r
 	return false
+}
+
+func SplitAtFirst(s, sep string) (string, string) {
+	idx := strings.Index(s, sep)
+	if idx == -1 {
+		return s, ""
+	}
+	return s[:idx], s[idx+len(sep):]
 }

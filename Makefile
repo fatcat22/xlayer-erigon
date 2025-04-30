@@ -26,7 +26,7 @@ CGO_CFLAGS += -DMDBX_FORCE_ASSERTIONS=0 # Enable MDBX's asserts by default in 'd
 CGO_CFLAGS += -O
 CGO_CFLAGS += -D__BLST_PORTABLE__
 CGO_CFLAGS += -Wno-unknown-warning-option -Wno-enum-int-mismatch -Wno-strict-prototypes -Wno-unused-but-set-variable
-CGO_CFLAGS += -I$(CURDIR)/deps/rocksdb/include
+CGO_CFLAGS += -I$(CURDIR)/deps/rocksdb/build/include
 
 CGO_LDFLAGS := $(shell $(GO) env CGO_LDFLAGS 2> /dev/null)
 ifeq ($(shell uname -s), Darwin)
@@ -34,7 +34,16 @@ ifeq ($(shell uname -s), Darwin)
 		CGO_LDFLAGS += -mmacosx-version-min=13.3
 	endif
 endif
-CGO_LDFLAGS += -L$(CURDIR)/deps/rocksdb -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy -llz4 -lzstd
+CGO_LDFLAGS += -L$(CURDIR)/deps/rocksdb/build/lib -lrocksdb ${LDFLAGS}
+
+ifeq ($(UNAME), Linux)
+ROCKSDB_EXTRA_CFLAGS="-Wno-error=maybe-uninitialized -Wno-error=uninitialized${CFLAGS+ CFLAGS}"
+ROCKSDB_EXTRA_CXXFLAGS="-Wno-error=maybe-uninitialized -Wno-error=uninitialized${CXXFLAGS+ CXXFLAGS}"
+else
+ROCKSDB_EXTRA_CFLAGS=""
+ROCKSDB_EXTRA_CXXFLAGS=""
+endif
+ROCKSDB_BUILD_DIR="$(CURDIR)/deps/rocksdb/build"
 
 # about netgo see: https://github.com/golang/go/issues/30310#issuecomment-471669125 and https://github.com/golang/go/issues/57757
 BUILD_TAGS = nosqlite,noboltdb
@@ -124,7 +133,10 @@ else ifeq ($(UNAME), Linux )
 endif
 
 rocksdb:
-	cd deps/rocksdb && EXTRA_CFLAGS="-Wno-error=maybe-uninitialized -Wno-error=uninitialized" EXTRA_CXXFLAGS="-Wno-error=maybe-uninitialized -Wno-error=uninitialized" make -j8 static_lib
+	@[ -d $(ROCKSDB_BUILD_DIR) ] || (mkdir $(ROCKSDB_BUILD_DIR))
+	@cd $(ROCKSDB_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DWITH_LZ4=ON -DWITH_ZSTD=ON -DWITH_ZLIB=OFF -DWITH_SNAPPY=OFF -DROCKSDB_BUILD_SHARED=OFF -DCMAKE_INSTALL_PREFIX=$(ROCKSDB_BUILD_DIR) ..
+	@cd $(ROCKSDB_BUILD_DIR) && EXTRA_CFLAGS=$(ROCKSDB_EXTRA_CFLAGS) EXTRA_CXXFLAGS=$(ROCKSDB_EXTRA_CXXFLAGS) make rocksdb -j6
+	@cd $(ROCKSDB_BUILD_DIR) && cmake --install . --component devel
 
 ## erigon:                            build erigon
 cdk-erigon: go-version rocksdb cdk-erigon.cmd
@@ -201,6 +213,9 @@ test-erigon-lib:
 test-erigon-ext:
 	@cd tests/erigon-ext-test && ./test.sh $(GIT_COMMIT)
 
+test-rocksdb: rocksdb
+	@cd erigon-lib/kv/rocksdb && $(GOTEST)
+
 ## test:                              run unit tests with a 100s timeout
 .PHONY: test
 test:
@@ -239,6 +254,7 @@ cpu_monitor:
 clean:
 	go clean -cache
 	rm -fr build/*
+	rm -rf $(ROCKSDB_BUILD_DIR)
 
 # The devtools target installs tools required for 'go generate'.
 # You need to put $GOBIN (or $GOPATH/bin) in your PATH to use 'go generate'.

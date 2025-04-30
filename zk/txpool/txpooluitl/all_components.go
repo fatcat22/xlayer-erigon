@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"github.com/c2h5oh/datasize"
 	mdbx2 "github.com/erigontech/mdbx-go/mdbx"
-	"github.com/ledgerwatch/erigon-lib/kv/dbbuilder"
 	"github.com/ledgerwatch/erigon-lib/kv/mdbx"
 	"time"
 
@@ -109,7 +108,7 @@ func AllComponents(ctx context.Context, cfg txpoolcfg.Config, ethCfg *ethconfig.
 		Flags(func(f uint) uint { return f ^ mdbx2.Durable | mdbx2.SafeNoSync }).
 		GrowthStep(16 * datasize.MB).
 		SyncPeriod(30 * time.Second)
-	txPoolDB, err := dbbuilder.NewDB(cfg.DatabaseType, ctx, opts, kv.TxpoolTablesCfg, cfg.EnableConbineLog)
+	txPoolDB, err := cfg.DatabaseType.NewDB(ctx, opts, kv.TxpoolTablesCfg, cfg.EnableConbineLog)
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
 	}

@@ -5,41 +5,66 @@ import (
 	"fmt"
 	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon-lib/kv/combinedb"
+	"github.com/ledgerwatch/erigon-lib/kv/dbutils"
 	"github.com/ledgerwatch/erigon-lib/kv/mdbx"
 	"github.com/ledgerwatch/erigon-lib/kv/rocksdb"
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/compatible_rocksdb"
+	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/common"
 )
 
-type DatabseType int
+type majorDBType int
 
 const (
-	DatabseTypeMdbx DatabseType = iota // default value
-	DatabaseTypeRocksDB
-	DatabaseTypeCombine
+	majorDBTypeMdbx majorDBType = iota // default value
+	majorDBTypeRocksdb
+	majorDBTypeCombine
 )
 
-func ToDatabaseType(s string) DatabseType {
-	switch s {
+type DatabaseType struct {
+	major       majorDBType
+	rocksdbType rocksdb.RocksDBType
+	combineType combinedb.CombineDBType
+}
+
+// ToDatabaseType convert the string to DatabaseType.
+// the string could be:
+// - mdbx
+// - rocksdb.native
+// - rocksdb.compatible.mock
+// - rocksdb.compatible.rocksdb
+// - combine.native
+// - combine.compatible.mock
+// - combine.compatible.rocksdb
+func ToDatabaseType(s string) DatabaseType {
+	var dbType DatabaseType
+
+	major, others := dbutils.SplitAtFirst(s, ".")
+	switch major {
 	case "mdbx":
-		return DatabseTypeMdbx
+		dbType.major = majorDBTypeMdbx
 	case "rocksdb":
-		return DatabaseTypeRocksDB
+		dbType.major = majorDBTypeRocksdb
+		dbType.rocksdbType = rocksdb.ToRocksDBType(others)
 	case "combine":
-		return DatabaseTypeCombine
+		dbType.major = majorDBTypeCombine
+		dbType.combineType = combinedb.ToCombineDBType(others)
 	default:
 		panic(fmt.Sprintf("unknown db type: %s", s))
 	}
+
+	return dbType
 }
 
-func NewDB(dbType DatabseType, ctx context.Context, opts mdbx.MdbxOpts, tableCfg kv.TableCfg, enableCombineLog bool) (kv.RwDB, error) {
-	switch dbType {
-	case DatabseTypeMdbx:
+func (dt DatabaseType) NewDB(ctx context.Context, opts mdbx.MdbxOpts, tableCfg kv.TableCfg, enableCombineLog bool) (kv.RwDB, error) {
+	switch dt.major {
+	case majorDBTypeMdbx:
 		return opts.Open(ctx)
-	case DatabaseTypeRocksDB:
-		return compatible_rocksdb.NewRocksDB(opts.GetPath(), opts.GetLogger(), tableCfg, opts.GetLabel(), opts.GetRoTxsLimiter(), opts.IsReadonly(), rocksdb.RealRDB)
-	case DatabaseTypeCombine:
-		return combinedb.NewCombinDB(ctx, opts, tableCfg, enableCombineLog)
+	case majorDBTypeRocksdb:
+		options := common.NewRocksDBOptions()
+		return dt.rocksdbType.NewRocksDB(opts.GetPath(), opts.GetLogger(), tableCfg, opts.GetLabel(), opts.GetRoTxsLimiter(), opts.IsReadonly(), options)
+	case majorDBTypeCombine:
+		options := common.NewRocksDBOptions()
+		return combinedb.NewCombinDB(ctx, opts, tableCfg, enableCombineLog, options, dt.combineType)
 	default:
-		panic(fmt.Sprintf("unknown db type: %v", dbType))
+		panic(fmt.Sprintf("unknown databse type: %v", dt.major))
 	}
 }

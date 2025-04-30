@@ -9,39 +9,35 @@ import (
 	common2 "github.com/ledgerwatch/erigon-lib/kv/rocksdb/common"
 )
 
-type RocksDbCursor struct {
+type compatibleCursor struct {
+	rtx *compatibleTransaction
+	it  *compatibleIterator
+
 	table    string
 	tableCfg kv.TableCfgItem
 
-	rtx *RocksDbTx
-	id  uint64
-
-	it *RocksDbIterator
+	id uint64
 }
 
-func newRocksDbCursorRW(table string, tableCfg kv.TableCfgItem, rtx *RocksDbTx, id uint64) (*RocksDbCursor, error) {
-	return &RocksDbCursor{
+func newCompatibleCursorRW(table string, tableCfg kv.TableCfgItem, rtx *compatibleTransaction, id uint64) (*compatibleCursor, error) {
+	return &compatibleCursor{
+		rtx: rtx,
+		it:  newCompatibleIterator(rtx.tx, table),
+
 		table:    table,
 		tableCfg: tableCfg,
-
-		rtx: rtx,
-		it:  NewRocksDbIterator(rtx.tx, table),
 
 		id: id,
 	}, nil
 }
 
-func (c *RocksDbCursor) UpdateSnapshot() {
-	c.it.UpdateSnapshot()
-}
-
 // impl Cursor interface
 
-func (c *RocksDbCursor) First() ([]byte, []byte, error) { // First - position at first key/data item
+func (c *compatibleCursor) First() ([]byte, []byte, error) { // First - position at first key/data item
 	return c.Seek(nil)
 }
 
-func (c *RocksDbCursor) Seek(seek []byte) (k []byte, v []byte, err error) { // Seek - position at first key greater than or equal to specified key
+func (c *compatibleCursor) Seek(seek []byte) (k []byte, v []byte, err error) { // Seek - position at first key greater than or equal to specified key
 	if c.tableCfg.AutoDupSortKeysConversion {
 		return c.seekDupSort(seek)
 	}
@@ -62,7 +58,7 @@ func (c *RocksDbCursor) Seek(seek []byte) (k []byte, v []byte, err error) { // S
 	return k, v, nil
 }
 
-func (c *RocksDbCursor) SeekExact(key []byte) ([]byte, []byte, error) { // SeekExact - position at exact matching key if exists
+func (c *compatibleCursor) SeekExact(key []byte) ([]byte, []byte, error) { // SeekExact - position at exact matching key if exists
 	b := c.tableCfg
 	if b.AutoDupSortKeysConversion && len(key) == b.DupFromLen {
 		from, to := b.DupFromLen, b.DupToLen
@@ -89,7 +85,7 @@ func (c *RocksDbCursor) SeekExact(key []byte) ([]byte, []byte, error) { // SeekE
 	return k, v, nil
 }
 
-func (c *RocksDbCursor) Next() (k []byte, v []byte, err error) { // Next - position at next key/value (can iterate over DupSort key/values automatically)
+func (c *compatibleCursor) Next() (k []byte, v []byte, err error) { // Next - position at next key/value (can iterate over DupSort key/values automatically)
 	k, v, err = c.it.Next()
 	if err != nil {
 		if errors.Is(err, common2.ErrInvalidIter) {
@@ -111,7 +107,7 @@ func (c *RocksDbCursor) Next() (k []byte, v []byte, err error) { // Next - posit
 	return k, v, nil
 }
 
-func (c *RocksDbCursor) Prev() (k []byte, v []byte, err error) { // Prev - position at previous key
+func (c *compatibleCursor) Prev() (k []byte, v []byte, err error) { // Prev - position at previous key
 	k, v, err = c.it.Prev()
 	if err != nil {
 		if errors.Is(err, common2.ErrInvalidIter) {
@@ -130,7 +126,7 @@ func (c *RocksDbCursor) Prev() (k []byte, v []byte, err error) { // Prev - posit
 	return k, v, nil
 
 }
-func (c *RocksDbCursor) Last() ([]byte, []byte, error) { // Last - position at last key and last possible value
+func (c *compatibleCursor) Last() ([]byte, []byte, error) { // Last - position at last key and last possible value
 	k, v, err := c.it.Last()
 	if err != nil {
 		if errors.Is(err, common2.ErrInvalidIter) {
@@ -150,7 +146,7 @@ func (c *RocksDbCursor) Last() ([]byte, []byte, error) { // Last - position at l
 	return k, v, nil
 
 }
-func (c *RocksDbCursor) Current() ([]byte, []byte, error) { // Current - return key/data at current cursor position
+func (c *compatibleCursor) Current() ([]byte, []byte, error) { // Current - return key/data at current cursor position
 	k, v, err := c.it.Current()
 	if err != nil {
 		return []byte{}, nil, err
@@ -166,11 +162,11 @@ func (c *RocksDbCursor) Current() ([]byte, []byte, error) { // Current - return 
 	return k, v, nil
 }
 
-func (c *RocksDbCursor) Count() (uint64, error) { // Count - fast way to calculate amount of keys in bucket. It counts all keys even if Prefix was set.
+func (c *compatibleCursor) Count() (uint64, error) { // Count - fast way to calculate amount of keys in bucket. It counts all keys even if Prefix was set.
 	return c.it.Count()
 }
 
-func (c *RocksDbCursor) Close() {
+func (c *compatibleCursor) Close() {
 	if c.it != nil {
 		c.it.Close()
 		delete(c.rtx.cursors, c.id)
@@ -179,7 +175,7 @@ func (c *RocksDbCursor) Close() {
 }
 
 // Put - based on order
-func (c *RocksDbCursor) Put(k, v []byte) error {
+func (c *compatibleCursor) Put(k, v []byte) error {
 	b := c.tableCfg
 	if b.AutoDupSortKeysConversion {
 		if err := c.putDupSort(k, v); err != nil {
@@ -194,7 +190,7 @@ func (c *RocksDbCursor) Put(k, v []byte) error {
 }
 
 // Append - append the given key/data pair to the end of the database. This option allows fast bulk loading when keys are already known to be in the correct order.
-func (c *RocksDbCursor) Append(k []byte, v []byte) error {
+func (c *compatibleCursor) Append(k []byte, v []byte) error {
 	if c.tableCfg.AutoDupSortKeysConversion {
 		b := c.tableCfg
 		from, to := b.DupFromLen, b.DupToLen
@@ -222,7 +218,7 @@ func (c *RocksDbCursor) Append(k []byte, v []byte) error {
 }
 
 // Delete - short version of SeekExact+DeleteCurrent or SeekBothExact+DeleteCurrent
-func (c *RocksDbCursor) Delete(k []byte) error {
+func (c *compatibleCursor) Delete(k []byte) error {
 	if c.tableCfg.AutoDupSortKeysConversion {
 		return c.deleteDupSort(k)
 	}
@@ -242,7 +238,7 @@ func (c *RocksDbCursor) Delete(k []byte) error {
 	return c.delCurrent()
 }
 
-func (c *RocksDbCursor) getBothRange(searchKey, searchV []byte) ([]byte, error) {
+func (c *compatibleCursor) getBothRange(searchKey, searchV []byte) ([]byte, error) {
 	// mdbx:
 	// _, v, err := c.c.Get(k, v, mdbx.GetBothRange)
 	// return v, err
@@ -251,7 +247,7 @@ func (c *RocksDbCursor) getBothRange(searchKey, searchV []byte) ([]byte, error) 
 	return v, err
 }
 
-func (c *RocksDbCursor) getBoth(k, v []byte) ([]byte, error) {
+func (c *compatibleCursor) getBoth(k, v []byte) ([]byte, error) {
 	//_, v, err := c.c.Get(k, v, mdbx.GetBoth)
 	//return v, err
 
@@ -259,7 +255,7 @@ func (c *RocksDbCursor) getBoth(k, v []byte) ([]byte, error) {
 	return v, err
 }
 
-func (c *RocksDbCursor) delCurrent() error {
+func (c *compatibleCursor) delCurrent() error {
 	// mdbx
 	// return c.c.Del(mdbx.Current)
 	curK, valueStamp, err := c.it.currentKeyAndValueStamp()
@@ -300,11 +296,11 @@ func (c *RocksDbCursor) delCurrent() error {
 // can still be used on it.
 // Both MDB_NEXT and MDB_GET_CURRENT will return the same record after
 // this operation.
-func (c *RocksDbCursor) DeleteCurrent() error {
+func (c *compatibleCursor) DeleteCurrent() error {
 	return c.delCurrent()
 }
 
-func (c *RocksDbCursor) putDupSort(key []byte, value []byte) error {
+func (c *compatibleCursor) putDupSort(key []byte, value []byte) error {
 	b := c.tableCfg
 	from, to := b.DupFromLen, b.DupToLen
 	if len(key) != from && len(key) >= to {
@@ -345,7 +341,7 @@ func (c *RocksDbCursor) putDupSort(key []byte, value []byte) error {
 	return c.put(key, value)
 }
 
-func (c *RocksDbCursor) putCurrent(k, v []byte) error {
+func (c *compatibleCursor) putCurrent(k, v []byte) error {
 	// mdbx:
 	// return c.c.Put(k, v, mdbx.Current)
 	curK, valueStamp, err := c.it.currentKeyAndValueStamp()
@@ -371,7 +367,7 @@ func (c *RocksDbCursor) putCurrent(k, v []byte) error {
 	return nil
 }
 
-func (c *RocksDbCursor) putNoOverwrite(k, v []byte) error {
+func (c *compatibleCursor) putNoOverwrite(k, v []byte) error {
 	// mdbx:
 	// return c.c.Put(k, v, mdbx.NoOverwrite)
 
@@ -383,7 +379,7 @@ func (c *RocksDbCursor) putNoOverwrite(k, v []byte) error {
 	return c.put(k, v)
 }
 
-func (c *RocksDbCursor) put(k, v []byte) error {
+func (c *compatibleCursor) put(k, v []byte) error {
 	var err error
 	if c.tableCfg.Flags&kv.DupSort != 0 {
 		err = c.rtx.putSorted(c.table, k, v)
@@ -398,7 +394,7 @@ func (c *RocksDbCursor) put(k, v []byte) error {
 	return nil
 }
 
-func (c *RocksDbCursor) seekDupSort(seek []byte) (k, v []byte, err error) {
+func (c *compatibleCursor) seekDupSort(seek []byte) (k, v []byte, err error) {
 	b := c.tableCfg
 	from, to := b.DupFromLen, b.DupToLen
 	if len(seek) == 0 {
@@ -458,16 +454,16 @@ func (c *RocksDbCursor) seekDupSort(seek []byte) (k, v []byte, err error) {
 	return k, v, nil
 }
 
-func (c *RocksDbCursor) setRange(k []byte) ([]byte, []byte, error) {
+func (c *compatibleCursor) setRange(k []byte) ([]byte, []byte, error) {
 	// return c.c.Get(k, nil, mdbx.SetRange)
 	return c.it.Seek(k)
 }
-func (c *RocksDbCursor) set(k []byte) ([]byte, []byte, error) {
+func (c *compatibleCursor) set(k []byte) ([]byte, []byte, error) {
 	// return c.c.Get(k, nil, mdbx.Set)
 	return c.it.SeekExact(k)
 }
 
-func (c *RocksDbCursor) putAppendDup(k, v []byte) (err error) {
+func (c *compatibleCursor) putAppendDup(k, v []byte) (err error) {
 	curK, curV, curErr := c.it.Current()
 	defer func() {
 		if err != nil {
@@ -498,7 +494,7 @@ func (c *RocksDbCursor) putAppendDup(k, v []byte) (err error) {
 	return c.put(k, v)
 }
 
-func (c *RocksDbCursor) putAppend(k, v []byte) (err error) {
+func (c *compatibleCursor) putAppend(k, v []byte) (err error) {
 	curK, curV, curErr := c.it.Current()
 	defer func() {
 		if err != nil {
@@ -525,7 +521,7 @@ func (c *RocksDbCursor) putAppend(k, v []byte) (err error) {
 	return c.putNoOverwrite(k, v)
 }
 
-func (c *RocksDbCursor) deleteDupSort(key []byte) error {
+func (c *compatibleCursor) deleteDupSort(key []byte) error {
 	b := c.tableCfg
 	from, to := b.DupFromLen, b.DupToLen
 	if len(key) != from && len(key) >= to {
@@ -557,7 +553,7 @@ func (c *RocksDbCursor) deleteDupSort(key []byte) error {
 	return c.delCurrent()
 }
 
-func (c *RocksDbCursor) delAllDupData() (err error) {
+func (c *compatibleCursor) delAllDupData() (err error) {
 	// return c.c.Del(mdbx.AllDups)
 	k, v, err := c.it.Current()
 	if err != nil {
@@ -582,7 +578,7 @@ func (c *RocksDbCursor) delAllDupData() (err error) {
 	return nil
 }
 
-func (c *RocksDbCursor) lastDup() ([]byte, error) {
+func (c *compatibleCursor) lastDup() ([]byte, error) {
 	// _, v, err := c.c.Get(nil, nil, mdbx.LastDup)
 	// return v, err
 
@@ -590,7 +586,7 @@ func (c *RocksDbCursor) lastDup() ([]byte, error) {
 	return v, err
 }
 
-func (c *RocksDbCursor) firstDup() ([]byte, error) {
+func (c *compatibleCursor) firstDup() ([]byte, error) {
 	//_, v, err := c.c.Get(nil, nil, mdbx.FirstDup)
 	//return v, err
 
@@ -598,13 +594,13 @@ func (c *RocksDbCursor) firstDup() ([]byte, error) {
 	return v, err
 }
 
-func (c *RocksDbCursor) nextDup() ([]byte, []byte, error) {
+func (c *compatibleCursor) nextDup() ([]byte, []byte, error) {
 	// return c.c.Get(nil, nil, mdbx.NextDup)
 
 	return c.it.NextDup()
 }
 
-func (c *RocksDbCursor) nextNoDup() ([]byte, []byte, error) {
+func (c *compatibleCursor) nextNoDup() ([]byte, []byte, error) {
 	// return c.c.Get(nil, nil, mdbx.NextNoDup)
 	if err := c.it.NextKey(); err != nil {
 		if errors.Is(err, common2.ErrInvalidIter) {
@@ -622,7 +618,7 @@ func (c *RocksDbCursor) nextNoDup() ([]byte, []byte, error) {
 	return k, v, nil
 }
 
-func (c *RocksDbCursor) prevDup() ([]byte, []byte, error) {
+func (c *compatibleCursor) prevDup() ([]byte, []byte, error) {
 	// return c.c.Get(nil, nil, mdbx.PrevDup)
 	return c.it.PrevDup()
 }

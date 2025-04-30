@@ -605,10 +605,8 @@ func TestDelete(t *testing.T) {
 		}
 
 		for k, _, err := rc.Seek(Uint64ToBytes(fromBlock + 1)); k != nil; k, _, err = rc.Next() {
-			fmt.Printf("loop. rc:%v\n", rc)
 			require.NoError(t, err)
 			require.NoError(t, rtx.Delete(rocksdbTestTable2, k))
-			fmt.Printf("loop end\n")
 		}
 	})
 	t.Run("notDupSort", func(t *testing.T) {

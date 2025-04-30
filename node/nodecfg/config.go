@@ -168,7 +168,7 @@ type Config struct {
 
 	Http httpcfg.HttpCfg
 
-	DatabaseType     dbbuilder.DatabseType
+	DatabaseType     dbbuilder.DatabaseType
 	EnableConbineLog bool
 }
 

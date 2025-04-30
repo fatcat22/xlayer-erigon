@@ -85,12 +85,14 @@ pprof.addr: 0.0.0.0
 
 zkevm.standalone-smt-db: true  # true: enalbe split smt db, false: not split
 
-# database type of txpool. the value could be:
-# mdbx, rocksdb, combine
+# database type. the value could be:
+# - mdbx
+# - rocksdb.native
+# - rocksdb.compatible.mock
+# - rocksdb.compatible.rocksdb
+# - combine.native
+# - combine.compatible.mock
+# - combine.compatible.rocksdb
 txpool.dbtype: "mdbx"
-
-# database type of chain data. the value could be:
-# mdbx, rocksdb, combine
 chaindata.dbtype: "mdbx"
-
 combinedb.log.enable: false

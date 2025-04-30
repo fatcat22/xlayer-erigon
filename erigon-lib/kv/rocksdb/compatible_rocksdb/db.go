@@ -3,26 +3,21 @@ package compatible_rocksdb
 import (
 	"context"
 	"fmt"
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb"
-	rdbcommon "github.com/ledgerwatch/erigon-lib/kv/rocksdb/common"
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/native_rocksdb"
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/native_rocksdb/mock_rocksdb"
 	"runtime"
 	"unsafe"
 
 	"github.com/ledgerwatch/erigon-lib/common/dbg"
 	"github.com/ledgerwatch/erigon-lib/kv"
+	rdbcommon "github.com/ledgerwatch/erigon-lib/kv/rocksdb/common"
+	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/compatible_rocksdb/backend"
+	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/compatible_rocksdb/backend/backend_type"
+	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/compatible_rocksdb/backend/mock"
 	"github.com/ledgerwatch/log/v3"
-	"github.com/linxGnu/grocksdb"
 	"golang.org/x/sync/semaphore"
 )
 
-type RocksDB struct {
-	db       native_rocksdb.RDB
-	lruCache *grocksdb.Cache
-	bbto     *grocksdb.BlockBasedTableOptions
-	opts     *grocksdb.Options
-	txopts   *grocksdb.TransactionDBOptions
+type CompatibleRocksDB struct {
+	db backend.CompatibleBackend
 
 	closeGuard *rdbcommon.CloseGuard
 
@@ -36,35 +31,20 @@ type RocksDB struct {
 	leakDetector   *dbg.LeakDetector
 }
 
-func NewRocksDB(dbPath string, logger log.Logger, tablesCfg kv.TableCfg, label kv.Label, readTxLimiter *semaphore.Weighted, readOnly bool, rdbType rocksdb.RDBType) (kv.RwDB, error) {
+func NewCompatibleRocksDB(dbPath string, logger log.Logger, tablesCfg kv.TableCfg, label kv.Label, readTxLimiter *semaphore.Weighted, readOnly bool, backendType backend_type.CompatibleBackendType, options *rdbcommon.RocksDBOptions) (kv.RwDB, error) {
 	if readTxLimiter == nil {
 		targetSemCount := int64(runtime.GOMAXPROCS(-1)) - 1
 		readTxLimiter = semaphore.NewWeighted(targetSemCount) // 1 less than max to allow unlocking to happen
 	}
 	writeTxLimiter := semaphore.NewWeighted(int64(runtime.GOMAXPROCS(-1)) - 1) // 1 less than max to allow unlocking to happen
 
-	lruCache := grocksdb.NewLRUCache(3 << 30)
-
-	bbto := grocksdb.NewDefaultBlockBasedTableOptions()
-	bbto.SetBlockCache(lruCache)
-
-	opts := grocksdb.NewDefaultOptions()
-	opts.SetCreateIfMissing(true)
-	opts.SetBlockBasedTableFactory(bbto)
-
-	txopts := grocksdb.NewDefaultTransactionDBOptions()
-
-	db, err := rdbType.NewRDB(opts, txopts, dbPath)
+	db, err := backendType.NewBackend(dbPath, readOnly, options)
 	if err != nil {
 		return nil, err
 	}
 
-	return &RocksDB{
+	return &CompatibleRocksDB{
 		db:             db,
-		lruCache:       lruCache,
-		bbto:           bbto,
-		opts:           opts,
-		txopts:         txopts,
 		closeGuard:     rdbcommon.NewCloseGuard(),
 		readOnly:       readOnly,
 		tablesCfg:      tablesCfg,
@@ -75,41 +55,27 @@ func NewRocksDB(dbPath string, logger log.Logger, tablesCfg kv.TableCfg, label k
 	}, nil
 }
 
-func (db *RocksDB) GetMemStorage() map[string]*rdbcommon.DBValue {
-	return db.db.(*mock_rocksdb.MemoryRDB).GetMemStorage()
+func (db *CompatibleRocksDB) GetMemStorage() map[string]*rdbcommon.DBValue {
+	return db.db.(*mock.MemoryRDB).GetMemStorage()
 }
 
-// impl Closer interface
-func (db *RocksDB) Close() {
+func (db *CompatibleRocksDB) Close() {
 	firstClose := db.closeGuard.Close()
 	if firstClose {
 		db.db.Close()
 		db.db = nil
-
-		db.lruCache.Destroy()
-		db.lruCache = nil
-
-		db.bbto.Destroy()
-		db.bbto = nil
-
-		db.opts.Destroy()
-		db.opts = nil
-
-		db.txopts.Destroy()
-		db.txopts = nil
 	}
 }
 
-func (db *RocksDB) Get(table string, k []byte) (*rdbcommon.DBValue, error) {
-	return db.db.Get(rdbcommon.MergeKey(table, k))
+func (db *CompatibleRocksDB) Get(table string, k []byte) (*rdbcommon.DBValue, error) {
+	return db.db.GetCompatibleValue(table, k)
 }
 
-// impl Ro interface
-func (db *RocksDB) ReadOnly() bool {
+func (db *CompatibleRocksDB) ReadOnly() bool {
 	return db.readOnly
 }
 
-func (db *RocksDB) View(ctx context.Context, f func(tx kv.Tx) error) error {
+func (db *CompatibleRocksDB) View(ctx context.Context, f func(tx kv.Tx) error) error {
 	tx, err := db.BeginRo(ctx)
 	if err != nil {
 		return err
@@ -119,26 +85,25 @@ func (db *RocksDB) View(ctx context.Context, f func(tx kv.Tx) error) error {
 	return f(tx)
 }
 
-func (db *RocksDB) BeginRo(ctx context.Context) (tx kv.Tx, err error) {
+func (db *CompatibleRocksDB) BeginRo(ctx context.Context) (tx kv.Tx, err error) {
 	return db.beginTx(ctx, db.readTxLimiter)
 }
 
-func (db *RocksDB) AllTables() kv.TableCfg {
+func (db *CompatibleRocksDB) AllTables() kv.TableCfg {
 	return db.tablesCfg
 }
 
-func (db *RocksDB) PageSize() uint64 {
-	// note: no avaliable call to PageSize for now
+func (db *CompatibleRocksDB) PageSize() uint64 {
+	// note: no available call to PageSize for now
 	panic("not supported")
 }
 
-func (db *RocksDB) CHandle() unsafe.Pointer {
-	// note: not support for RocksDB
+func (db *CompatibleRocksDB) CHandle() unsafe.Pointer {
+	// note: not support for CompatibleRocksDB
 	panic("not supported")
 }
 
-// impl RwDB interface
-func (db *RocksDB) Update(ctx context.Context, f func(tx kv.RwTx) error) error {
+func (db *CompatibleRocksDB) Update(ctx context.Context, f func(tx kv.RwTx) error) error {
 	tx, err := db.BeginRw(ctx)
 	if err != nil {
 		return err
@@ -159,7 +124,7 @@ func (db *RocksDB) Update(ctx context.Context, f func(tx kv.RwTx) error) error {
 	return nil
 }
 
-func (db *RocksDB) UpdateNosync(ctx context.Context, f func(tx kv.RwTx) error) error {
+func (db *CompatibleRocksDB) UpdateNosync(ctx context.Context, f func(tx kv.RwTx) error) error {
 	tx, err := db.BeginRwNosync(ctx)
 	if err != nil {
 		return err
@@ -180,16 +145,16 @@ func (db *RocksDB) UpdateNosync(ctx context.Context, f func(tx kv.RwTx) error) e
 	return nil
 }
 
-func (db *RocksDB) BeginRw(ctx context.Context) (tx kv.RwTx, err error) {
+func (db *CompatibleRocksDB) BeginRw(ctx context.Context) (tx kv.RwTx, err error) {
 	return db.beginTx(ctx, db.writeTxLimiter)
 }
 
-func (db *RocksDB) BeginRwNosync(ctx context.Context) (kv.RwTx, error) {
+func (db *CompatibleRocksDB) BeginRwNosync(ctx context.Context) (kv.RwTx, error) {
 	// note: yztodo: there isn't a real `no sync` in rocksdb
 	return db.BeginRw(ctx)
 }
 
-func (db *RocksDB) beginTx(ctx context.Context, txLimiter *semaphore.Weighted) (tx kv.RwTx, err error) {
+func (db *CompatibleRocksDB) beginTx(ctx context.Context, txLimiter *semaphore.Weighted) (tx kv.RwTx, err error) {
 	// don't try to acquire if the context is already done
 	select {
 	case <-ctx.Done():
@@ -219,7 +184,7 @@ func (db *RocksDB) beginTx(ctx context.Context, txLimiter *semaphore.Weighted) (
 
 	id := db.leakDetector.Add()
 	// todo: yztodo: not a real read only tx yet
-	return newRocksDbTx(db, ctx, func() {
+	return newCompatibleTransaction(db, ctx, func() {
 		db.closeGuard.DeReference()
 		txLimiter.Release(1)
 		db.leakDetector.Del(id)

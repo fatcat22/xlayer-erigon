@@ -4,17 +4,16 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/compatible_rocksdb"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"runtime"
 	"time"
 
 	"github.com/ledgerwatch/erigon-lib/kv"
+	"github.com/ledgerwatch/erigon-lib/kv/dbbuilder"
 	"github.com/ledgerwatch/erigon-lib/kv/mdbx"
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb"
 	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/common"
+	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/compatible_rocksdb"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/linxGnu/grocksdb"
 	"golang.org/x/sync/semaphore"
@@ -27,7 +26,7 @@ type dataPair struct {
 
 func main() {
 	go func() {
-		http.ListenAndServe(":6060", nil)
+		_ = http.ListenAndServe(":6060", nil)
 	}()
 	// Command-line argument parsing
 	mdbxPath := flag.String("mdbx", "", "Path to the source MDBX database")
@@ -56,11 +55,7 @@ func main() {
 	}
 
 	// Open the source MDBX database
-	srcDB, err := openMDBX(*mdbxPath, *label, logger)
-	if err != nil {
-		logger.Error("Failed to open MDBX database", "path", *mdbxPath, "error", err)
-		os.Exit(1)
-	}
+	srcDB := openMDBX(*mdbxPath, kv.UnmarshalLabel(*label), logger)
 	defer srcDB.Close()
 
 	logger.Info("start querying all tables")
@@ -75,16 +70,16 @@ func main() {
 	logger.Info("Starting database conversion")
 
 	// handle special tables
-	memDstDB := openMemRDB(logger)
+	memDstDB := openCompatibleMockDB(logger)
 	defer memDstDB.Close()
 	totalRecords += convertTables(specialTables, srcDB, memDstDB, logger, func() {
-		memDatas := memDstDB.(*compatible_rocksdb.RocksDB).GetMemStorage()
+		memDatas := memDstDB.(*compatible_rocksdb.CompatibleRocksDB).GetMemStorage()
 		writeDeduplicatedDirect(memDatas, *rocksdbPath, logger)
 	})
 	memDstDB.Close()
 
 	// handle normal tables
-	dstDB := openRealRDB(*rocksdbPath, logger)
+	dstDB := openCompatibleRocksDB(*rocksdbPath, logger)
 	defer dstDB.Close()
 	totalRecords += convertTables(normalTables, srcDB, dstDB, logger, func() {})
 
@@ -117,40 +112,34 @@ func queryAllTables(db kv.RwDB, specialTablesMap map[string]struct{}) (normalTab
 	return
 }
 
-func openMDBX(path, label string, logger log.Logger) (kv.RwDB, error) {
-	logger.Info("Opening MDBX database", "path", path, "label", label)
+func buildMdbxOpts(path string, label kv.Label, logger log.Logger) mdbx.MdbxOpts {
 	roTxLimit := int64(32)
 	roTxsLimiter := semaphore.NewWeighted(roTxLimit)
 
-	opts := mdbx.NewMDBX(logger).
+	return mdbx.NewMDBX(logger).
 		Path(path).
 		RoTxsLimiter(roTxsLimiter).
 		Readonly().
-		Label(kv.UnmarshalLabel(label))
-
-	return opts.Open(context.Background())
+		Label(label)
 }
 
-func openMemRDB(logger log.Logger) kv.RwDB {
-	return openRocksDB("", rocksdb.MemRDB, logger)
+func openMDBX(path string, label kv.Label, logger log.Logger) kv.RwDB {
+	logger.Info("Opening MDBX database", "path", path, "label", label)
+	return openDB(dbbuilder.ToDatabaseType("mdbx"), buildMdbxOpts(path, label, logger), kv.ChaindataTablesCfg)
 }
 
-func openRealRDB(path string, logger log.Logger) kv.RwDB {
-	return openRocksDB(path, rocksdb.RealRDB, logger)
+func openCompatibleMockDB(logger log.Logger) kv.RwDB {
+	return openDB(dbbuilder.ToDatabaseType("rocksdb.compatible.mock"), buildMdbxOpts("", kv.ChainDB, logger), kv.ChaindataTablesCfg)
 }
 
-func openRocksDB(path string, rdbType rocksdb.RDBType, logger log.Logger) kv.RwDB {
-	targetSemCount := int64(runtime.GOMAXPROCS(-1)) - 1
-	if targetSemCount <= 0 {
-		targetSemCount = 1
-	}
+func openCompatibleRocksDB(path string, logger log.Logger) kv.RwDB {
+	return openDB(dbbuilder.ToDatabaseType("rocksdb.compatible.rocksdb"), buildMdbxOpts(path, kv.ChainDB, logger), kv.ChaindataTablesCfg)
+}
 
-	readTxLimit := int64(32)
-	roTxsLimiter := semaphore.NewWeighted(readTxLimit)
-
-	db, err := compatible_rocksdb.NewRocksDB(path, logger, kv.ChaindataTablesCfg, kv.ChainDB, roTxsLimiter, false, rdbType)
+func openDB(rdbType dbbuilder.DatabaseType, opts mdbx.MdbxOpts, tableCfg kv.TableCfg) kv.RwDB {
+	db, err := rdbType.NewDB(context.Background(), opts, tableCfg, false)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to open rocksdb. path=%s. err=%v", path, err))
+		panic(fmt.Sprintf("Failed to open rocksdb. path=%s. err=%v", opts.GetPath(), err))
 	}
 	return db
 }

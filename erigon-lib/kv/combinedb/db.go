@@ -3,18 +3,64 @@ package combinedb
 import (
 	"context"
 	"fmt"
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/compatible_rocksdb"
 	"path"
 	"sync"
 	"sync/atomic"
 	"unsafe"
 
 	"github.com/ledgerwatch/erigon-lib/kv"
+	"github.com/ledgerwatch/erigon-lib/kv/dbutils"
 	"github.com/ledgerwatch/erigon-lib/kv/mdbx"
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb"
+	rdbcommon "github.com/ledgerwatch/erigon-lib/kv/rocksdb/common"
+	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/compatible_rocksdb"
+	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/compatible_rocksdb/backend/backend_type"
+	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/native_rocksdb"
+	"github.com/ledgerwatch/log/v3"
+	"golang.org/x/sync/semaphore"
 )
 
 var commitLock sync.RWMutex
+
+type CombineDBType struct {
+	major          majorCombineDBType
+	compatibleType backend_type.CompatibleBackendType
+}
+
+type majorCombineDBType int
+
+const (
+	_ majorCombineDBType = iota
+	combineNative
+	combineCompatible
+)
+
+func ToCombineDBType(s string) CombineDBType {
+	var dbType CombineDBType
+
+	major, others := dbutils.SplitAtFirst(s, ".")
+	switch major {
+	case "native":
+		dbType.major = combineNative
+	case "compatible":
+		dbType.major = combineCompatible
+		dbType.compatibleType = backend_type.ToCompatibleBackendType(others)
+	default:
+		panic(fmt.Sprintf("unknown combine db type: %s", s))
+	}
+
+	return dbType
+}
+
+func (ct CombineDBType) newDB(dbPath string, logger log.Logger, tablesCfg kv.TableCfg, label kv.Label, readTxLimiter *semaphore.Weighted, readOnly bool, options *rdbcommon.RocksDBOptions) (kv.RwDB, error) {
+	switch ct.major {
+	case combineNative:
+		return native_rocksdb.NewNativeRocksDB(dbPath, readOnly, options)
+	case combineCompatible:
+		return compatible_rocksdb.NewCompatibleRocksDB(dbPath, logger, tablesCfg, label, readTxLimiter, readOnly, ct.compatibleType, options)
+	default:
+		panic(fmt.Sprintf("unknown combine db type: %v", ct))
+	}
+}
 
 type CombineDB struct {
 	mdbx    kv.RwDB
@@ -25,7 +71,7 @@ type CombineDB struct {
 
 var dbCounter atomic.Uint64
 
-func NewCombinDB(ctx context.Context, opts mdbx.MdbxOpts, tableCfg kv.TableCfg, enableLog bool) (db kv.RwDB, err error) {
+func NewCombinDB(ctx context.Context, opts mdbx.MdbxOpts, tableCfg kv.TableCfg, enableLog bool, options *rdbcommon.RocksDBOptions, combineType CombineDBType) (db kv.RwDB, err error) {
 	dbDir := opts.GetPath()
 
 	opts = opts.Path(path.Join(dbDir, "mdbx"))
@@ -42,7 +88,7 @@ func NewCombinDB(ctx context.Context, opts mdbx.MdbxOpts, tableCfg kv.TableCfg, 
 
 	rocksdbDir := path.Join(dbDir, "rocksdb")
 	opts.GetLogger().Info("Set rocksdb path", "new path", rocksdbDir)
-	rocksdb, err := compatible_rocksdb.NewRocksDB(rocksdbDir, opts.GetLogger(), tableCfg, opts.GetLabel(), opts.GetRoTxsLimiter(), opts.IsReadonly(), rocksdb.RealRDB)
+	rocksdb, err := combineType.newDB(rocksdbDir, opts.GetLogger(), tableCfg, opts.GetLabel(), opts.GetRoTxsLimiter(), opts.IsReadonly(), options)
 	if err != nil {
 		return nil, err
 	}

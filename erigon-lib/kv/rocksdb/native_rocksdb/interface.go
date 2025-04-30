@@ -1,35 +1,49 @@
 package native_rocksdb
 
 import (
-	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/common"
 	"github.com/linxGnu/grocksdb"
 )
 
-type RDB interface {
-	Get(key []byte) (*common.DBValue, error)
-	TransactionBegin(opts *grocksdb.WriteOptions, transactionOpts *grocksdb.TransactionOptions, oldTransaction *grocksdb.Transaction) RDBTransaction
+type NativeRocksDBBase interface {
 	Close()
 }
 
-type RDBTransaction interface {
-	Get(opts *grocksdb.ReadOptions, key []byte) (*common.DBValue, error)
-	Put(key []byte, value *common.DBValue) error
-	Delete(key []byte) error
+type NativeRocksDB interface {
+	NativeRocksDBBase
+
+	NativeGet(opts *grocksdb.ReadOptions, key []byte) ([]byte, error)
+	NewNativeTransaction(opts *grocksdb.WriteOptions, transactionOpts *grocksdb.TransactionOptions, oldTransaction *grocksdb.Transaction) NativeTransaction
+}
+
+type NativeTransactionBase interface {
 	Commit() error
-	Rollback() error
-	NewIterator(beginPrefix, endPrefix []byte) RDBIterator
+	Rollback()
 	Destroy()
 }
 
-type RDBIterator interface {
+type NativeTransaction interface {
+	NativeTransactionBase
+
+	NativeGet(opts *grocksdb.ReadOptions, key []byte) ([]byte, error)
+	NativePut(key, value []byte) error
+	NativeDelete(key []byte) error
+	NewNativeIterator(beginPrefix, endPrefix []byte) NativeIterator
+}
+
+type NativeIteratorBase interface {
 	Valid() bool
 	SeekToFirst()
 	SeekToLast()
 	Next()
 	Prev()
-	Seek(key []byte)
-	Key() []byte
-	Value() *common.DBValue
 	Close()
 	Err() error
+}
+
+type NativeIterator interface {
+	NativeIteratorBase
+
+	NativeSeek(key []byte)
+	NativeKey() []byte
+	NativeValue() []byte
 }

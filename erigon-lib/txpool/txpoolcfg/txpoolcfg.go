@@ -64,7 +64,7 @@ type Config struct {
 
 	PurgeDistance time.Duration
 
-	DatabaseType     dbbuilder.DatabseType
+	DatabaseType     dbbuilder.DatabaseType
 	EnableConbineLog bool
 }
 
@@ -91,7 +91,7 @@ var DefaultConfig = Config{
 
 	OverrideShanghaiTime: nil,
 
-	DatabaseType: dbbuilder.DatabseTypeMdbx,
+	DatabaseType: dbbuilder.ToDatabaseType("mdbx"),
 }
 
 type DiscardReason uint8

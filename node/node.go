@@ -40,7 +40,6 @@ import (
 	"github.com/ledgerwatch/log/v3"
 
 	"github.com/ledgerwatch/erigon-lib/kv"
-	"github.com/ledgerwatch/erigon-lib/kv/dbbuilder"
 	"github.com/ledgerwatch/erigon-lib/kv/mdbx"
 	"github.com/ledgerwatch/erigon-lib/kv/memdb"
 	"github.com/ledgerwatch/erigon/migrations"
@@ -368,7 +367,7 @@ func OpenDatabase(ctx context.Context, config *nodecfg.Config, label kv.Label, n
 		default:
 		}
 
-		return dbbuilder.NewDB(config.DatabaseType, ctx, opts, tablesCfg, config.EnableConbineLog)
+		return config.DatabaseType.NewDB(ctx, opts, tablesCfg, config.EnableConbineLog)
 	}
 	var err error
 	db, err = openFunc(false)
