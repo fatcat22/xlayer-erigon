@@ -83,7 +83,7 @@ pprof: true
 pprof.port: 6060
 pprof.addr: 0.0.0.0
 
-zkevm.standalone-smt-db: true  # true: enalbe split smt db, false: not split
+zkevm.standalone-smt-db: true  # true: enalbe split smt db, false: not split. also notice smt.dbtype if enable split db.
 
 # database type. the value could be:
 # - mdbx
@@ -95,4 +95,5 @@ zkevm.standalone-smt-db: true  # true: enalbe split smt db, false: not split
 # - combine.compatible.rocksdb
 txpool.dbtype: "mdbx"
 chaindata.dbtype: "mdbx"
+smt.dbtype: "mdbx"
 combinedb.log.enable: false

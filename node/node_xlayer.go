@@ -71,7 +71,7 @@ func OpenDatabaseSMT(ctx context.Context, config *nodecfg.Config, logger log.Log
 			opts = opts.GrowthStep(config.MdbxGrowthStep)
 		}
 		opts = opts.DirtySpace(uint64(512 * datasize.MB))
-		return opts.Open(ctx)
+		return config.SMTDBType.NewDB(ctx, opts, kv.TableCfg{}, config.EnableConbineLog)
 	}
 
 	return openFunc(false)

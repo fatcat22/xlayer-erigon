@@ -367,7 +367,7 @@ func OpenDatabase(ctx context.Context, config *nodecfg.Config, label kv.Label, n
 		default:
 		}
 
-		return config.DatabaseType.NewDB(ctx, opts, tablesCfg, config.EnableConbineLog)
+		return config.ChainDataDBType.NewDB(ctx, opts, tablesCfg, config.EnableConbineLog)
 	}
 	var err error
 	db, err = openFunc(false)

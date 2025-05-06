@@ -92,4 +92,5 @@ zkevm.enable-add-tx-notify: true
 # - combine.compatible.rocksdb
 txpool.dbtype: "mdbx"
 chaindata.dbtype: "mdbx"
+smt.dbtype: "mdbx"
 combinedb.log.enable: false

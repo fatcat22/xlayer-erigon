@@ -168,7 +168,8 @@ type Config struct {
 
 	Http httpcfg.HttpCfg
 
-	DatabaseType     dbbuilder.DatabaseType
+	ChainDataDBType  dbbuilder.DatabaseType
+	SMTDBType        dbbuilder.DatabaseType
 	EnableConbineLog bool
 }
 

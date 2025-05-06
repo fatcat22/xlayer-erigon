@@ -1522,6 +1522,10 @@ var (
 		Name:  "chaindata.dbtype",
 		Usage: "the type of database the node will use to store chain data",
 	}
+	SMTDBTypeFlag = cli.StringFlag{
+		Name:  "smt.dbtype",
+		Usage: "the type of database the node will use to store smt data",
+	}
 
 	CombineDBLogEnable = cli.BoolFlag{
 		Name:  "combinedb.log.enable",
@@ -1880,6 +1884,7 @@ func SetNodeConfig(ctx *cli.Context, cfg *nodecfg.Config, logger log.Logger) {
 	setNodeUserIdent(ctx, cfg)
 	SetP2PConfig(ctx, &cfg.P2P, cfg.NodeName(), cfg.Dirs.DataDir, logger)
 	setChainDataDBType(ctx, cfg)
+	setSMTDBType(ctx, cfg)
 
 	cfg.SentryLogPeerInfo = ctx.IsSet(SentryLogPeerInfoFlag.Name)
 }
@@ -2511,7 +2516,16 @@ func CobraFlags(cmd *cobra.Command, urfaveCliFlagsLists ...[]cli.Flag) {
 
 func setChainDataDBType(ctx *cli.Context, cfg *nodecfg.Config) {
 	if ctx.IsSet(ChainDataDBTypeFlag.Name) {
-		cfg.DatabaseType = dbbuilder.ToDatabaseType(ctx.String(ChainDataDBTypeFlag.Name))
+		cfg.ChainDataDBType = dbbuilder.ToDatabaseType(ctx.String(ChainDataDBTypeFlag.Name))
+	}
+	if ctx.IsSet(CombineDBLogEnable.Name) {
+		cfg.EnableConbineLog = ctx.Bool(CombineDBLogEnable.Name)
+	}
+}
+
+func setSMTDBType(ctx *cli.Context, cfg *nodecfg.Config) {
+	if ctx.IsSet(SMTDBTypeFlag.Name) {
+		cfg.SMTDBType = dbbuilder.ToDatabaseType(ctx.String(SMTDBTypeFlag.Name))
 	}
 	if ctx.IsSet(CombineDBLogEnable.Name) {
 		cfg.EnableConbineLog = ctx.Bool(CombineDBLogEnable.Name)

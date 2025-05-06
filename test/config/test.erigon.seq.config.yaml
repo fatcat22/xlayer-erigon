@@ -103,7 +103,7 @@ zkevm.seal-batch-immediately-on-overflow: true
 zkevm.sequencer-timeout-on-empty-tx-pool: 5ms
 zkevm.pre-run-address-list: [""]
 zkevm.block-info-concurrent: true
-zkevm.standalone-smt-db: true  # true: enable split smt db, false: not split
+zkevm.standalone-smt-db: true  # true: enable split smt db, false: not split. also notice smt.dbtype if enable split db.
 zkevm.enable-async-commit: true
 
 # to reduce lock race in stress test
@@ -121,4 +121,5 @@ zkevm.enable-add-tx-notify: true
 # - combine.compatible.rocksdb
 txpool.dbtype: "mdbx"
 chaindata.dbtype: "mdbx"
+smt.dbtype: "mdbx"
 combinedb.log.enable: false
