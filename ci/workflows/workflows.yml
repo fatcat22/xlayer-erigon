@@ -49,6 +49,12 @@ tasks:
     events:
       - pull_request
 
+  - name: test-resend
+    command: make test-resend
+    type: compose
+    events:
+      - pull_request 
+
   - name: data-loss
     command: cd ./test && make test-data-loss
     type: compose

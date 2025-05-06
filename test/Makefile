@@ -163,6 +163,7 @@ test:
 		run_test test-e2e; \
 		run_test test-data-loss; \
 		run_test test-executor; \
+		run_test test-resend; \
 		run_test tests; \
 		run_test lint; \
 		run_test check_chinese_characters; \
@@ -481,6 +482,24 @@ test-executor:
 	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -count=1 -failfast -race -v -p 1 -timeout 600s ../ci/e2e-1/... -run "^TestEthTransfer$$"
 	git checkout -- ../test/config/test.erigon.seq.config.yaml
 	echo "Executor tests passed"
+
+.PHONY: test-resend
+test-resend:
+	make stop
+	make run
+	sleep 1
+	docker ps -a
+	echo "test-resend step1"
+	go test -count=1 -failfast -race -v -p 1 -timeout 300s -run TestPendingStep1 ./e2e/resend_test.go
+	$(STOP_DOCKER_SEQ)
+	echo "stop seq ok"
+	sleep 1
+	rm -rf data/seq/txpool;
+	sleep 1
+	$(RUN_DOCKER_SEQ)
+	echo "test-resend step2"
+	go test -count=1 -failfast -race -v -p 1 -timeout 300s -run TestTriggerStep2 ./e2e/resend_test.go
+	echo "test-resend passed"
 
 mainnet: build-docker
 	# base services

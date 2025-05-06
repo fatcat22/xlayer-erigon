@@ -264,6 +264,22 @@ jobs:
       - name: Test
         run: make test-executor
         working-directory: test
+
+  # For X Layer, test tx pool resend
+  test-resend:
+    strategy:
+      fail-fast: false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build Docker
+        run: make build-docker
+
+      - name: Test
+        run: make test-resend
+        working-directory: test        
         
   # For X Layer
   check-chinese-chars:
