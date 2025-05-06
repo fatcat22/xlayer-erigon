@@ -745,6 +745,24 @@ func (ec *Client) SendTransaction(ctx context.Context, tx types.Transaction) err
 	return ec.c.CallContext(ctx, nil, "eth_sendRawTransaction", hexutil.Encode(data.Bytes()))
 }
 
+func (ec *Client) NewPendingTransactionFilter(ctx context.Context) (*big.Int, error) {
+	var id hexutil.Big
+	err := ec.c.CallContext(ctx, &id, "eth_newPendingTransactionFilter")
+	if err != nil {
+		return nil, err
+	}
+	return id.ToInt(), nil
+}
+
+func (ec *Client) GetFilterChanges(ctx context.Context, id *big.Int) ([]string, error) {
+	var hashes []string
+	err := ec.c.CallContext(ctx, &hashes, "eth_getFilterChanges", (*hexutil.Big)(id).String())
+	if err != nil {
+		return nil, err
+	}
+	return hashes, nil
+}
+
 func toBlockNumArg(number *big.Int) string {
 	if number == nil {
 		return "latest"

@@ -1449,3 +1449,69 @@ func TestFixedNonceTooLowTransactions(t *testing.T) {
 	require.Equal(t, expectedFinalNonce, finalNonce,
 		"Final nonce is incorrect, expected: %d, actual: %d", expectedFinalNonce, finalNonce)
 }
+
+func TestQueryPendingTransactionsByFilterApi(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
+	client, err := ethclient.Dial(operations.DefaultL2NetworkURL)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	id, err := client.NewPendingTransactionFilter(ctx)
+	require.NoError(t, err)
+
+	// Use a fixed sender address and private key
+	sender := common.HexToAddress(operations.DefaultL2AdminAddress)
+	privateKey, err := crypto.HexToECDSA(strings.TrimPrefix(operations.DefaultL2AdminPrivateKey, "0x"))
+	require.NoError(t, err)
+	signer := types.MakeSigner(operations.GetTestChainConfig(operations.DefaultL2ChainID), 1, 0)
+
+	// Get the initial nonce
+	baseNonce, err := client.PendingNonceAt(ctx, sender)
+	require.NoError(t, err)
+	log.Infof("Starting nonce: %d", baseNonce)
+
+	to := common.HexToAddress(operations.DefaultL2NewAcc1Address)
+	value := uint256.NewInt(uint64(1000)) // Fixed value for easy verification
+	gas := uint64(21000)
+	gasPrice := uint256.NewInt(1 * encoding.Gwei) // Fixed gas price
+
+	txCount := 10
+
+	for nonce := baseNonce; nonce < baseNonce+uint64(txCount); nonce++ {
+		tx := &types.LegacyTx{
+			CommonTx: types.CommonTx{
+				Nonce: nonce,
+				To:    &to,
+				Gas:   gas,
+				Value: value,
+				Data:  nil,
+			},
+			GasPrice: gasPrice,
+		}
+
+		signedTx, err := types.SignTx(tx, *signer, privateKey)
+		require.NoError(t, err)
+
+		err = client.SendTransaction(ctx, signedTx)
+		require.NoError(t, err)
+	}
+
+	hashes, err := client.GetFilterChanges(ctx, id)
+	require.NoError(t, err)
+
+	require.Len(t, hashes, txCount)
+
+	for i, hash := range hashes {
+		tx, _, err := client.TransactionByHash(ctx, common.HexToHash(hash))
+		require.NoError(t, err)
+		txSender, err := tx.Sender(*signer)
+		require.NoError(t, err)
+
+		require.Equal(t, sender, txSender)
+		require.Equal(t, &to, tx.GetTo())
+		require.Equal(t, baseNonce+uint64(i), tx.GetNonce())
+	}
+}
