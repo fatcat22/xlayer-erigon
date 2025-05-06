@@ -163,6 +163,7 @@ func BuildWitnessFromTrieDbState(ctx context.Context, tx kv.Tx, txsmt kv.Tx, tds
 		}
 	}
 
+	// For X Layer, split db and ac
 	eridb := db2.NewRoEriDb(txsmt, tx)
 	if txsmt == nil {
 		eridb = db2.NewRoEriDb(tx, tx)

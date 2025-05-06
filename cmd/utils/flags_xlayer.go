@@ -288,11 +288,30 @@ var (
 		Usage: "Enable concurrent block info calculation",
 		Value: false,
 	}
-
 	EnableAsyncCommit = cli.BoolFlag{
 		Name:  "zkevm.enable-async-commit",
 		Usage: "Enable async smt commit feature",
 		Value: false,
+	}
+	StandaloneSMTDatabase = cli.BoolFlag{
+		Name:  "zkevm.standalone-smt-db",
+		Usage: "Use standalone SMT database, not integrated with chaindb",
+		Value: false,
+	}
+	SequencerSkipEmptyBlocks = cli.BoolFlag{
+		Name:  "zkevm.sequencer-skip-empty-blocks",
+		Usage: "Skip empty blocks",
+		Value: false,
+	}
+	SequencerMaxBlockSealTime = cli.StringFlag{
+		Name:  "zkevm.sequencer-max-block-seal-time",
+		Usage: "Max block seal time. Defaults to 6s",
+		Value: "6s",
+	}
+	SequencerBatchCounterPercentage = cli.IntFlag{
+		Name:  "zkevm.sequencer-batch-counter-percentage",
+		Usage: "Percentage of the sequencer's counter to be used for the batch",
+		Value: 100,
 	}
 )
 

@@ -1,18 +1,16 @@
 package smt
 
 import (
-	"github.com/benbjohnson/immutable"
-	"math/big"
-
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"sync"
 	"time"
 
+	"github.com/benbjohnson/immutable"
 	"github.com/ledgerwatch/erigon-lib/common"
-
 	"github.com/ledgerwatch/erigon/smt/pkg/db"
 	"github.com/ledgerwatch/erigon/smt/pkg/utils"
 	"github.com/ledgerwatch/log/v3"
@@ -30,24 +28,26 @@ type DB interface {
 	DeleteByNodeKey(key utils.NodeKey) error
 	SetLastRoot(lr *big.Int) error
 	SetDepth(uint8) error
-	SetLastHeight(uint64) error
 	CommitBatch() error
 	OpenBatch(quitCh <-chan struct{})
 	RollbackBatch()
+	RoDB
+	// For X Layer, split db and ac
 	SetCache(cache *immutable.Map[string, *immutable.Map[string, []byte]])
 	RetriveAndCleanCache() map[string]map[string][]byte
-	RoDB
+	SetLastHeight(uint64) error
 }
 
 type RoDB interface {
 	GetDepth() (uint8, error)
 	GetLastRoot() (*big.Int, error)
-	GetLastHeight() (uint64, error)
 	GetCode(codeHash []byte) ([]byte, error)
 	GetHashKey(key utils.NodeKey) (utils.NodeKey, error)
 	GetKeySource(key utils.NodeKey) ([]byte, error)
 	Get(key utils.NodeKey, values *utils.NodeValue12) error
 	GetAccountValue(key utils.NodeKey) (utils.NodeValue8, error)
+	// For X Layer, split db and ac
+	GetLastHeight() (uint64, error)
 }
 
 type DebuggableDB interface {
@@ -112,20 +112,6 @@ func (s *SMT) SetLastRoot(lr *big.Int) {
 	if err != nil {
 		panic(err)
 	}
-}
-
-func (s *RoSMT) LastHeight() (uint64, error) {
-	s.clearUpMutex.Lock()
-	defer s.clearUpMutex.Unlock()
-
-	return s.DbRo.GetLastHeight()
-}
-
-func (s *SMT) SetLastHeight(newHeight uint64) error {
-	s.clearUpMutex.Lock()
-	defer s.clearUpMutex.Unlock()
-
-	return s.Db.SetLastHeight(newHeight)
 }
 
 func (s *SMT) StartPeriodicCheck(doneChan chan bool) {
@@ -699,12 +685,6 @@ type TraverseAction func(prefix []byte, k utils.NodeKey, v utils.NodeValue12) (b
 
 func (s *RoSMT) Traverse(ctx context.Context, node *big.Int, action TraverseAction) error {
 	return s.traverse(ctx, node, action, []byte{})
-}
-
-// Define the stack entry structure
-type stackEntry struct {
-	node   *big.Int
-	prefix []byte
 }
 
 // traverse performs an iterative pre-order DFS traversal of the SMT

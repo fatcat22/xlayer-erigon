@@ -3,14 +3,13 @@ package smt
 import (
 	"context"
 	"fmt"
-	"github.com/benbjohnson/immutable"
-	"github.com/ledgerwatch/erigon-lib/kv/membatchwithdb"
 	"math"
 
+	"github.com/benbjohnson/immutable"
 	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/kv"
+	"github.com/ledgerwatch/erigon-lib/kv/membatchwithdb"
 	db2 "github.com/ledgerwatch/erigon/smt/pkg/db"
-
 	"github.com/ledgerwatch/erigon/smt/pkg/smt"
 	"github.com/ledgerwatch/erigon/turbo/trie"
 	"github.com/ledgerwatch/erigon/zk"
@@ -38,6 +37,7 @@ func UnwindZkSMT(ctx context.Context, logPrefix string, from, to uint64, tx kv.R
 		log.Info(fmt.Sprintf("[%s]", logPrefix), "last root", common.BigToHash(dbSmt.LastRoot()))
 	}
 
+	// For X Layer, split db and ac
 	// only open the batch if tx is not already one
 	isBatchOpen := false
 	if txsmt != nil {
@@ -105,6 +105,7 @@ func UnwindZkSMT(ctx context.Context, logPrefix string, from, to uint64, tx kv.R
 		log.Info(fmt.Sprintf("[%s] Trie root matches", logPrefix), "hash", hash.Hex())
 	}
 
+	// For X Layer, split db and ac
 	if isBatchOpen {
 		if err := eridb.CommitBatch(); err != nil {
 			return trie.EmptyRoot, err

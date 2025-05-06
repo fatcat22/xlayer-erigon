@@ -5,14 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/benbjohnson/immutable"
-	smt2 "github.com/ledgerwatch/erigon/zk/smt"
 	"math/big"
 
+	"github.com/benbjohnson/immutable"
 	"github.com/ledgerwatch/erigon-lib/chain"
 	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/common/hexutility"
 	"github.com/ledgerwatch/erigon-lib/kv"
+	smt2 "github.com/ledgerwatch/erigon/zk/smt"
 	zktypes "github.com/ledgerwatch/erigon/zk/types"
 	"github.com/ledgerwatch/log/v3"
 
@@ -91,14 +91,16 @@ type ZkEvmAPIImpl struct {
 	ethApi *APIImpl
 
 	db               kv.RoDB
-	dbsmt            kv.RoDB
 	ReturnDataLimit  int
 	config           *ethconfig.Config
 	l1Syncer         *syncer.L1Syncer
 	l2SequencerUrl   string
 	semaphores       map[string]chan struct{}
 	datastreamServer server.DataStreamServer
-	cache            *smt2.SmtCache
+
+	// For X Layer, split db and ac
+	dbsmt kv.RoDB
+	cache *smt2.SmtCache
 }
 
 func (api *ZkEvmAPIImpl) initializeSemaphores(functionLimits map[string]int) {
@@ -127,13 +129,14 @@ func NewZkEvmAPI(
 	a := &ZkEvmAPIImpl{
 		ethApi:           base,
 		db:               db,
-		dbsmt:            dbsmt,
 		ReturnDataLimit:  returnDataLimit,
 		config:           zkConfig,
 		l1Syncer:         l1Syncer,
 		l2SequencerUrl:   l2SequencerUrl,
 		datastreamServer: dataStreamServer,
-		cache:            cache,
+		// For X Layer, split db and ac
+		dbsmt: dbsmt,
+		cache: cache,
 	}
 
 	a.initializeSemaphores(map[string]int{
@@ -961,6 +964,7 @@ func (api *ZkEvmAPIImpl) GetWitness(ctx context.Context, blockNrOrHash rpc.Block
 	if debug != nil {
 		dbg = *debug
 	}
+	// For X Layer, split db and ac
 	return api.getBlockRangeWitness(ctx, api.db, api.dbsmt, blockNrOrHash, blockNrOrHash, dbg, checkedMode)
 }
 
@@ -976,6 +980,7 @@ func (api *ZkEvmAPIImpl) GetBlockRangeWitness(ctx context.Context, startBlockNrO
 	if debug != nil {
 		dbg = *debug
 	}
+	// For X Layer, split db and ac
 	return api.getBlockRangeWitness(ctx, api.db, api.dbsmt, startBlockNrOrHash, endBlockNrOrHash, dbg, checkedMode)
 }
 
@@ -1023,6 +1028,7 @@ func (api *ZkEvmAPIImpl) getBatchWitness(ctx context.Context, tx kv.Tx, txsmt kv
 
 		startBlockRpc := rpc.BlockNumberOrHash{BlockNumber: &startBlockInt}
 		endBlockNrOrHash := rpc.BlockNumberOrHash{BlockNumber: &endBlockInt}
+		// For X Layer, split db and ac
 		return api.getBlockRangeWitness(ctx, api.db, api.dbsmt, startBlockRpc, endBlockNrOrHash, debug, mode)
 	} else {
 		generator, fullWitness, err := api.buildGenerator(ctx, tx, mode)
@@ -1030,6 +1036,7 @@ func (api *ZkEvmAPIImpl) getBatchWitness(ctx context.Context, tx kv.Tx, txsmt kv
 			return nil, err
 		}
 
+		// For X Layer, split db and ac
 		return generator.GetWitnessByBadBatch(tx, txsmt, ctx, batchNum, debug, fullWitness)
 	}
 }
@@ -1073,6 +1080,7 @@ func (api *ZkEvmAPIImpl) getBlockRangeWitness(ctx context.Context, db kv.RoDB, d
 		return nil, fmt.Errorf("not supported by Erigon3")
 	}
 
+	// For X Layer, split db and ac
 	var txsmt kv.Tx = nil
 	if dbsmt != nil {
 		txsmt, err = dbsmt.BeginRo(ctx)
@@ -1125,6 +1133,7 @@ func (api *ZkEvmAPIImpl) GetBatchWitness(ctx context.Context, batchNumber uint64
 	}
 	defer tx.Rollback()
 
+	// For X Layer, split db and ac
 	var txsmt kv.Tx = nil
 	if api.dbsmt != nil {
 		txsmt, err = api.dbsmt.BeginRo(ctx)
@@ -1211,6 +1220,7 @@ func (api *ZkEvmAPIImpl) GetProverInput(ctx context.Context, batchNumber uint64,
 	start := rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(blockNumbers[0]))
 	end := rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(blockNumbers[len(blockNumbers)-1]))
 
+	// For X Layer, split db and ac
 	rangeWitness, err := api.getBlockRangeWitness(ctx, api.db, api.dbsmt, start, end, useDebug, checkedMode)
 	if err != nil {
 		return nil, err
@@ -1625,6 +1635,7 @@ func (zkapi *ZkEvmAPIImpl) GetProof(ctx context.Context, address common.Address,
 		return nil, fmt.Errorf("not supported by Erigon3")
 	}
 
+	// For X Layer, split db and ac
 	var txsmt kv.Tx = nil
 	if zkapi.dbsmt != nil {
 		txsmt, err = zkapi.dbsmt.BeginRo(ctx)
@@ -1654,7 +1665,7 @@ func (zkapi *ZkEvmAPIImpl) GetProof(ctx context.Context, address common.Address,
 	if err = utils.PopulateMemoryMutationTables(batch); err != nil {
 		return nil, err
 	}
-	// if there is no standalone smt db, keep batchSmt nil
+	// For X Layer, split db and ac, if there is no standalone smt db, keep batchSmt nil
 	var batchSmt *membatchwithdb.MemoryMutation = nil
 	if txsmt != nil {
 		batchSmt = membatchwithdb.NewMemoryBatch(txsmt, api.dirs.Tmp, api.logger)
@@ -1671,6 +1682,7 @@ func (zkapi *ZkEvmAPIImpl) GetProof(ctx context.Context, address common.Address,
 		unwindState := &stagedsync.UnwindState{UnwindPoint: blockNr}
 		stageState := &stagedsync.StageState{BlockNumber: latestBlock}
 
+		// For X Layer, split db and ac
 		interHashStageCfg := zkStages.StageZkInterHashesCfg(nil, nil, true, true, false, api.dirs.Tmp, api._blockReader, nil, api.historyV3(tx), api._agg, nil)
 
 		if err = zkStages.UnwindZkIntermediateHashesStage(unwindState, stageState, batch, batchSmt, interHashStageCfg, ctx, true); err != nil {
@@ -1735,6 +1747,7 @@ func (zkapi *ZkEvmAPIImpl) GetProof(ctx context.Context, address common.Address,
 		return nil, err
 	}
 
+	// For X Layer, split db and ac
 	smtDB := smtDb.NewRoEriDb(txsmt, tx)
 	if txsmt == nil {
 		smtDB = smtDb.NewRoEriDb(tx, tx)
