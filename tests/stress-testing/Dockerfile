@@ -16,8 +16,6 @@ RUN git clone https://github.com/AmpereTravis/wrk2-aarch64 && \
     cd wrk2-aarch64 && \
     make
 
-RUN ls -l
-
 FROM ubuntu:22.04
 
 RUN apt-get update && apt-get install -y \
