@@ -191,8 +191,12 @@ func (s *L1Syncer) RunQueryBlocks(lastCheckedBlock uint64) {
 			} else {
 				if latestL1Block > s.lastCheckedL1Block.Load() {
 					s.isDownloading.Store(true)
-					if err := s.queryBlocks(); err != nil {
-						log.Error("Error querying blocks", "err", err)
+					lastProcessed, err := s.queryBlocks()
+					if err != nil {
+						log.Error("Error querying blocks", "err", err, "lastProcessed", lastProcessed, "latestL1Block", latestL1Block)
+						if lastProcessed > s.lastCheckedL1Block.Load() {
+							s.lastCheckedL1Block.Store(lastProcessed)
+						}
 					} else {
 						s.lastCheckedL1Block.Store(latestL1Block)
 					}
@@ -333,7 +337,7 @@ func (s *L1Syncer) getLatestL1Block() (uint64, error) {
 	return latest, nil
 }
 
-func (s *L1Syncer) queryBlocks() error {
+func (s *L1Syncer) queryBlocks() (uint64, error) {
 	// Fixed receiving duplicate log events.
 	// lastCheckedL1Block means that it has already been checked in the previous cycle.
 	// It should not be checked again in the new cycle, so +1 is added here.
@@ -386,10 +390,19 @@ func (s *L1Syncer) queryBlocks() error {
 
 	aimingFor := s.latestL1Block - startBlock
 	complete := 0
+
+	queryTimeout := time.NewTimer(30 * time.Second)
+	defer queryTimeout.Stop()
+
+	var lastProcessedBlock uint64 = s.lastCheckedL1Block.Load()
 loop:
 	for {
 		select {
 		case <-s.ctx.Done():
+			break loop
+		case <-queryTimeout.C:
+			log.Warn(fmt.Sprintf("[%s] Query blocks timeout after 30 seconds", "L1Syncer"))
+			err = fmt.Errorf("query blocks timeout")
 			break loop
 		case res := <-results:
 			if s.flagStop.Load() {
@@ -404,6 +417,7 @@ loop:
 			progress += res.Size
 			if len(res.Logs) > 0 {
 				s.logsChan <- res.Logs
+				lastProcessedBlock = startBlock + progress - 1
 			}
 
 			if complete == len(fetches) {
@@ -421,7 +435,7 @@ loop:
 	close(stop)
 	wg.Wait()
 
-	return err
+	return lastProcessedBlock, err
 }
 
 func (s *L1Syncer) getSequencedLogs(jobs <-chan fetchJob, results chan jobResult, stop chan bool, wg *sync.WaitGroup) {
