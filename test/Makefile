@@ -134,8 +134,8 @@ all: build-docker ## Runs a full node
 stop: ## Stops all services
 	$(STOP)
 
-.PHONY: basic-run
-basic-run: build-docker ## Runs a minimal node
+.PHONY: min-run
+min-run: build-docker ## Runs a minimal node
 	$(RUN_DOCKER_L1_NETWORK)
 	sleep 3
 	$(RUN_DOCKER_SEQ)
@@ -143,14 +143,6 @@ basic-run: build-docker ## Runs a minimal node
 	$(RUN_DOCKER_DS)
 	sleep 10
 	$(RUN_DOCKER_RPC)
-	$(RUN_DOCKER_PROMETHEUS)
-	$(RUN_DOCKER_GRAFANA)
-
-.PHONY: min-run
-min-run: build-docker ## Runs a minimal node
-	$(RUN_DOCKER_L1_NETWORK)
-	sleep 3
-	$(RUN_DOCKER_SEQ)
 	$(RUN_DOCKER_PROMETHEUS)
 	$(RUN_DOCKER_GRAFANA)
 
