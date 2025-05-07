@@ -31,8 +31,10 @@ type (
 )
 
 type operation struct {
+	// execute is the operation function
+	execute     executionFunc
 	constantGas uint64
-
+	dynamicGas  gasFunc
 	// maxStack specifies the max length the stack can have for this operation
 	// to not overflow the stack.
 	maxStack int
@@ -40,17 +42,12 @@ type operation struct {
 	// numPop tells how many stack items are required
 	numPop  int // δ in the Yellow Paper
 	numPush int // α in the Yellow Paper
+	isPush  bool
+	isSwap  bool
+	isDup   bool
 	opNum   int // only for push, swap, dup
-
-	// execute is the operation function
-	execute    executionFunc
-	dynamicGas gasFunc
-
 	// memorySize returns the memory size required for the operation
 	memorySize memorySizeFunc
-	isPush     bool
-	isSwap     bool
-	isDup      bool
 }
 
 var (
