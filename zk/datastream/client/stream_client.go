@@ -673,9 +673,6 @@ LOOP:
 
 		if readNewProto {
 			if parsedProto, entryNum, err = ReadParsedProto(c); err != nil {
-				if err == ErrReachedEntryNumberLimit {
-					return c.TrySendStopSignal()
-				}
 				return err
 			}
 			readNewProto = false
@@ -703,13 +700,9 @@ LOOP:
 			time.Sleep(10 * time.Microsecond)
 		}
 
-		// Reach the end of range
+		// Reach the end of range. Do not send stop signal here as range read may continue
 		if entryNum == toEntry || c.header.TotalEntries < entryNum {
-			log.Trace("[Datastream client] reached the current end of the stream", "header_totalEntries", c.header.TotalEntries, "entryNum", entryNum)
-
-			if err := c.TrySendStopSignal(); err != nil {
-				return err
-			}
+			log.Trace("[Datastream client] reached the current end of the range read", "toEntry", toEntry, "entryNum", entryNum, "header_totalEntries", c.header.TotalEntries)
 			break LOOP
 		}
 	}
@@ -785,10 +778,6 @@ func (c *StreamClient) HandleStart() error {
 	}
 
 	return nil
-}
-
-func (c *StreamClient) HandleRestart() error {
-	return c.tryReConnect()
 }
 
 func (c *StreamClient) tryReConnect() (err error) {
