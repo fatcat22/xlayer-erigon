@@ -1,12 +1,8 @@
 package stages
 
 import (
-	"fmt"
-	"time"
-
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
-	"github.com/ledgerwatch/erigon/zkevm/log"
 )
 
 func newSequencerBatchNonValidationStreamWriter(batchContext *BatchContext, batchState *BatchState) *SequencerBatchStreamWriter {
@@ -61,7 +57,6 @@ func (sbc *SequencerBatchStreamWriter) writeBlockDetailsToDatastreamWithoutVerif
 		}
 	}
 
-	log.Info(fmt.Sprintf("writeBlockDetailsToDatastreamWithoutVerification  time=%s, batchNumber=%d, first=%d, last=%d", time.Now().UnixMilli(), batchNumber, blockNumbers[0], blockNumbers[len(blockNumbers)-1]))
 	if err := sbc.streamServer.WriteBlockWithBatchStartToStream(sbc.logPrefix, sbc.sdb.tx, sbc.sdb.hermezDb, forkId, batchNumber, previousBlockBatchNumber, *previousBlock, *block); err != nil {
 		return err
 	}

@@ -52,6 +52,7 @@ type DataStreamServer interface {
 	UnwindIfNecessary(logPrefix string, reader DbReader, blockNum, prevBlockBatchNum, batchNum uint64) error
 	WriteBatchEnd(reader DbReader, batchNumber uint64, stateRoot *common.Hash, localExitRoot *common.Hash) (err error)
 	WriteGenesisToStream(genesis *eritypes.Block, reader *hermez_db.HermezDbReader, tx kv.Tx) error
+	ReadBlock(blockNum uint64) (*types.FullL2Block, error)
 }
 
 type DataStreamServerFactory interface {

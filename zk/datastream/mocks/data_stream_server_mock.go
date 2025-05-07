@@ -330,6 +330,15 @@ func (m *MockDataStreamServer) ReadBatchesWithConcurrency(arg0, arg1 uint64) ([]
 	return m.ReadBatches(arg0, arg1)
 }
 
+// For X Layer, implement DataStreamServer
+func (m *MockDataStreamServer) ReadBlock(arg0 uint64) (*types0.FullL2Block, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadBlock", arg0)
+	ret0, _ := ret[0].(*types0.FullL2Block)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
 // ReadBatches indicates an expected call of ReadBatches.
 func (mr *MockDataStreamServerMockRecorder) ReadBatches(arg0, arg1 any) *MockDataStreamServerReadBatchesCall {
 	mr.mock.ctrl.T.Helper()

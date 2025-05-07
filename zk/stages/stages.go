@@ -279,7 +279,7 @@ func DefaultZkStages(
 				if badBlockUnwind {
 					return nil
 				}
-				return SpawnStageBatches(s, u, ctx, txc.Tx, batchesCfg)
+				return SpawnStageBatches(s, u, ctx, txc.Tx, batchesCfg, dataStreamCatchupCfg)
 			},
 			Unwind: func(firstCycle bool, u *stages.UnwindState, s *stages.StageState, txc wrap.TxContainer, logger log.Logger) error {
 				return UnwindBatchesStage(u, txc.Tx, batchesCfg, ctx)

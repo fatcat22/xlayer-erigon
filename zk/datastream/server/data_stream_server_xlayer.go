@@ -96,3 +96,48 @@ func (srv *ZkEVMDataStreamServer) ReadBatchesWithConcurrency(start uint64, end u
 
 	return batches, nil
 }
+
+func (srv *ZkEVMDataStreamServer) ReadBlock(blockNum uint64) (*types.FullL2Block, error) {
+	bookmark := types.NewBookmarkProto(blockNum, datastream.BookmarkType_BOOKMARK_TYPE_L2_BLOCK)
+	marshalled, err := bookmark.Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	entryNum, err := srv.streamServer.GetBookmark(marshalled)
+
+	if err != nil {
+		return nil, err
+	}
+
+	iterator := newDataStreamServerIterator(srv.streamServer, entryNum)
+
+	return ReadBlock(iterator, blockNum)
+}
+
+func ReadBlock(iterator client.FileEntryIterator, blockNum uint64) (*types.FullL2Block, error) {
+	var block *types.FullL2Block
+
+	for {
+		parsedProto, _, err := client.ReadParsedProto(iterator)
+		if err != nil {
+			return nil, err
+		}
+
+		if parsedProto == nil {
+			break
+		}
+
+		switch parsedProto := parsedProto.(type) {
+		case *types.FullL2Block:
+			if blockNum == parsedProto.L2BlockNumber {
+				block = parsedProto
+				break
+			}
+		default:
+			continue
+		}
+	}
+
+	return block, nil
+}

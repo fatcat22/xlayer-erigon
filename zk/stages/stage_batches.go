@@ -40,6 +40,9 @@ var (
 	ErrFailedToFindCommonAncestor = errors.New("failed to find common ancestor block in the db")
 )
 
+// For X Layer
+var ShouldAlignDataStreamDownStream = true
+
 type ErigonDb interface {
 	WriteHeader(batchNo *big.Int, blockHash common.Hash, stateRoot, txHash, parentHash common.Hash, coinbase common.Address, ts, gasLimit uint64, chainConfig *chain.Config) (*ethTypes.Header, error)
 	WriteBody(batchNo *big.Int, headerHash common.Hash, txs []ethTypes.Transaction) error
@@ -117,6 +120,7 @@ func SpawnStageBatches(
 	ctx context.Context,
 	tx kv.RwTx,
 	cfg BatchesCfg,
+	dataStreamCatchupCfg DataStreamCatchupCfg,
 ) error {
 	logPrefix := s.LogPrefix()
 	log.Info(fmt.Sprintf("[%s] Starting batches stage", logPrefix))
@@ -241,6 +245,20 @@ func SpawnStageBatches(
 			return err
 		}
 		return nil
+	}
+
+	// For X Layer, aligns to datastream downstream when local is mismatched with sequencer
+	if ShouldAlignDataStreamDownStream {
+		unwindHeight, isMismatch, err := getMismatchHeight(ctx, cfg, dataStreamCatchupCfg)
+		if err != nil {
+			panic(fmt.Sprintf("getMismatchHeight returns error: %v", err))
+		}
+		if highestDSL2Block > 1 && isMismatch {
+			if _, err := unwindFn(unwindHeight); err != nil {
+				return err
+			}
+		}
+		ShouldAlignDataStreamDownStream = false
 	}
 
 	dsClientProgress := dsQueryClient.GetProgressAtomic()
