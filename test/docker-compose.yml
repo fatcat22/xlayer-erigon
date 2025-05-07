@@ -45,6 +45,34 @@ services:
     command: >
       zkProver -c /usr/src/app/config.json
 
+  xlayer-executor-4:
+    container_name: xlayer-executor-4
+    image: hermeznetwork/zkevm-prover:v9.0.0-RC3-fork.13
+    platform: linux/amd64
+    environment:
+      - EXPERIMENTAL_DOCKER_DESKTOP_FORCE_QEMU=1
+    ports:
+      - 0.0.0.0:50064:50061 # MT
+      - 0.0.0.0:50074:50071 # Executor
+    volumes:
+      - ./config/test.stateless_executor.config.json:/usr/src/app/config.json
+    command: >
+      zkProver -c /usr/src/app/config.json
+
+  xlayer-executor-5:
+    container_name: xlayer-executor-5
+    image: hermeznetwork/zkevm-prover:v9.0.0-RC3-fork.13
+    platform: linux/amd64
+    environment:
+      - EXPERIMENTAL_DOCKER_DESKTOP_FORCE_QEMU=1
+    ports:
+      - 0.0.0.0:50065:50061 # MT
+      - 0.0.0.0:50076:50071 # Executor
+    volumes:
+      - ./config/test.stateless_executor.config.json:/usr/src/app/config.json
+    command: >
+      zkProver -c /usr/src/app/config.json
+
   xlayer-seqs:
     container_name: xlayer-seqs
     image: zjg555543/cdk:v0.5.4-rc1
