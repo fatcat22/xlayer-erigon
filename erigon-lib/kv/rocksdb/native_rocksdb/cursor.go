@@ -2,6 +2,7 @@ package native_rocksdb
 
 import (
 	"bytes"
+	"errors"
 	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/common"
 )
@@ -123,4 +124,66 @@ func (c *nativeRwCursor) Delete(k []byte) error {
 
 func (c *nativeRwCursor) DeleteCurrent() error {
 	panic("nativeRwCursor.DeleteCurrent is not supported")
+}
+
+func (c *nativeRwCursor) SeekBothExact(key, value []byte) ([]byte, []byte, error) {
+	return c.SeekExact(key)
+}
+
+// SeekBothRange - exact match of the key, but range match of the value
+func (c *nativeRwCursor) SeekBothRange(key, value []byte) ([]byte, error) {
+	_, v, err := c.SeekExact(key)
+	return v, err
+}
+
+// FirstDup - position at first data item of current key
+func (c *nativeRwCursor) FirstDup() ([]byte, error) {
+	_, v, err := c.Current()
+	return v, err
+}
+
+// NextDup - position at next data item of current key
+func (c *nativeRwCursor) NextDup() ([]byte, []byte, error) {
+	return c.Current()
+}
+
+// NextNoDup - position at first data item of next key
+func (c *nativeRwCursor) NextNoDup() ([]byte, []byte, error) {
+	k, v, err := c.Next()
+	if err != nil {
+		if errors.Is(err, common.ErrInvalidIter) {
+			return nil, nil, nil
+		}
+	}
+	return k, v, err
+}
+
+func (c *nativeRwCursor) PrevDup() ([]byte, []byte, error) {
+	return c.Current()
+}
+
+func (c *nativeRwCursor) PrevNoDup() ([]byte, []byte, error) {
+	k, v, err := c.Prev()
+	if err != nil {
+		if errors.Is(err, common.ErrInvalidIter) {
+			return nil, nil, nil
+		}
+	}
+	return k, v, err
+}
+
+// LastDup - position at last data item of current key
+func (c *nativeRwCursor) LastDup() ([]byte, error) {
+	_, v, err := c.Current()
+	if err != nil {
+		if errors.Is(err, common.ErrInvalidIter) {
+			return nil, nil
+		}
+	}
+	return v, err
+}
+
+// CountDuplicates - number of duplicates for the current key
+func (c *nativeRwCursor) CountDuplicates() (uint64, error) {
+	return 1, nil
 }

@@ -32,7 +32,8 @@ func main() {
 	mdbxPath := flag.String("mdbx", "", "Path to the source MDBX database")
 	rocksdbPath := flag.String("rocksdb", "", "Path to the target RocksDB database")
 	verbose := flag.Bool("verbose", false, "Whether to output detailed logs")
-	label := flag.String("label", "", "db label of mdbx")
+	labelStr := flag.String("label", "", "database label")
+	dbTypeStr := flag.String("dbtype", "", "database type")
 	flag.Parse()
 
 	if *mdbxPath == "" || *rocksdbPath == "" {
@@ -47,6 +48,7 @@ func main() {
 	} else {
 		logger.SetHandler(log.LvlFilterHandler(log.LvlWarn, log.StderrHandler))
 	}
+	logger.Info("Starting mdbx2rocksdb", "mdbxPath", *mdbxPath, "rocksdbPath", *rocksdbPath, "label", *labelStr, "dbType", *dbTypeStr)
 
 	// Configure logging
 	if err := os.MkdirAll(*rocksdbPath, 0755); err != nil {
@@ -54,8 +56,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	label := kv.UnmarshalLabel(*labelStr)
+	dbType := dbbuilder.ToDatabaseType(*dbTypeStr)
+
 	// Open the source MDBX database
-	srcDB := openMDBX(*mdbxPath, kv.UnmarshalLabel(*label), logger)
+	srcDB := openMDBX(*mdbxPath, label, logger)
 	defer srcDB.Close()
 
 	logger.Info("start querying all tables")
@@ -70,16 +75,18 @@ func main() {
 	logger.Info("Starting database conversion")
 
 	// handle special tables
-	memDstDB := openCompatibleMockDB(logger)
-	defer memDstDB.Close()
-	totalRecords += convertTables(specialTables, srcDB, memDstDB, logger, func() {
-		memDatas := memDstDB.(*compatible_rocksdb.CompatibleRocksDB).GetMemStorage()
-		writeDeduplicatedDirect(memDatas, *rocksdbPath, logger)
-	})
-	memDstDB.Close()
+	if label == kv.ChainDB {
+		memDstDB := openCompatibleMockDB(label, logger)
+		defer memDstDB.Close()
+		totalRecords += convertTables(specialTables, srcDB, memDstDB, logger, func() {
+			memDatas := memDstDB.(*compatible_rocksdb.CompatibleRocksDB).GetMemStorage()
+			writeDeduplicatedDirect(memDatas, *rocksdbPath, logger)
+		})
+		memDstDB.Close()
+	}
 
 	// handle normal tables
-	dstDB := openCompatibleRocksDB(*rocksdbPath, logger)
+	dstDB := openDestinationDB(*rocksdbPath, label, dbType, logger)
 	defer dstDB.Close()
 	totalRecords += convertTables(normalTables, srcDB, dstDB, logger, func() {})
 
@@ -128,12 +135,12 @@ func openMDBX(path string, label kv.Label, logger log.Logger) kv.RwDB {
 	return openDB(dbbuilder.ToDatabaseType("mdbx"), buildMdbxOpts(path, label, logger), kv.ChaindataTablesCfg)
 }
 
-func openCompatibleMockDB(logger log.Logger) kv.RwDB {
-	return openDB(dbbuilder.ToDatabaseType("rocksdb.compatible.mock"), buildMdbxOpts("", kv.ChainDB, logger), kv.ChaindataTablesCfg)
+func openCompatibleMockDB(label kv.Label, logger log.Logger) kv.RwDB {
+	return openDB(dbbuilder.ToDatabaseType("rocksdb.compatible.mock"), buildMdbxOpts("", label, logger), kv.ChaindataTablesCfg)
 }
 
-func openCompatibleRocksDB(path string, logger log.Logger) kv.RwDB {
-	return openDB(dbbuilder.ToDatabaseType("rocksdb.compatible.rocksdb"), buildMdbxOpts(path, kv.ChainDB, logger), kv.ChaindataTablesCfg)
+func openDestinationDB(path string, label kv.Label, dbType dbbuilder.DatabaseType, logger log.Logger) kv.RwDB {
+	return openDB(dbType, buildMdbxOpts(path, label, logger), kv.ChaindataTablesCfg)
 }
 
 func openDB(rdbType dbbuilder.DatabaseType, opts mdbx.MdbxOpts, tableCfg kv.TableCfg) kv.RwDB {

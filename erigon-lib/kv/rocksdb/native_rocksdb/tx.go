@@ -90,7 +90,14 @@ func (rtx *nativeTransaction) Has(table string, key []byte) (bool, error) {
 }
 
 func (rtx *nativeTransaction) GetOne(table string, key []byte) (val []byte, err error) {
-	return rtx.NativeGet(rtx.defaultRdopts, rdbcommon.MergeKey(table, key))
+	val, err = rtx.NativeGet(rtx.defaultRdopts, rdbcommon.MergeKey(table, key))
+	if err != nil {
+		if errors.Is(err, rdbcommon.ErrKeyNotExist) {
+			// keep same as mdbx.GetOne
+			return nil, nil
+		}
+	}
+	return val, err
 }
 
 func (rtx *nativeTransaction) ForEach(table string, fromPrefix []byte, walker func(k, v []byte) error) error {
@@ -145,7 +152,7 @@ func (rtx *nativeTransaction) Cursor(table string) (kv.Cursor, error) {
 }
 
 func (rtx *nativeTransaction) CursorDupSort(table string) (kv.CursorDupSort, error) {
-	panic("nativeTransaction.CursorDupSort is not supported")
+	return newNativeRwCursor(table, rtx), nil
 }
 
 func (rtx *nativeTransaction) DBSize() (uint64, error) {
@@ -216,7 +223,8 @@ func (rtx *nativeTransaction) DropBucket(string) error {
 }
 
 func (rtx *nativeTransaction) CreateBucket(string) error {
-	panic("nativeTransaction.CreateBucket is not supported")
+	// do nothing
+	return nil
 }
 
 func (rtx *nativeTransaction) ExistsBucket(string) (bool, error) {
@@ -236,7 +244,7 @@ func (rtx *nativeTransaction) RwCursorDupSort(table string) (kv.RwCursorDupSort,
 }
 
 func (rtx *nativeTransaction) CollectMetrics() {
-	panic("nativeTransaction.CollectMetrics is not implemented")
+	// todo: not implemented yet
 }
 
 func (rtx *nativeTransaction) SpaceDirty() (uint64, uint64, error) {
