@@ -487,18 +487,18 @@ test-executor:
 test-resend:
 	make stop
 	make run
-	sleep 1
+	sleep 3
 	docker ps -a
 	echo "test-resend step1"
 	go test -count=1 -failfast -race -v -p 1 -timeout 300s -run TestPendingStep1 ./e2e/resend_test.go
 	$(STOP_DOCKER_SEQ)
 	echo "stop seq ok"
-	sleep 1
+	sleep 3
 	ls -l data/seq/txpool/
 	rm -rf data/seq/txpool/*;
 	ls -l data/seq/txpool/
-	sleep 1
 	$(RUN_DOCKER_SEQ)
+	sleep 3
 	echo "test-resend step2"
 	go test -count=1 -failfast -race -v -p 1 -timeout 300s -run TestTriggerStep2 ./e2e/resend_test.go
 	echo "test-resend passed"
