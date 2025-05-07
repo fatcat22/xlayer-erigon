@@ -41,6 +41,7 @@ type XLayerConfig struct {
 
 	SequencerSkipEmptyBlocks      bool
 	EnableNonValidationDataStream bool
+	SequencerMaxBlockSealTime     time.Duration
 }
 
 var DefaultXLayerConfig = XLayerConfig{}
