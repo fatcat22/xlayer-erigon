@@ -494,7 +494,9 @@ test-resend:
 	$(STOP_DOCKER_SEQ)
 	echo "stop seq ok"
 	sleep 1
-	rm -rf data/seq/txpool;
+	ls -l data/seq/txpool/
+	rm -rf data/seq/txpool/*;
+	ls -l data/seq/txpool/
 	sleep 1
 	$(RUN_DOCKER_SEQ)
 	echo "test-resend step2"

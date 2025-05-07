@@ -79,13 +79,15 @@ func TestTriggerStep2(t *testing.T) {
 	require.NoError(t, err)
 	err = client.SendTransaction(ctx, signedTx)
 	for i := 0; i < 180; i++ {
+		time.Sleep(1 * time.Second)
 		newNonce, err := client.PendingNonceAt(ctx, from)
-		require.NoError(t, err)
+		if err != nil {
+			continue
+		}
 		log.Infof("newNonce %d", newNonce)
 		if newNonce == nonce+maxPending {
 			break
 		}
-		time.Sleep(1 * time.Second)
 	}
 	newNonce, err := client.PendingNonceAt(ctx, from)
 	require.Equal(t, nonce+maxPending, newNonce)
