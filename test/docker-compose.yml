@@ -238,7 +238,7 @@ services:
 
   xlayer-pool-manager:
     container_name: xlayer-pool-manager
-    image: zjg555543/zkevm-pool-manager:665ff9d
+    image: zjg555543/zkevm-pool-manager:c101972
     deploy:
       resources:
         limits:
