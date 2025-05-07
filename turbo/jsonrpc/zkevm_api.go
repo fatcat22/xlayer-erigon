@@ -82,7 +82,7 @@ type ZkEvmAPI interface {
 	GetRollupAddress(ctx context.Context) (res json.RawMessage, err error)
 	GetRollupManagerAddress(ctx context.Context) (res json.RawMessage, err error)
 	GetLatestDataStreamBlock(ctx context.Context) (hexutil.Uint64, error)
-	// For X Layer
+	// For X Layer, non validation dataStream
 	GetLatestNonValidationDataStreamBlock(ctx context.Context) (hexutil.Uint64, error)
 }
 
@@ -1994,7 +1994,7 @@ func (api *ZkEvmAPIImpl) GetLatestDataStreamBlock(ctx context.Context) (hexutil.
 	return hexutil.Uint64(latestBlock), nil
 }
 
-// For X Layer
+// For X Layer, non validation dataStream
 func (api *ZkEvmAPIImpl) GetLatestNonValidationDataStreamBlock(ctx context.Context) (hexutil.Uint64, error) {
 	tx, err := api.db.BeginRo(ctx)
 	if err != nil {

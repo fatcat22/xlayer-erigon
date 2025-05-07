@@ -154,7 +154,7 @@ type PreStartTasks struct {
 	WarmUpDataStream  bool
 	PurgeWitnessCache bool
 
-	// For X Layer, non validation datastream
+	// For X Layer, non validation dataStream
 	WarmUpNonValidationDataStream bool
 }
 
@@ -250,7 +250,7 @@ type Ethereum struct {
 	smtFlushCancel context.CancelFunc
 	smtFlushDoneCh chan struct{}
 	verifier       *legacy_executor_verifier.LegacyExecutorVerifier
-	// For X Layer, non validation datastream
+	// For X Layer, non validation dataStream
 	nonValidationStreamServer server.StreamServer
 }
 
@@ -1068,7 +1068,7 @@ func New(ctx context.Context, stack *node.Node, config *ethconfig.Config, logger
 			}
 		}
 
-		// For X Layer, non validation datastream
+		// For X Layer, non validation dataStream
 		if err = backend.initNonValidationStreamServer(stack, httpCfg); err != nil {
 			return nil, err
 		}
@@ -1192,7 +1192,7 @@ func New(ctx context.Context, stack *node.Node, config *ethconfig.Config, logger
 			dataStreamServer = dataStreamServerFactory.CreateDataStreamServer(backend.streamServer, backend.chainConfig.ChainID.Uint64())
 		}
 
-		// For X Layer, non validation datastream
+		// For X Layer, non validation dataStream
 		var nonValidationDataStreamServer server.DataStreamServer
 		if backend.nonValidationStreamServer != nil {
 			nonValidationDataStreamServer = dataStreamServerFactory.CreateDataStreamServer(backend.nonValidationStreamServer, backend.chainConfig.ChainID.Uint64())
@@ -1278,7 +1278,7 @@ func New(ctx context.Context, stack *node.Node, config *ethconfig.Config, logger
 				backend.verifier,
 				l1InfoTreeUpdater,
 				hook,
-				// For X Layer, non validation datastream
+				// For X Layer, non validation dataStream
 				nonValidationDataStreamServer,
 			)
 
@@ -1489,7 +1489,7 @@ func (s *Ethereum) Init(stack *node.Node, config *ethconfig.Config, chainConfig 
 			return
 		}
 
-		// For X Layer, non validation datastream
+		// For X Layer, non validation dataStream
 		if err := cli.StartDataStream(s.nonValidationStreamServer); err != nil {
 			log.Error(err.Error())
 			return
@@ -1535,7 +1535,7 @@ func (s *Ethereum) PreStart() error {
 		}
 	}
 
-	// For X Layer, non validation datastream
+	// For X Layer, non validation dataStream
 	if err := s.warmUpNonValidationStreamServer(); err != nil {
 		return err
 	}

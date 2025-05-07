@@ -112,7 +112,7 @@ func NewSequencerZkStages(ctx context.Context,
 	verifier *legacy_executor_verifier.LegacyExecutorVerifier,
 	infoTreeUpdater *l1infotree.Updater,
 	hook *Hook,
-	// For X Layer, non validation datastream
+	// For X Layer, non validation dataStream
 	nonValidationDataStreamServer server.DataStreamServer,
 ) []*stagedsync.Stage {
 	dirs := cfg.Dirs
@@ -155,7 +155,7 @@ func NewSequencerZkStages(ctx context.Context,
 			uint16(cfg.YieldSize),
 			infoTreeUpdater,
 			hook,
-			// For X Layer, non validation datastream
+			// For X Layer, non validation dataStream
 			nonValidationDataStreamServer,
 		),
 		stagedsync.StageHashStateCfg(db, dirs, cfg.HistoryV3, agg),

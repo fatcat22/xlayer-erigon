@@ -96,36 +96,6 @@ run: build-docker ## Runs a full node
 	$(RUN_DOCKER_PROMETHEUS)
 	$(RUN_DOCKER_GRAFANA)
 
-.PHONY: run-nonval-ds
-run-nonval-ds: build-docker ## Runs a full node
-	# base services
-	$(RUN_DOCKER_STATELESS_EXECUTOR)
-	$(RUN_DOCKER_L1_NETWORK)
-	$(RUN_DOCKER_DATA_AVAILABILITY_DB)
-	$(RUN_DOCKER_POOL_DB)
-	$(RUN_DOCKER_AGGREGATOR_DB)
-	sleep 3
-	$(RUN_DOCKER_DATA_AVAILABILITY)
-	$(RUN_DOCKER_APPROVE)
-
-	# app services
-	sleep 3
-	$(RUN_DOCKER_SEQ)
-	$(RUN_DOCKER_PROVER)
-	sleep 10
-	$(RUN_DOCKER_DS)
-	$(RUN_DOCKER_NON_VALIDATION_DS)
-	$(RUN_DOCKER_SIGNER)
-	$(RUN_DOCKER_SEQ_SENDER)
-	$(RUN_DOCKER_AGGREGATOR)
-	$(RUN_DOCKER_POOL_MANAGER)
-	$(RUN_DOCKER_RPC)
-	$(RUN_DOCKER_NON_VALIDATION_RPC)
-
-	# monitoring services
-	$(RUN_DOCKER_PROMETHEUS)
-	$(RUN_DOCKER_GRAFANA)
-
 .PHONY: all
 all: build-docker ## Runs a full node
 	# base services
@@ -159,6 +129,36 @@ all: build-docker ## Runs a full node
 	$(RUN_DOCKER_BRIDGE_SERVICE)
 	sleep 3
 	$(RUN_DOCKER_BRIDGE_UI)
+
+	# monitoring services
+	$(RUN_DOCKER_PROMETHEUS)
+	$(RUN_DOCKER_GRAFANA)
+
+.PHONY: run-nonval-ds
+run-nonval-ds: build-docker ## Runs a full node
+	# base services
+	$(RUN_DOCKER_STATELESS_EXECUTOR)
+	$(RUN_DOCKER_L1_NETWORK)
+	$(RUN_DOCKER_DATA_AVAILABILITY_DB)
+	$(RUN_DOCKER_POOL_DB)
+	$(RUN_DOCKER_AGGREGATOR_DB)
+	sleep 3
+	$(RUN_DOCKER_DATA_AVAILABILITY)
+	$(RUN_DOCKER_APPROVE)
+
+	# app services
+	sleep 3
+	$(RUN_DOCKER_SEQ)
+	$(RUN_DOCKER_PROVER)
+	sleep 10
+	$(RUN_DOCKER_DS)
+	$(RUN_DOCKER_NON_VALIDATION_DS)
+	$(RUN_DOCKER_SIGNER)
+	$(RUN_DOCKER_SEQ_SENDER)
+	$(RUN_DOCKER_AGGREGATOR)
+	$(RUN_DOCKER_POOL_MANAGER)
+	$(RUN_DOCKER_RPC)
+	$(RUN_DOCKER_NON_VALIDATION_RPC)
 
 	# monitoring services
 	$(RUN_DOCKER_PROMETHEUS)

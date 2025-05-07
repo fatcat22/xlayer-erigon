@@ -25,7 +25,7 @@ const (
 	BATCH_NUMBER_BY_BLOCK_NUMBER  = "zkevm_batchNumberByBlockNumber"
 	ZK_BLOCK_BY_NUMBER            = "zkevm_getFullBlockByNumber"
 
-	// For X Layer
+	// For X Layer, non validation dataStream
 	SEQUENCER_NON_VALIDATION_DATASTREAM_RPC_CALL = "zkevm_getLatestNonValidationDataStreamBlock"
 )
 
@@ -173,7 +173,7 @@ func GetSequencerHighestDataStreamBlock(endpoint string) (uint64, error) {
 	return trimHexAndHandleUint64Result(res)
 }
 
-// For X Layer
+// For X Layer, non validation dataStream
 func GetSequencerHighestNonValidationDataStreamBlock(endpoint string) (uint64, error) {
 	res, err := jsonClient.JSONRPCCall(endpoint, SEQUENCER_NON_VALIDATION_DATASTREAM_RPC_CALL)
 	if err != nil {

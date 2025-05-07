@@ -58,7 +58,7 @@ var (
 	BeaconState                 SyncStage = "BeaconState"                 // Beacon blocks are sent to the state transition function
 	BeaconIndexes               SyncStage = "BeaconIndexes"               // Fills up Beacon indexes
 
-	// For X Layer
+	// For X Layer, non validation dataStream
 	NonValidationDataStream SyncStage = "NonValidationDataStream"
 )
 

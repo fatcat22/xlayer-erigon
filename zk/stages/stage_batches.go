@@ -40,7 +40,7 @@ var (
 	ErrFailedToFindCommonAncestor = errors.New("failed to find common ancestor block in the db")
 )
 
-// For X Layer
+// For X Layer, aligns to datastream downstream when local is mismatched with sequencer
 var ShouldAlignDataStreamDownStream = true
 
 type ErigonDb interface {
@@ -249,6 +249,7 @@ func SpawnStageBatches(
 
 	// For X Layer, aligns to datastream downstream when local is mismatched with sequencer
 	if ShouldAlignDataStreamDownStream {
+		// Here we choose to align the datastream downstream to seq because we want rpc to be a backup of seq.
 		unwindHeight, isMismatch, err := getMismatchHeight(ctx, cfg, dataStreamCatchupCfg)
 		if err != nil {
 			panic(fmt.Sprintf("getMismatchHeight returns error: %v", err))

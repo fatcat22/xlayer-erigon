@@ -330,7 +330,7 @@ func (m *MockDataStreamServer) ReadBatchesWithConcurrency(arg0, arg1 uint64) ([]
 	return m.ReadBatches(arg0, arg1)
 }
 
-// For X Layer, implement DataStreamServer
+// For X Layer, non validation dataStream, implement DataStreamServer
 func (m *MockDataStreamServer) ReadBlock(arg0 uint64) (*types0.FullL2Block, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReadBlock", arg0)

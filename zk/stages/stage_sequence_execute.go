@@ -202,7 +202,7 @@ func sequencingBatchStep(
 	batchState := newBatchState(forkId, batchNumberForStateInitialization, executionAt+1, cfg.zk.UseExecutors(), cfg.zk.L1SyncStartBlock > 0, cfg.txPool, resequenceBatchJob)
 	blockDataSizeChecker := NewBlockDataChecker(cfg.zk.ShouldCountersBeUnlimited(batchState.isL1Recovery()))
 	streamWriter := newSequencerBatchStreamWriter(batchContext, batchState)
-	// For X Layer
+	// For X Layer, non validation dataStream
 	var nonValidationStreamWriter *SequencerBatchStreamWriter
 	if cfg.nonValidationDataStreamServer != nil {
 		nonValidationStreamWriter = newSequencerBatchNonValidationStreamWriter(batchContext, batchState)
@@ -221,7 +221,7 @@ func sequencingBatchStep(
 			return err
 		}
 
-		// For X Layer
+		// For X Layer, non validation dataStream
 		if cfg.nonValidationDataStreamServer != nil {
 			if err = cfg.nonValidationDataStreamServer.WriteWholeBatchToStream(logPrefix, sdb.tx, sdb.hermezDb.HermezDbReader, lastBatch, injectedBatchBatchNumber); err != nil {
 				return err
@@ -298,7 +298,7 @@ func sequencingBatchStep(
 		shouldCheckForExecutionAndDataStreamAlignment = false
 	}
 
-	// For X Layer
+	// For X Layer, non validation dataStream
 	if !batchState.isAnyRecovery() && shouldCheckForDataStreamAndNonValidationDataStreamAlignment {
 		if cfg.nonValidationDataStreamServer != nil {
 			latestBatch, err := streamWriter.streamServer.GetHighestBatchNumber()
@@ -976,7 +976,7 @@ BatchLoop:
 			log.Info(fmt.Sprintf("[%s] Finish block %d with %d transactions...", logPrefix, blockNumber, len(batchState.blockState.builtBlockElements.transactions)), "info-tree-index", infoTreeIndexProgress, "taken", time.Since(startTime))
 		}
 
-		// For X Layer
+		// For X Layer, non validation dataStream
 		if !batchState.isL1Recovery() {
 			if err := nonValidationStreamWriter.CommitNewUpdatesWithoutVerification(forkId, batchState.batchNumber, batchState.builtBlocks); err != nil {
 				return err
