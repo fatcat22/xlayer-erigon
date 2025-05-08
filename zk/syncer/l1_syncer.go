@@ -192,7 +192,7 @@ func (s *L1Syncer) RunQueryBlocks(lastCheckedBlock uint64) {
 				if latestL1Block > s.lastCheckedL1Block.Load() {
 					s.isDownloading.Store(true)
 					if err := s.queryBlocks(); err != nil {
-						log.Error("Error querying blocks", "err", err, "latestL1Block", latestL1Block)
+						log.Error("Error querying blocks", "err", err)
 					} else {
 						s.lastCheckedL1Block.Store(latestL1Block)
 					}
@@ -447,7 +447,8 @@ func (s *L1Syncer) getSequencedLogs(jobs <-chan fetchJob, results chan jobResult
 			retry := 0
 			for {
 				em := s.getNextEtherman()
-				ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
 				logs, err = em.FilterLogs(ctx, query)
 				if err != nil {
 					log.Warn("getSequencedLogs retry error", "err", err, "from", j.From, "to", j.To, "retry", retry)
