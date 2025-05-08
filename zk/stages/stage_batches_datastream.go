@@ -66,8 +66,8 @@ func (r *DatastreamClientRunner) StartRangeRead(
 	go func() {
 		routineId := rand.Intn(1000000)
 
-		log.Info(fmt.Sprintf("[%s] Started downloading L2Blocks routine ID: %d", r.logPrefix, routineId))
-		defer log.Info(fmt.Sprintf("[%s] Ended downloading L2Blocks routine ID: %d", r.logPrefix, routineId))
+		log.Info(fmt.Sprintf("[%s] Started range downloading L2Blocks routine ID: %d", r.logPrefix, routineId))
+		defer log.Info(fmt.Sprintf("[%s] Ended range downloading L2Blocks routine ID: %d", r.logPrefix, routineId))
 
 		r.isReading.Store(true)
 		defer r.isReading.Store(false)
@@ -99,11 +99,13 @@ func (r *DatastreamClientRunner) StartRangeRead(
 			}
 
 			from := progress.Load()
+			log.Info("XHG StartRangeRead", "from", from, "highestDSL2Block", highestDSL2Block)
 			if from >= highestDSL2Block {
 				break
 			}
 
 			to := min(from+blockRange, highestDSL2Block)
+			log.Info("XHG ReadRangeEntriesToChannel", "to", to)
 			if err := r.dsClient.ReadRangeEntriesToChannel(to); err != nil {
 				if !errorFlag {
 					// Try to reconnect and get range again
