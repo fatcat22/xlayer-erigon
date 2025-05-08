@@ -191,12 +191,8 @@ func (s *L1Syncer) RunQueryBlocks(lastCheckedBlock uint64) {
 			} else {
 				if latestL1Block > s.lastCheckedL1Block.Load() {
 					s.isDownloading.Store(true)
-					lastProcessed, err := s.queryBlocks()
-					if err != nil {
-						log.Error("Error querying blocks", "err", err, "lastProcessed", lastProcessed, "latestL1Block", latestL1Block)
-						if lastProcessed > s.lastCheckedL1Block.Load() {
-							s.lastCheckedL1Block.Store(lastProcessed)
-						}
+					if err := s.queryBlocks(); err != nil {
+						log.Error("Error querying blocks", "err", err, "latestL1Block", latestL1Block)
 					} else {
 						s.lastCheckedL1Block.Store(latestL1Block)
 					}
@@ -337,7 +333,7 @@ func (s *L1Syncer) getLatestL1Block() (uint64, error) {
 	return latest, nil
 }
 
-func (s *L1Syncer) queryBlocks() (uint64, error) {
+func (s *L1Syncer) queryBlocks() error {
 	// Fixed receiving duplicate log events.
 	// lastCheckedL1Block means that it has already been checked in the previous cycle.
 	// It should not be checked again in the new cycle, so +1 is added here.
@@ -390,19 +386,10 @@ func (s *L1Syncer) queryBlocks() (uint64, error) {
 
 	aimingFor := s.latestL1Block - startBlock
 	complete := 0
-
-	queryTimeout := time.NewTimer(30 * time.Second)
-	defer queryTimeout.Stop()
-
-	var lastProcessedBlock uint64 = s.lastCheckedL1Block.Load()
 loop:
 	for {
 		select {
 		case <-s.ctx.Done():
-			break loop
-		case <-queryTimeout.C:
-			log.Warn(fmt.Sprintf("[%s] Query blocks timeout after 30 seconds", "L1Syncer"))
-			err = fmt.Errorf("query blocks timeout")
 			break loop
 		case res := <-results:
 			if s.flagStop.Load() {
@@ -417,7 +404,6 @@ loop:
 			progress += res.Size
 			if len(res.Logs) > 0 {
 				s.logsChan <- res.Logs
-				lastProcessedBlock = startBlock + progress - 1
 			}
 
 			if complete == len(fetches) {
@@ -435,7 +421,7 @@ loop:
 	close(stop)
 	wg.Wait()
 
-	return lastProcessedBlock, err
+	return err
 }
 
 func (s *L1Syncer) getSequencedLogs(jobs <-chan fetchJob, results chan jobResult, stop chan bool, wg *sync.WaitGroup) {
@@ -461,9 +447,10 @@ func (s *L1Syncer) getSequencedLogs(jobs <-chan fetchJob, results chan jobResult
 			retry := 0
 			for {
 				em := s.getNextEtherman()
-				logs, err = em.FilterLogs(context.Background(), query)
+				ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+				logs, err = em.FilterLogs(ctx, query)
 				if err != nil {
-					log.Debug("getSequencedLogs retry error", "err", err)
+					log.Warn("getSequencedLogs retry error", "err", err, "from", j.From, "to", j.To, "retry", retry)
 					retry++
 					if retry > 5 {
 						results <- jobResult{
