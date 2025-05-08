@@ -8,7 +8,7 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 if [ $# -lt 1 ]; then
-    echo "Usage: $0 <event> [<task>]"
+    echo "Usage: $0 <event> [<task> | -s]"
     echo "Valid events: pull_request, push, release."
     exit 1
 fi
@@ -18,6 +18,12 @@ if [ "$EVENT" != "pull_request" ] && [ "$EVENT" != "push" ] && [ "$EVENT" != "re
     exit 1
 fi
 ONLY_TASK=${2:-""}
+SEQ=0
+if [ "$ONLY_TASK" == "-s" ]; then
+    ONLY_TASK=""
+    SEQ=1
+    echo "Running some tasks in sequential mode."
+fi
 
 # ** Parse workflow file
 WORKFLOWFILE="./ci/workflows/workflows.yml"
@@ -129,6 +135,16 @@ for task in "${!tasks_compose[@]}"; do
     echo "Command: $CMD"
     eval $CMD >> $LOGSDIR/logs-$task.log 2>&1 &
     task_pid[$task]=$!
+    if [ "$SEQ" -eq 1 ]; then
+        wait ${task_pid[$task]}
+        if [ $? -ne 0 ]; then
+            echo -e "${NC}Task $task ${RED}failed${NC}."
+            task_status[$task]="failed"
+        else
+            echo -e "${NC}Task $task ${GREEN}succeeded${NC}."
+            task_status[$task]="succeeded"
+        fi
+    fi
 done
 
 # *** Run DinD (Docker-in-Docker) Kurtosis tasks
@@ -142,6 +158,16 @@ for task in "${!tasks_kurtosis[@]}"; do
     echo "Command: $CMD"
     eval $CMD > $LOGSDIR/logs-$task.log 2>&1 &
     task_pid[$task]=$!
+    if [ "$SEQ" -eq 1 ]; then
+        wait ${task_pid[$task]}
+        if [ $? -ne 0 ]; then
+            echo -e "${NC}Task $task ${RED}failed${NC}."
+            task_status[$task]="failed"
+        else
+            echo -e "${NC}Task $task ${GREEN}succeeded${NC}."
+            task_status[$task]="succeeded"
+        fi
+    fi
 done
 
 # Wait for all tasks to finish
