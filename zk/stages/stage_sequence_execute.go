@@ -309,7 +309,7 @@ func sequencingBatchStep(
 			if err != nil {
 				return err
 			}
-			previousBlockBatchNumber, found, err := sdb.hermezDb.HermezDbReader.CheckBatchNoByL2Block(latestBlock - 1)
+			nonStreamBatch, err := nonValidationStreamWriter.streamServer.GetHighestBatchNumber()
 			if err != nil {
 				return err
 			}
@@ -317,25 +317,16 @@ func sequencingBatchStep(
 			if err != nil {
 				return err
 			}
-			streamBlock, err := streamWriter.streamServer.GetHighestBlockNumber()
-			if err != nil {
-				return err
-			}
 
-			if nonStreamHeight > streamBlock {
-				if !found || err != nil {
-					log.Error("Not found previousBlockBatchNumber", "err", err)
-					return err
-				}
-
-				if latestBatch != previousBlockBatchNumber {
+			if nonStreamHeight > latestBlock {
+				if latestBatch != nonStreamBatch {
 					if err = nonValidationStreamWriter.streamServer.UnwindToBatchStart(latestBatch + 1); err != nil {
-						log.Info("Sequencing batch step unwind to block", "err", err)
+						log.Info("Sequencing batch step unwind to batchStart", "batchNum", latestBatch+1, "err", err)
 						return err
 					}
 				} else {
-					if err = nonValidationStreamWriter.streamServer.UnwindToBlock(streamBlock + 1); err != nil {
-						log.Info("Sequencing batch step unwind to block", "err", err)
+					if err = nonValidationStreamWriter.streamServer.UnwindToBlock(latestBlock + 1); err != nil {
+						log.Info("Sequencing batch step unwind to block", "blockNum", latestBlock+1, "err", err)
 						return err
 					}
 				}
@@ -1007,7 +998,9 @@ BatchLoop:
 		}
 
 		// check for new responses from the verifier
+		start3 := time.Now()
 		needsUnwind, err := updateStreamAndCheckRollback(batchContext, batchState, streamWriter, u, s)
+		log.Info("updateStreamAndCheckRollback spent time", "time", time.Since(start3))
 
 		// lets commit everything after updateStreamAndCheckRollback no matter of its result unless
 		// we're in L1 recovery where losing some blocks on restart doesn't matter
