@@ -15,6 +15,7 @@ import (
 
 	"github.com/ledgerwatch/erigon/zk/datastream/proto/github.com/0xPolygonHermez/zkevm-node/state/datastream"
 	"github.com/ledgerwatch/erigon/zk/datastream/types"
+	"github.com/ledgerwatch/erigon/zk/utils"
 	"github.com/ledgerwatch/log/v3"
 )
 
@@ -747,6 +748,33 @@ func ReadParsedProto(iterator FileEntryIterator) (
 
 		l2Block.L2Txs = txs
 		parsedEntry = l2Block
+
+		if fullBlock, ok := parsedEntry.(*types.FullL2Block); ok && fullBlock != nil {
+			utils.WriteToTraceLog("%s,%s,%s,%s,%s,%s,%d,%d,%s,%d,%d,%d,%s,%s,%d,%s,%d,%s,%s,%s,%s,%s",
+				utils.Chain,                   // chain
+				"",                            // hash
+				"",                            // status
+				utils.ServiceNameRPC,          // serviceName
+				utils.Business,                // business
+				"",                            // client
+				utils.ChainID,                 // chainId
+				utils.StepRPCReceiveBlock.ID,  // process ID
+				utils.StepRPCReceiveBlock.Key, // processWord
+				-1,                            // index
+				-1,                            // innerIndex
+				time.Now().UnixNano()/int64(time.Millisecond), // currentTime
+				"",                      // referId
+				"",                      // contractAddress
+				fullBlock.L2BlockNumber, // blockHeight
+				fullBlock.L2Blockhash,   // blockHash
+				fullBlock.Timestamp,     // blockTime
+				"",                      // depositConfirmHeight
+				"",                      // tokenID
+				"",                      // mevSupplier
+				"",                      // businessHash
+				"",                      // transactionType
+			)
+		}
 		return
 	case types.EntryTypeL2BlockEnd:
 		log.Debug(fmt.Sprintf("retrieved EntryTypeL2BlockEnd: %+v", file))

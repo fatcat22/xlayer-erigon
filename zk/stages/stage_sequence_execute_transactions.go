@@ -3,9 +3,12 @@ package stages
 import (
 	"context"
 	"errors"
+
 	"fmt"
 	"runtime"
 	"sync"
+
+	"time"
 
 	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/kv"
@@ -58,6 +61,33 @@ func getNextPoolTransactions(ctx context.Context, cfg SequenceBlockCfg, executio
 	}
 	transactions = append(transactions, yieldedTxs...)
 	ids = append(ids, yieldedIds...)
+
+	for _, tx := range transactions {
+		utils.WriteToTraceLog("%s,%s,%s,%s,%s,%s,%d,%d,%s,%d,%d,%d,%s,%s,%d,%s,%d,%s,%s,%s,%s,%s",
+			utils.Chain,                // chain
+			tx.Hash(),                  // hash
+			"",                         // status
+			utils.ServiceNameSequencer, // serviceName
+			utils.Business,             // business
+			"",                         // client
+			utils.ChainID,              // chainId
+			utils.StepSeqReceiveTx.ID,  // process ID
+			utils.StepSeqReceiveTx.Key, // processWord
+			-1,                         // index
+			-1,                         // innerIndex
+			time.Now().UnixNano()/int64(time.Millisecond), // currentTime
+			"",            // referId
+			"",            // contractAddress
+			executionAt+1, // blockHeight
+			"",            // blockHash
+			"",            // blockTime
+			"",            // depositConfirmHeight
+			"",            // tokenID
+			"",            // mevSupplier
+			"",            // businessHash
+			tx.Type(),     // transactionType
+		)
+	}
 
 	return transactions, ids, allConditionsOk, err
 }
@@ -261,6 +291,33 @@ func attemptAddTransaction(
 		effectiveGasPrice,
 		false,
 	)
+
+	if err == nil && receipt != nil {
+		utils.WriteToTraceLog("%s,%s,%s,%s,%s,%s,%d,%d,%s,%d,%d,%d,%s,%s,%d,%s,%d,%s,%s,%s,%s,%s",
+			utils.Chain,                // chain
+			transaction.Hash(),         // hash
+			"",                         // status
+			utils.ServiceNameSequencer, // serviceName
+			utils.Business,             // business
+			"",                         // client
+			utils.ChainID,              // chainId
+			utils.StepSeqPackageTx.ID,  // process ID
+			utils.StepSeqPackageTx.Key, // processWord
+			-1,                         // index
+			-1,                         // innerIndex
+			time.Now().UnixNano()/int64(time.Millisecond), // currentTime
+			"",                            // referId
+			receipt.ContractAddress.Hex(), // contractAddress
+			header.Number.Uint64(),        // blockHeight
+			"",                            // blockHash
+			header.Time,                   // blockTime
+			"",                            // depositConfirmHeight
+			"",                            // tokenID
+			"",                            // mevSupplier
+			"",                            // businessHash
+			transaction.Type(),            // transactionType
+		)
+	}
 
 	if err != nil {
 		if errors.Is(err, core.ErrGasLimitReached) {

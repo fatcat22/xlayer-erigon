@@ -370,6 +370,31 @@ BatchLoop:
 		}
 		startTime := time.Now()
 		log.Info(fmt.Sprintf("[%s] Starting block %d (forkid %v)...", logPrefix, blockNumber, batchState.forkId))
+
+		utils.WriteToTraceLog("%s,%s,%s,%s,%s,%s,%d,%d,%s,%d,%d,%d,%s,%s,%d,%s,%s,%s,%s,%s,%s,%s",
+			utils.Chain,                 // chain
+			"",                          // hash
+			"",                          // status
+			utils.ServiceNameSequencer,  // serviceName
+			utils.Business,              // business
+			"",                          // client
+			utils.ChainID,               // chainId
+			utils.StepSeqBeginBlock.ID,  // process ID
+			utils.StepSeqBeginBlock.Key, // processWord
+			-1,                          // index
+			-1,                          // innerIndex
+			time.Now().UnixNano()/int64(time.Millisecond), // currentTime
+			"",          // referId
+			"",          // contractAddress
+			blockNumber, // blockHeight
+			"",          // blockHash
+			"",          // blockTime
+			"",          // depositConfirmHeight
+			"",          // tokenID
+			"",          // mevSupplier
+			"",          // businessHash
+			"",          // transactionType
+		)
 		logTicker.Reset(10 * time.Second)
 		// For X Layer block timer
 		blockTimer := time.NewTimer(cfg.zk.XLayer.SequencerMaxBlockSealTime)
@@ -910,7 +935,30 @@ BatchLoop:
 		} else {
 			log.Info(fmt.Sprintf("[%s] Finish block %d with %d transactions...", logPrefix, blockNumber, len(batchState.blockState.builtBlockElements.transactions)), "info-tree-index", infoTreeIndexProgress, "taken", time.Since(startTime))
 		}
-
+		utils.WriteToTraceLog("%s,%s,%s,%s,%s,%s,%d,%d,%s,%d,%d,%d,%s,%s,%d,%s,%d,%s,%s,%s,%s,%s",
+			utils.Chain,                // chain
+			"",                         // hash
+			"",                         // status
+			utils.ServiceNameSequencer, // serviceName
+			utils.Business,             // business
+			"",                         // client
+			utils.ChainID,              // chainId
+			utils.StepSeqEndBlock.ID,   // process ID
+			utils.StepSeqEndBlock.Key,  // processWord
+			-1,                         // index
+			-1,                         // innerIndex
+			time.Now().UnixNano()/int64(time.Millisecond), // currentTime
+			"",           // referId
+			"",           // contractAddress
+			blockNumber,  // blockHeight
+			block.Hash(), // blockHash
+			block.Time(), // blockTime
+			"",           // depositConfirmHeight
+			"",           // tokenID
+			"",           // mevSupplier
+			"",           // businessHash
+			"",           // transactionType
+		)
 		// do not use remote executor in l1recovery mode
 		// if we need remote executor in l1 recovery then we must allow commit/start DB transactions
 		useExecutorForVerification := !batchState.isL1Recovery() && batchState.hasExecutorForThisBatch
@@ -918,6 +966,31 @@ BatchLoop:
 		if err != nil {
 			return err
 		}
+
+		utils.WriteToTraceLog("%s,%s,%s,%s,%s,%s,%d,%d,%s,%d,%d,%d,%s,%s,%d,%s,%d,%s,%s,%s,%s,%s",
+			utils.Chain,                    // chain
+			"",                             // hash
+			"",                             // status
+			utils.ServiceNameSequencer,     // serviceName
+			utils.Business,                 // business
+			"",                             // client
+			utils.ChainID,                  // chainId
+			utils.StepSeqVerifyTxBegin.ID,  // process ID
+			utils.StepSeqVerifyTxBegin.Key, // processWord
+			-1,                             // index
+			-1,                             // innerIndex
+			time.Now().UnixNano()/int64(time.Millisecond), // currentTime
+			"",           // referId
+			"",           // contractAddress
+			blockNumber,  // blockHeight
+			block.Hash(), // blockHash
+			block.Time(), // blockTime
+			"",           // depositConfirmHeight
+			"",           // tokenID
+			"",           // mevSupplier
+			"",           // businessHash
+			"",           // transactionType
+		)
 		cfg.legacyVerifier.StartAsyncVerification(batchContext.s.LogPrefix(), batchState.forkId, batchState.batchNumber, block.Root(), counters.UsedAsMap(), batchState.builtBlocks, useExecutorForVerification, batchContext.cfg.zk.XLayer.ExecutorMock, batchContext.cfg.zk.SequencerBatchVerificationTimeout, batchContext.cfg.zk.SequencerBatchVerificationRetries)
 
 		// For X Layer, local replay and smt alignment's feature of stateroot mismatch detection

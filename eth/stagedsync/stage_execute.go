@@ -53,6 +53,7 @@ import (
 	"github.com/ledgerwatch/erigon/turbo/silkworm"
 	"github.com/ledgerwatch/erigon/zk/erigon_db"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
+	"github.com/ledgerwatch/erigon/zk/utils"
 )
 
 const (
@@ -601,6 +602,9 @@ Loop:
 			log.Info("Committed State", "gas reached", currentStateGas, "gasTarget", gasState)
 			currentStateGas = 0
 			commitTime := time.Now()
+
+			var logHeaderForCommit *types.Header = header
+
 			if err = batch.Flush(ctx, txc.Tx); err != nil {
 				return err
 			}
@@ -610,6 +614,31 @@ Loop:
 			if !useExternalTx {
 				if err = txc.Tx.Commit(); err != nil {
 					return err
+				}
+				if logHeaderForCommit != nil {
+					utils.WriteToTraceLog("%s,%s,%s,%s,%s,%s,%d,%d,%s,%d,%d,%d,%s,%s,%d,%s,%d,%s,%s,%s,%s,%s",
+						utils.Chain,                  // chain
+						"",                           // txhash
+						"",                           // status
+						utils.ServiceNameRPC,         // serviceName
+						utils.Business,               // business
+						"",                           // client
+						utils.ChainID,                // chainId
+						utils.StepRPCFinishBlock.ID,  // process
+						utils.StepRPCFinishBlock.Key, // processWord
+						-1,                           // index
+						-1,                           // innerIndex
+						time.Now().UnixNano()/int64(time.Millisecond), // currentTime
+						"",                                 // referId
+						"",                                 // contractAddress
+						logHeaderForCommit.Number.Uint64(), // blockHeight
+						logHeaderForCommit.Hash(),          // blockHash
+						logHeaderForCommit.Time,            // blockTime
+						"",                                 // depositConfirmHeight
+						"",                                 // tokenID
+						"",                                 // mevSupplier
+						"",                                 // businessHash
+						"")                                 // transactionType
 				}
 				txc.Tx, err = cfg.db.BeginRw(context.Background())
 				if err != nil {

@@ -264,6 +264,33 @@ func (srv *ZkEVMDataStreamServer) WriteBlockWithBatchStartToStream(
 		return err
 	}
 
+	if blockEntries != nil && blockEntries.Size() > 0 {
+		utils.WriteToTraceLog("%s,%s,%s,%s,%s,%s,%d,%d,%s,%d,%d,%d,%s,%s,%d,%s,%d,%s,%s,%s,%s,%s",
+			utils.Chain,                // chain
+			"",                         // hash
+			"",                         // status
+			utils.ServiceNameSequencer, // serviceName
+			utils.Business,             // business
+			"",                         // client
+			utils.ChainID,              // chainId
+			utils.StepSeqDsSent.ID,     // process ID
+			utils.StepSeqDsSent.Key,    // processWord
+			-1,                         // index
+			-1,                         // innerIndex
+			time.Now().UnixNano()/int64(time.Millisecond), // currentTime
+			"",           // referId
+			"",           // contractAddress
+			blockNum,     // blockHeight
+			block.Hash(), // blockHash
+			block.Time(), // blockTime
+			"",           // depositConfirmHeight
+			"",           // tokenID
+			"",           // mevSupplier
+			"",           // businessHash
+			"",           // transactionType
+		)
+	}
+
 	if batchStartEntries != nil {
 		if err = srv.commitEntriesToStreamProto(batchStartEntries.Entries()); err != nil {
 			return err
