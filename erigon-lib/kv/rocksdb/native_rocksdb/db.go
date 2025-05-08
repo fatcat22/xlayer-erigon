@@ -5,6 +5,7 @@ import (
 	"github.com/ledgerwatch/erigon-lib/kv"
 	rdbcommon "github.com/ledgerwatch/erigon-lib/kv/rocksdb/common"
 	"github.com/linxGnu/grocksdb"
+	"path"
 	"unsafe"
 )
 
@@ -17,7 +18,7 @@ type NativeRocksDBImpl struct {
 }
 
 func NewNativeRocksDB(dbPath string, readOnly bool, options *rdbcommon.RocksDBOptions) (*NativeRocksDBImpl, error) {
-	db, err := grocksdb.OpenTransactionDb(options.Opts, options.TxOpts, dbPath)
+	db, err := grocksdb.OpenTransactionDb(options.Opts, options.TxOpts, path.Join(dbPath, "rocksdb"))
 
 	return &NativeRocksDBImpl{
 		db:      db,

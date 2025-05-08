@@ -86,9 +86,7 @@ func NewCombinDB(ctx context.Context, opts mdbx.MdbxOpts, tableCfg kv.TableCfg, 
 		}
 	}()
 
-	rocksdbDir := path.Join(dbDir, "rocksdb")
-	opts.GetLogger().Info("Set rocksdb path", "new path", rocksdbDir)
-	rocksdb, err := combineType.newDB(rocksdbDir, opts.GetLogger(), tableCfg, opts.GetLabel(), opts.GetRoTxsLimiter(), opts.IsReadonly(), options)
+	rocksdb, err := combineType.newDB(dbDir, opts.GetLogger(), tableCfg, opts.GetLabel(), opts.GetRoTxsLimiter(), opts.IsReadonly(), options)
 	if err != nil {
 		return nil, err
 	}

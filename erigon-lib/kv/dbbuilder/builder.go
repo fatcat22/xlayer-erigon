@@ -9,6 +9,7 @@ import (
 	"github.com/ledgerwatch/erigon-lib/kv/mdbx"
 	"github.com/ledgerwatch/erigon-lib/kv/rocksdb"
 	"github.com/ledgerwatch/erigon-lib/kv/rocksdb/common"
+	"path"
 )
 
 type majorDBType int
@@ -57,6 +58,7 @@ func ToDatabaseType(s string) DatabaseType {
 func (dt DatabaseType) NewDB(ctx context.Context, opts mdbx.MdbxOpts, tableCfg kv.TableCfg, enableCombineLog bool) (kv.RwDB, error) {
 	switch dt.major {
 	case majorDBTypeMdbx:
+		opts = opts.Path(path.Join(opts.GetPath(), "mdbx"))
 		return opts.Open(ctx)
 	case majorDBTypeRocksdb:
 		options := common.NewRocksDBOptions()
