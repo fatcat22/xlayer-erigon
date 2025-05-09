@@ -60,6 +60,8 @@ func ApplyFlagsForEthXLayerConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		SequencerMaxBlockSealTime:         sequencerMaxBlockSealTime,
 		SequencerOkPayBlockTxsLimit:       ctx.Uint64(utils.OkPaySequencerBlockTxsLimit.Name),
 		OkPaySenderAccountsList:           *common.NewOrderedListOfAddresses(1024),
+		GetLogsTimeout:                    ctx.Duration(utils.GetLogsTimeout.Name),
+		GetLogsRetries:                    ctx.Int(utils.GetLogsRetries.Name),
 	}
 	if cfg.XLayer.BlockInfoConcurrent {
 		blockinfo.InitUseBlockInfoTreeTrue()

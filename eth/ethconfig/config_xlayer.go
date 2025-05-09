@@ -42,6 +42,9 @@ type XLayerConfig struct {
 	SequencerSkipEmptyBlocks  bool
 	SequencerMaxBlockSealTime time.Duration
 
+	GetLogsTimeout time.Duration
+	GetLogsRetries int
+
 	// For OkPay
 	// SequencerOkPayBlockTxsLimit is the max number of txs per block allocated for OkPay txs
 	SequencerOkPayBlockTxsLimit uint64
