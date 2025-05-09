@@ -28,7 +28,7 @@ func (api *APIImpl) SendRawTransaction(ctx context.Context, encodedTx hexutility
 		0,                          // blockHeight
 		"",                         // blockHash
 		0,                          // blockTime
-		"",                         // transactionType (using tx count)
+		"",                         // transactionType
 	)
 
 	// For X Layer, optimize tx pool
@@ -67,7 +67,7 @@ func (api *APIImpl) sendRawTransactionSingle(ctx context.Context, encodedTx hexu
 				0,                          // blockHeight
 				"",                         // blockHash
 				0,                          // blockTime
-				"",                         // transactionType (using tx count)
+				"",                         // transactionType
 			)
 
 			return api.sendTxZk(api.PoolManagerUrl, encodedTx, chainId.Uint64())

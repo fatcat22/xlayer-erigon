@@ -273,7 +273,7 @@ func (srv *ZkEVMDataStreamServer) WriteBlockWithBatchStartToStream(
 			blockNum,                   // blockHeight
 			block.Hash().String(),      // blockHash
 			block.Time(),               // blockTime
-			"",                         // transactionType (using tx count)
+			"",                         // transactionType
 		)
 	}
 

@@ -54,7 +54,7 @@ func (sbc *SequencerBatchStreamWriter) CommitNewUpdates() ([]*verifier.VerifierB
 						blockResp.BlockNumber,           // blockHeight
 						string(blockResp.BlockHash),     // blockHash
 						blockResp.Timestamp,             // blockTime
-						"",                              // transactionType (using tx count)
+						"",                              // transactionType
 					)
 
 				}

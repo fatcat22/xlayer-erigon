@@ -378,7 +378,7 @@ BatchLoop:
 			blockNumber,                 // blockHeight
 			"",                          // blockHash
 			0,                           // blockTime
-			"",                          // transactionType (using tx count)
+			"",                          // transactionType
 		)
 
 		logTicker.Reset(10 * time.Second)
@@ -930,7 +930,7 @@ BatchLoop:
 			blockNumber,                // blockHeight
 			block.Hash().String(),      // blockHash
 			block.Time(),               // blockTime
-			"",                         // transactionType (using tx count)
+			"",                         // transactionType
 		)
 		// do not use remote executor in l1recovery mode
 		// if we need remote executor in l1 recovery then we must allow commit/start DB transactions
@@ -948,7 +948,7 @@ BatchLoop:
 			blockNumber,                    // blockHeight
 			block.Hash().String(),          // blockHash
 			block.Time(),                   // blockTime
-			"",                             // transactionType (using tx count)
+			"",                             // transactionType
 		)
 		cfg.legacyVerifier.StartAsyncVerification(batchContext.s.LogPrefix(), batchState.forkId, batchState.batchNumber, block.Root(), counters.UsedAsMap(), batchState.builtBlocks, useExecutorForVerification, batchContext.cfg.zk.XLayer.ExecutorMock, batchContext.cfg.zk.SequencerBatchVerificationTimeout, batchContext.cfg.zk.SequencerBatchVerificationRetries)
 

@@ -624,7 +624,7 @@ Loop:
 						0,                            // blockHeight
 						"",                           // blockHash
 						0,                            // blockTime
-						"",                           // transactionType (using tx count)
+						"",                           // transactionType
 					)
 				}
 				txc.Tx, err = cfg.db.BeginRw(context.Background())

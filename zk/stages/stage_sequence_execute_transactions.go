@@ -69,7 +69,7 @@ func getNextPoolTransactions(ctx context.Context, cfg SequenceBlockCfg, executio
 			executionAt+1,              // blockHeight
 			"",                         // blockHash
 			0,                          // blockTime
-			string(tx.Type()),          // transactionType (using tx count)
+			string(tx.Type()),          // transactionType
 		)
 	}
 
@@ -285,7 +285,7 @@ func attemptAddTransaction(
 			header.Number.Uint64(),      // blockHeight
 			"",                          // blockHash
 			0,                           // blockTime
-			string(transaction.Type()),  // transactionType (using tx count)
+			string(transaction.Type()),  // transactionType
 		)
 	}
 
