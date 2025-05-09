@@ -316,7 +316,7 @@ func SpawnStageBatches(
 				break
 			}
 			count++
-			log.Info("XHG ProcessEntry", "count", count)
+			log.Info("ProcessEntry", "count", count)
 			if endLoop, err = batchProcessor.ProcessEntry(entry); err != nil {
 				// if we triggered an unwind somewhere we need to return from the stage
 				if err == ErrorTriggeredUnwind {
@@ -324,6 +324,7 @@ func SpawnStageBatches(
 				}
 				return fmt.Errorf("ProcessEntry: %w", err)
 			}
+			log.Info("batchProcessor.LastBlockHeight", "lastHeight", batchProcessor.LastBlockHeight())
 			dsClientProgress.Store(batchProcessor.LastBlockHeight())
 		case <-ctx.Done():
 			log.Warn(fmt.Sprintf("[%s] Context done", logPrefix))

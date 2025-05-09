@@ -280,7 +280,7 @@ func (p *BatchesProcessor) processFullBlock(blockEntry *types.FullL2Block) (endL
 	}
 
 	// unwind if we already have this block
-	log.Info("XHG rocessFullBlock", "L2BlockNumber", blockEntry.L2BlockNumber, "lastBlockHeight", p.lastBlockHeight)
+	log.Info("rocessFullBlock", "L2BlockNumber", blockEntry.L2BlockNumber, "lastBlockHeight", p.lastBlockHeight)
 	if blockEntry.L2BlockNumber < p.lastBlockHeight+1 {
 		log.Warn(fmt.Sprintf("[%s] Block %d, already processed unwinding...", p.logPrefix, blockEntry.L2BlockNumber))
 		if _, err := p.unwind(blockEntry.L2BlockNumber); err != nil {
@@ -348,7 +348,7 @@ func (p *BatchesProcessor) processFullBlock(blockEntry *types.FullL2Block) (endL
 	p.lastBlockRoot = blockEntry.StateRoot
 
 	p.lastBlockHeight = blockEntry.L2BlockNumber
-	log.Info("XHG processFullBlock update p.lastblockHeight", "newHeight", p.lastBlockHeight)
+	log.Info("processFullBlock update p.lastblockHeight", "newHeight", p.lastBlockHeight)
 
 	p.blocksWritten++
 	p.progressChan <- p.blocksWritten

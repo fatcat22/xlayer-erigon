@@ -72,6 +72,14 @@ func (r *DatastreamClientRunner) StartRangeRead(
 		r.isReading.Store(true)
 		defer r.isReading.Store(false)
 
+		// Check for conn health
+		if err := r.dsClient.HandleStart(); err != nil {
+			time.Sleep(1 * time.Second)
+			errorChan <- struct{}{}
+			log.Warn(fmt.Sprintf("[%s] Error on handle start datastream connection", r.logPrefix), "error", err)
+			return
+		}
+
 		// first load up the header of the stream
 		if _, err := r.dsClient.GetHeader(); err != nil {
 			errorChan <- struct{}{}
@@ -79,6 +87,7 @@ func (r *DatastreamClientRunner) StartRangeRead(
 			return
 		}
 
+		lastFrom := uint64(0)
 		errorFlag := false
 		progress := r.dsClient.GetProgressAtomic()
 		for !r.stopRunner.Load() {
@@ -90,22 +99,20 @@ func (r *DatastreamClientRunner) StartRangeRead(
 				}
 			}
 
-			// Check for conn health
-			if err := r.dsClient.HandleStart(); err != nil {
-				time.Sleep(1 * time.Second)
-				errorChan <- struct{}{}
-				log.Warn(fmt.Sprintf("[%s] Error on handle start datastream connection", r.logPrefix), "error", err)
-				return
-			}
-
 			from := progress.Load()
-			log.Info("XHG StartRangeRead", "from", from, "highestDSL2Block", highestDSL2Block)
+			log.Info("StartRangeRead", "from", from, "highestDSL2Block", highestDSL2Block)
 			if from >= highestDSL2Block {
 				break
 			}
 
+			if lastFrom == from {
+				log.Info("StartRangeRead lastFrom equals to from", "from", from, "lastFrom", lastFrom)
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
 			to := min(from+blockRange, highestDSL2Block)
-			log.Info("XHG ReadRangeEntriesToChannel", "to", to)
+			log.Info("ReadRangeEntriesToChannel", "to", to)
 			if err := r.dsClient.ReadRangeEntriesToChannel(to); err != nil {
 				if !errorFlag {
 					// Try to reconnect and get range again
@@ -120,6 +127,7 @@ func (r *DatastreamClientRunner) StartRangeRead(
 			} else {
 				errorFlag = false
 			}
+			lastFrom = from
 		}
 
 		// Send stop signal
