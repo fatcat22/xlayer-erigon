@@ -756,7 +756,9 @@ BatchLoop:
 					blockDataSizeChecker = &backupDataSizeChecker
 					batchState.onAddedTransaction(transaction, receipt, execResult, effectiveGas)
 					minedTxHashes = append(minedTxHashes, txHash)
-					blockContext.OkPayTxCount++
+					if isOkPayTx {
+						blockContext.OkPayTxCount++
+					}
 				}
 
 				// We will only update the processed index in resequence job if there isn't overflow
