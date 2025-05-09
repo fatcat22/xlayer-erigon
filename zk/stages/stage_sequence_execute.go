@@ -298,6 +298,10 @@ func sequencingBatchStep(
 
 	batchCounters := prepareBatchCounters(batchContext, batchState)
 	olderBatchCounters := vm.NewEmptyCounters()
+	var preBlockCounters map[string]int
+	var preBlockRoot common.Hash
+	var preBlockNumber uint64
+	var useExecutorForVerification bool
 
 	if batchState.isL1Recovery() {
 		if cfg.zk.L1SyncStopBatch > 0 && batchState.batchNumber > cfg.zk.L1SyncStopBatch {
@@ -914,13 +918,18 @@ BatchLoop:
 
 		// do not use remote executor in l1recovery mode
 		// if we need remote executor in l1 recovery then we must allow commit/start DB transactions
-		useExecutorForVerification := !batchState.isL1Recovery() && batchState.hasExecutorForThisBatch
+		useExecutorForVerification = !batchState.isL1Recovery() && batchState.hasExecutorForThisBatch
 		counters, err := batchCounters.CombineCollectors(l1TreeUpdateIndex != 0)
 		if err != nil {
 			return err
 		}
 		//cfg.legacyVerifier.StartAsyncVerification(batchContext.s.LogPrefix(), batchState.forkId, batchState.batchNumber, block.Root(), counters.UsedAsMap(), batchState.builtBlocks, useExecutorForVerification, batchContext.cfg.zk.XLayer.ExecutorMock, batchContext.cfg.zk.SequencerBatchVerificationTimeout, batchContext.cfg.zk.SequencerBatchVerificationRetries)
-		cfg.legacyVerifier.StartAsyncVerification(batchContext.s.LogPrefix(), batchState.forkId, batchState.batchNumber, block.Root(), vm.GetDifferUsedAsMap(counters, olderBatchCounters), []uint64{blockNumber}, useExecutorForVerification, batchContext.cfg.zk.XLayer.ExecutorMock, batchContext.cfg.zk.SequencerBatchVerificationTimeout, batchContext.cfg.zk.SequencerBatchVerificationRetries)
+		if len(batchState.builtBlocks) > 1 {
+			cfg.legacyVerifier.StartAsyncVerification(batchContext.s.LogPrefix(), batchState.forkId, batchState.batchNumber, preBlockRoot, preBlockCounters, []uint64{preBlockNumber}, useExecutorForVerification, batchContext.cfg.zk.XLayer.ExecutorMock, batchContext.cfg.zk.SequencerBatchVerificationTimeout, batchContext.cfg.zk.SequencerBatchVerificationRetries)
+		}
+		preBlockCounters = vm.GetDifferUsedAsMap(counters, olderBatchCounters)
+		preBlockRoot = block.Root()
+		preBlockNumber = blockNumber
 		olderBatchCounters = counters
 
 		// For X Layer, local replay and smt alignment's feature of stateroot mismatch detection
@@ -976,6 +985,7 @@ BatchLoop:
 			break BatchLoop
 		}
 	}
+	cfg.legacyVerifier.StartAsyncVerification(batchContext.s.LogPrefix(), batchState.forkId, batchState.batchNumber, block.Root(), olderBatchCounters.UsedAsMap(), batchState.builtBlocks, useExecutorForVerification, batchContext.cfg.zk.XLayer.ExecutorMock, batchContext.cfg.zk.SequencerBatchVerificationTimeout, batchContext.cfg.zk.SequencerBatchVerificationRetries)
 
 	/*
 		if adding something below that line we must ensure
