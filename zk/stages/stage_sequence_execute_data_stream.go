@@ -71,27 +71,29 @@ func (sbc *SequencerBatchStreamWriter) writeBlockDetailsToDatastream(verifiedBun
 			if err != nil {
 				return checkedVerifierBundles, err
 			}
-			block, err := rawdb.ReadBlockByNumber(sbc.sdb.tx, request.GetLastBlockNumber())
-			if err != nil {
-				return checkedVerifierBundles, err
-			}
-			// all blocks in a request has identical batch number
-			// we need only to check the previous block's batch number for i == 0
-			previousBlockBatchNumber := request.BatchNumber
-			if len(request.BlockNumbers) == 1 {
-				var found bool
-				previousBlockBatchNumber, found, err = sbc.sdb.hermezDb.HermezDbReader.CheckBatchNoByL2Block(previousBlock.NumberU64())
-				if !found || err != nil {
+			for _, blockNum := range request.BlockNumbers {
+				block, err := rawdb.ReadBlockByNumber(sbc.sdb.tx, blockNum)
+				if err != nil {
 					return checkedVerifierBundles, err
 				}
-			}
+				// all blocks in a request has identical batch number
+				// we need only to check the previous block's batch number for i == 0
+				previousBlockBatchNumber := request.BatchNumber
+				if len(request.BlockNumbers) == 1 {
+					var found bool
+					previousBlockBatchNumber, found, err = sbc.sdb.hermezDb.HermezDbReader.CheckBatchNoByL2Block(previousBlock.NumberU64())
+					if !found || err != nil {
+						return checkedVerifierBundles, err
+					}
+				}
 
-			if err := sbc.streamServer.WriteBlockWithBatchStartToStream(sbc.logPrefix, sbc.sdb.tx, sbc.sdb.hermezDb, request.ForkId, request.BatchNumber, previousBlockBatchNumber, *previousBlock, *block); err != nil {
-				return checkedVerifierBundles, err
-			}
+				if err := sbc.streamServer.WriteBlockWithBatchStartToStream(sbc.logPrefix, sbc.sdb.tx, sbc.sdb.hermezDb, request.ForkId, request.BatchNumber, previousBlockBatchNumber, *previousBlock, *block); err != nil {
+					return checkedVerifierBundles, err
+				}
 
-			if err = stages.SaveStageProgress(sbc.sdb.tx, stages.DataStream, block.NumberU64()); err != nil {
-				return checkedVerifierBundles, err
+				if err = stages.SaveStageProgress(sbc.sdb.tx, stages.DataStream, block.NumberU64()); err != nil {
+					return checkedVerifierBundles, err
+				}
 			}
 		}
 

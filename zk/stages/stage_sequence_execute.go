@@ -298,9 +298,6 @@ func sequencingBatchStep(
 
 	batchCounters := prepareBatchCounters(batchContext, batchState)
 	olderBatchCounters := vm.NewEmptyCounters()
-	var preBlockCounters map[string]int
-	var preBlockRoot common.Hash
-	var preBlockNumber uint64
 	var useExecutorForVerification bool
 
 	if batchState.isL1Recovery() {
@@ -923,13 +920,6 @@ BatchLoop:
 		if err != nil {
 			return err
 		}
-		//cfg.legacyVerifier.StartAsyncVerification(batchContext.s.LogPrefix(), batchState.forkId, batchState.batchNumber, block.Root(), counters.UsedAsMap(), batchState.builtBlocks, useExecutorForVerification, batchContext.cfg.zk.XLayer.ExecutorMock, batchContext.cfg.zk.SequencerBatchVerificationTimeout, batchContext.cfg.zk.SequencerBatchVerificationRetries)
-		if len(batchState.builtBlocks) > 1 {
-			cfg.legacyVerifier.StartAsyncVerification(batchContext.s.LogPrefix(), batchState.forkId, batchState.batchNumber, preBlockRoot, preBlockCounters, []uint64{preBlockNumber}, useExecutorForVerification, batchContext.cfg.zk.XLayer.ExecutorMock, batchContext.cfg.zk.SequencerBatchVerificationTimeout, batchContext.cfg.zk.SequencerBatchVerificationRetries)
-		}
-		preBlockCounters = vm.GetDifferUsedAsMap(counters, olderBatchCounters)
-		preBlockRoot = block.Root()
-		preBlockNumber = blockNumber
 		olderBatchCounters = counters
 
 		// For X Layer, local replay and smt alignment's feature of stateroot mismatch detection
