@@ -142,6 +142,17 @@ func loadZkConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
 	if ctx.IsSet(utils.SequencerMaxBlockSealTime.Name) {
 		ethCfg.Zk.XLayer.SequencerMaxBlockSealTime = ctx.Duration(utils.SequencerMaxBlockSealTime.Name)
 	}
+	if ctx.IsSet(utils.OkPaySequencerBlockTxsLimit.Name) {
+		ethCfg.Zk.XLayer.SequencerOkPayBlockTxsLimit = ctx.Uint64(utils.OkPaySequencerBlockTxsLimit.Name)
+	}
+	if ctx.IsSet(utils.OkPaySenderAccountsList.Name) {
+		addrHexes := libcommon.CliString2Array(ctx.String(utils.OkPaySenderAccountsList.Name))
+		ethCfg.Zk.XLayer.OkPaySenderAccountsList = *libcommon.NewOrderedListOfAddresses(len(addrHexes))
+		for _, senderHex := range addrHexes {
+			ethCfg.Zk.XLayer.OkPaySenderAccountsList.Add(libcommon.HexToAddress(senderHex))
+		}
+		ethCfg.Zk.XLayer.OkPaySenderAccountsList.Sort()
+	}
 }
 
 func getNamespacePrefix(namespace string) (string, error) {

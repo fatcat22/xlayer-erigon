@@ -69,11 +69,12 @@ type DeprecatedTxPoolConfig struct {
 	FreeGasList []FreeGasInfo
 	// EnableTimsort is the switch to use timsort on the best slice of txpool
 	EnableTimsort bool // For X Layer, optimize the txpool
-	// OkPay config
-	// OkPayAccountsList is the list of OkPay accounts
-	OkPayAccountsList common.OrderedList[common.Address]
-	// OkPayBlockGasLimit is the max gas limit per block allocated for OkPay transactions
-	OkPayBlockGasLimit uint64
+	// YieldGasLimit is the max gas limit for retrieving txs with every YieldBest call on the txpool
+	YieldGasLimit uint64
+
+	// For X Layer, OkPay config
+	// OkPayYieldGasPercentageLimit is the max percentage of the yield gas limit allocated for OkPay txs
+	OkPayYieldGasPercentageLimit float64
 }
 
 // FreeGasInfo contains the details for what tx should be free
@@ -110,8 +111,10 @@ var DeprecatedDefaultTxPoolConfig = DeprecatedTxPoolConfig{
 	FreeGasCountPerAddr:  3,
 	FreeGasLimit:         21000,
 	EnableFreeGasList:    false,
-	OkPayAccountsList:    *common.NewOrderedListOfAddresses(1024),
-	OkPayBlockGasLimit:   20000000,
+	YieldGasLimit:        30_000_000,
+
+	// For X Layer, OkPay config
+	OkPayYieldGasPercentageLimit: 0.8,
 }
 
 var DefaultTxPool2Config = func(fullCfg *Config) txpoolcfg.Config {

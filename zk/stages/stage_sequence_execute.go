@@ -18,6 +18,7 @@ import (
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/zk"
+	"github.com/ledgerwatch/erigon/zk/apollo"
 	"github.com/ledgerwatch/erigon/zk/datastream/server"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	"github.com/ledgerwatch/erigon/zk/metrics"
@@ -438,6 +439,9 @@ BatchLoop:
 		blockContext := core.NewEVMBlockContext(header, getHashFn, cfg.engine, &coinbase)
 		batchState.blockState.builtBlockElements.resetBlockBuildingArrays()
 
+		// For X Layer, for OkPay
+		okPayBlockTxsLimit := ^uint64(0)
+
 		parentRoot := parentBlock.Root()
 		if err = handleStateForNewBlockStarting(batchContext, ibs, blockNumber, batchState.batchNumber, header.Time, &parentRoot, l1TreeUpdate, shouldWriteGerToContract); err != nil {
 			return err
@@ -552,6 +556,9 @@ BatchLoop:
 				} else {
 					log.Trace(fmt.Sprintf("[%s] Yielded transactions from the pool", logPrefix), "txCount", len(batchState.blockState.transactionsForInclusion))
 				}
+
+				// For X Layer, for OkPay. Only limit block txs on newly sequenced blocks
+				okPayBlockTxsLimit = apollo.GetOkPayBlockTxsLimit(cfg.zk.XLayer.SequencerOkPayBlockTxsLimit)
 			}
 
 			// For X Layer
@@ -603,6 +610,12 @@ BatchLoop:
 				}
 
 				if _, found := sendersToSkip[txSender]; found {
+					continue
+				}
+
+				// For X Layer, for OkPay
+				isOkPayTx := apollo.CheckOkPayAddress(cfg.zk.XLayer.OkPaySenderAccountsList, txSender)
+				if isOkPayTx && blockContext.OkPayTxCount >= okPayBlockTxsLimit {
 					continue
 				}
 
@@ -743,6 +756,7 @@ BatchLoop:
 					blockDataSizeChecker = &backupDataSizeChecker
 					batchState.onAddedTransaction(transaction, receipt, execResult, effectiveGas)
 					minedTxHashes = append(minedTxHashes, txHash)
+					blockContext.OkPayTxCount++
 				}
 
 				// We will only update the processed index in resequence job if there isn't overflow

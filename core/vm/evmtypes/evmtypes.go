@@ -33,6 +33,9 @@ type BlockContext struct {
 	BaseFee       *uint256.Int   // Provides information for BASEFEE
 	PrevRanDao    *common.Hash   // Provides information for PREVRANDAO
 	ExcessBlobGas *uint64        // Provides information for handling data blobs
+
+	// For X Layer, for OkPay
+	OkPayTxCount uint64
 }
 
 // TxContext provides the EVM with information about a transaction.

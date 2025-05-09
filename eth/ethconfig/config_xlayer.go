@@ -41,6 +41,12 @@ type XLayerConfig struct {
 
 	SequencerSkipEmptyBlocks  bool
 	SequencerMaxBlockSealTime time.Duration
+
+	// For OkPay
+	// SequencerOkPayBlockTxsLimit is the max number of txs per block allocated for OkPay txs
+	SequencerOkPayBlockTxsLimit uint64
+	// OkPaySenderAccountsList is the list of OkPay sender accounts
+	OkPaySenderAccountsList common.OrderedList[common.Address]
 }
 
 var DefaultXLayerConfig = XLayerConfig{}

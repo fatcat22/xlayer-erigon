@@ -108,14 +108,25 @@ var (
 		Usage: "EnableTimsort enable timsort to instead of built-in sorting",
 		Value: false,
 	}
-	// OkPay
-	TxPoolOkPayAccountsList = cli.StringFlag{
-		Name:  "txpool.okpay-accounts-list",
-		Usage: "List of OkPay accounts",
+	TxPoolYieldGasLimit = cli.Uint64Flag{
+		Name:  "txpool.yield-gas-limit",
+		Usage: "Max gas limit for every YieldBest call on the txpool",
+		Value: 30_000_000,
 	}
-	TxPoolOkPayBlockGasLimit = cli.Uint64Flag{
-		Name:  "txpool.okpay-block-gas-limit",
-		Usage: "Max gas limit per block allocated for OkPay transactions",
+	// OkPay
+	OkPayYieldGasPercentageLimit = cli.Float64Flag{
+		Name:  "okpay.yield-gas-percentage-limit",
+		Usage: "Max percentage of the gas limit allocated for every YieldBest call on the txpool",
+		Value: 0.8,
+	}
+	OkPaySenderAccountsList = cli.StringFlag{
+		Name:  "okpay.sender-accounts-list",
+		Usage: "List of OkPay sender accounts",
+	}
+	OkPaySequencerBlockTxsLimit = cli.Uint64Flag{
+		Name:  "okpay.sequencer-okpay-block-txs-limit",
+		Usage: "Max number of txs per block allocated for OkPay transactions",
+		Value: 100,
 	}
 	// Gas Pricer
 	GpoTypeFlag = cli.StringFlag{
@@ -448,20 +459,13 @@ func setTxPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 	if ctx.IsSet(TxPoolEnableTimsort.Name) {
 		cfg.EnableTimsort = ctx.Bool(TxPoolEnableTimsort.Name)
 	}
-
-	// Set OkPay txpool configs
-	setTxPoolOkPay(ctx, cfg)
-}
-
-func setTxPoolOkPay(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
-	if ctx.IsSet(TxPoolOkPayAccountsList.Name) {
-		okPayAccountsList := libcommon.CliString2Array(ctx.String(TxPoolOkPayAccountsList.Name))
-		for _, okPayAccount := range okPayAccountsList {
-			cfg.OkPayAccountsList.Add(libcommon.HexToAddress(okPayAccount))
-		}
+	if ctx.IsSet(TxPoolYieldGasLimit.Name) {
+		cfg.YieldGasLimit = ctx.Uint64(TxPoolYieldGasLimit.Name)
 	}
-	if ctx.IsSet(TxPoolOkPayBlockGasLimit.Name) {
-		cfg.OkPayBlockGasLimit = ctx.Uint64(TxPoolOkPayBlockGasLimit.Name)
+
+	// For OkPay
+	if ctx.IsSet(OkPayYieldGasPercentageLimit.Name) {
+		cfg.OkPayYieldGasPercentageLimit = ctx.Float64(OkPayYieldGasPercentageLimit.Name)
 	}
 }
 

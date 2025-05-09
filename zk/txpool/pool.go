@@ -417,8 +417,10 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 			FreeGasCountPerAddr:  ethCfg.DeprecatedTxPool.FreeGasCountPerAddr,
 			FreeGasLimit:         ethCfg.DeprecatedTxPool.FreeGasLimit,
 			EnableFreeGasList:    ethCfg.DeprecatedTxPool.EnableFreeGasList,
-			OkPayAccountsList:    ethCfg.DeprecatedTxPool.OkPayAccountsList,
-			OkPayBlockGasLimit:   ethCfg.DeprecatedTxPool.OkPayBlockGasLimit,
+			YieldGasLimit:        ethCfg.DeprecatedTxPool.YieldGasLimit,
+			// For OkPay
+			OkPaySenderAccountsList:      ethCfg.Zk.XLayer.OkPaySenderAccountsList,
+			OkPayYieldGasPercentageLimit: ethCfg.DeprecatedTxPool.OkPayYieldGasPercentageLimit,
 		},
 		freeGasAddrs: map[string]bool{},
 	}

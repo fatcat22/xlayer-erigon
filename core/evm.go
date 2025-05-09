@@ -79,6 +79,8 @@ func NewEVMBlockContext(header *types.Header, blockHashFunc func(n uint64) libco
 		GasLimit:      header.GasLimit,
 		PrevRanDao:    prevRandDao,
 		ExcessBlobGas: excessBlobGas,
+		// For X Layer, for OkPay
+		OkPayTxCount: 0,
 	}
 }
 

@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ledgerwatch/erigon-lib/common"
+	libcommon "github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon/cmd/utils"
 	"github.com/ledgerwatch/erigon/core/vm"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
@@ -56,9 +58,19 @@ func ApplyFlagsForEthXLayerConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		EnableAddTxNotify:                 ctx.Bool(utils.EnableAddTxNotify.Name),
 		SequencerSkipEmptyBlocks:          ctx.Bool(utils.SequencerSkipEmptyBlocks.Name),
 		SequencerMaxBlockSealTime:         sequencerMaxBlockSealTime,
+		SequencerOkPayBlockTxsLimit:       ctx.Uint64(utils.OkPaySequencerBlockTxsLimit.Name),
+		OkPaySenderAccountsList:           *common.NewOrderedListOfAddresses(1024),
 	}
 	if cfg.XLayer.BlockInfoConcurrent {
 		blockinfo.InitUseBlockInfoTreeTrue()
+	}
+	if ctx.IsSet(utils.OkPaySenderAccountsList.Name) {
+		addrHexes := libcommon.CliString2Array(ctx.String(utils.OkPaySenderAccountsList.Name))
+		cfg.XLayer.OkPaySenderAccountsList = *libcommon.NewOrderedListOfAddresses(len(addrHexes))
+		for _, senderHex := range addrHexes {
+			cfg.XLayer.OkPaySenderAccountsList.Add(libcommon.HexToAddress(senderHex))
+		}
+		cfg.XLayer.OkPaySenderAccountsList.Sort()
 	}
 
 	// For X Layer, pre run

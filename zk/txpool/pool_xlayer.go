@@ -62,10 +62,14 @@ type XLayerConfig struct {
 	// EnableTimsort is the switch to use timsort on the best slice of txpool
 	EnableTimsort bool
 	EnableNotify  bool
-	// OkPayAccountsList is the list of OkPay accounts
-	OkPayAccountsList common.OrderedList[common.Address]
-	// OkPayBlockGasLimit is the max gas limit per block allocated for OkPay transactions
-	OkPayBlockGasLimit uint64
+	// YieldGasLimit is the max gas limit for every YieldBest call on the txpool
+	YieldGasLimit uint64
+
+	// OkPay config
+	// OkPaySenderAccountsList is the list of OkPay sender accounts
+	OkPaySenderAccountsList common.OrderedList[common.Address]
+	// OkPayYieldGasPercentageLimit is the max percentage of the gas limit allocated for every YieldBest call on the txpool
+	OkPayYieldGasPercentageLimit float64
 }
 
 type GPCache interface {
@@ -79,6 +83,7 @@ type GPCache interface {
 type ReadContext struct {
 	Txs              *types.TxsRlp
 	AvailableGas     uint64
+	PriorityOkPayGas uint64
 	AvailableBlobGas uint64
 	ToSkip           mapset.Set[[32]byte]
 	ToRemove         []*metaTx
@@ -86,7 +91,7 @@ type ReadContext struct {
 }
 
 // For X Layer, optimize tx pool
-func (p *TxPool) bestForXLayer(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableGas, availableBlobGas uint64, toSkip mapset.Set[[32]byte]) (bool, int, error) {
+func (p *TxPool) bestForXLayer(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, _, availableBlobGas uint64, toSkip mapset.Set[[32]byte]) (bool, int, error) {
 	removeWG.Wait()
 
 	if p.isDeniedYieldingTransactions() {
@@ -105,9 +110,12 @@ func (p *TxPool) bestForXLayer(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, a
 
 	best := p.pending.best
 
+	availableGas := p.getYieldGasLimitXLayer()
+	PriorityOkPayGas := (availableGas * uint64(p.getOkPayYieldGasPercentageLimitXLayer()*100)) / 100
 	readContext := ReadContext{
 		Txs:              txs,
 		AvailableGas:     availableGas,
+		PriorityOkPayGas: PriorityOkPayGas,
 		AvailableBlobGas: availableBlobGas,
 		ToSkip:           toSkip,
 		Count:            0,
@@ -153,14 +161,15 @@ func (p *TxPool) bestForXLayer(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, a
 	return true, readContext.Count, nil
 }
 
-func (p *TxPool) bestRead(n uint16, tx kv.Tx, onTopOf uint64, readContext *ReadContext, isOkPay bool) (bool, error) {
+func (p *TxPool) bestRead(n uint16, tx kv.Tx, onTopOf uint64, readContext *ReadContext, isAddOkPayOnly bool) (bool, error) {
 	isShanghai := p.isShanghai()
 	isLondon := p.isLondon()
 	best := p.pending.best
 
 	availableGas := readContext.AvailableGas
-	if isOkPay {
-		availableGas = min(availableGas, p.getOkPayBlockGasLimitXLayer())
+	// For OkPay
+	if isAddOkPayOnly {
+		availableGas = readContext.PriorityOkPayGas
 	}
 
 	for i := 0; readContext.Count < int(n) && i < len(best.ms); i++ {
@@ -203,7 +212,8 @@ func (p *TxPool) bestRead(n uint16, tx kv.Tx, onTopOf uint64, readContext *ReadC
 		}
 
 		// For OkPay
-		if isOkPay && !p.isOkPayAddrXLayer(sender) {
+		isOkPayTx := p.isOkPayAddrXLayer(sender)
+		if isAddOkPayOnly && !isOkPayTx {
 			// Skip adding if not OkPay sender
 			continue
 		}
@@ -271,8 +281,10 @@ type ApolloConfig interface {
 	CheckFreeClaimAddr(localFreeClaimGasAddrs common.OrderedList[common.Address], addr common.Address) bool
 	CheckFreeGasExAddr(localFreeGasExAddrs common.OrderedList[common.Address], addr common.Address) bool
 	GetEnableFreeGasList(localEnableFreeGasList bool) bool
-	CheckOkPayAddr(localOkPayAccountsList common.OrderedList[common.Address], addr common.Address) bool
-	GetOkPayBlockGasLimit(localOkPayBlockGasLimit uint64) uint64
+	GetYieldGasLimit(localYieldGasLimit uint64) uint64
+	// For OkPay
+	CheckOkPayAddress(localOkPayAccountsList common.OrderedList[common.Address], addr common.Address) bool
+	GetOkPayYieldGasPercentageLimit(localOkPayYieldGasPercentageLimit float64) float64
 }
 
 // SetApolloConfig sets the apollo config with the node's apollo config
@@ -382,18 +394,25 @@ func (p *TxPool) setFreeGasList(freeGasList []ethconfig.FreeGasInfo) {
 	}
 }
 
-func (p *TxPool) isOkPayAddrXLayer(senderAddr common.Address) bool {
+func (p *TxPool) getYieldGasLimitXLayer() uint64 {
 	if p.apolloCfg != nil {
-		return p.apolloCfg.CheckOkPayAddr(p.xlayerCfg.OkPayAccountsList, senderAddr)
+		return p.apolloCfg.GetYieldGasLimit(p.xlayerCfg.YieldGasLimit)
 	}
-	return p.xlayerCfg.OkPayAccountsList.Contains(senderAddr)
+	return p.xlayerCfg.YieldGasLimit
 }
 
-func (p *TxPool) getOkPayBlockGasLimitXLayer() uint64 {
+func (p *TxPool) isOkPayAddrXLayer(senderAddr common.Address) bool {
 	if p.apolloCfg != nil {
-		return p.apolloCfg.GetOkPayBlockGasLimit(p.xlayerCfg.OkPayBlockGasLimit)
+		return p.apolloCfg.CheckOkPayAddress(p.xlayerCfg.OkPaySenderAccountsList, senderAddr)
 	}
-	return p.xlayerCfg.OkPayBlockGasLimit
+	return p.xlayerCfg.OkPaySenderAccountsList.Contains(senderAddr)
+}
+
+func (p *TxPool) getOkPayYieldGasPercentageLimitXLayer() float64 {
+	if p.apolloCfg != nil {
+		return p.apolloCfg.GetOkPayYieldGasPercentageLimit(p.xlayerCfg.OkPayYieldGasPercentageLimit)
+	}
+	return p.xlayerCfg.OkPayYieldGasPercentageLimit
 }
 
 var requireTxPoolLock atomic.Bool
