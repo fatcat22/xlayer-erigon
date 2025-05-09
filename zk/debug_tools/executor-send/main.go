@@ -1,24 +1,30 @@
 package main
 
 import (
-	"flag"
-	"github.com/ledgerwatch/erigon/zk/legacy_executor_verifier/proto/github.com/0xPolygonHermez/zkevm-node/state/runtime/executor"
-	"os"
-	"fmt"
-	"encoding/json"
-	"time"
 	"context"
+	"encoding/json"
+	"flag"
+	"fmt"
+	"os"
+	"time"
+
+	"github.com/golang/protobuf/proto"
+	"github.com/ledgerwatch/erigon/zk/legacy_executor_verifier/proto/github.com/0xPolygonHermez/zkevm-node/state/runtime/executor"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 var file string
+var fileType string
 var endpoint string
 
 func main() {
 	flag.StringVar(&file, "file", "", "file to send")
+	flag.StringVar(&fileType, "file-type", "proto", "file type: json or proto (default)")
 	flag.StringVar(&endpoint, "endpoint", "", "endpoint to send to")
 	flag.Parse()
+
+	var err error
 
 	contents, err := os.ReadFile(file)
 	if err != nil {
@@ -27,7 +33,15 @@ func main() {
 	}
 
 	var payload executor.ProcessStatelessBatchRequestV2
-	err = json.Unmarshal(contents, &payload)
+
+	if fileType == "proto" {
+		err = proto.UnmarshalText(string(contents), &payload)
+	} else if fileType == "json" {
+		err = json.Unmarshal(contents, &payload)
+	} else {
+		fmt.Println("File type must be either json or proto.")
+		return
+	}
 	if err != nil {
 		fmt.Println(err)
 		return

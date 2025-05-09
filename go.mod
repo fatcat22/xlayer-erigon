@@ -27,6 +27,7 @@ require (
 	github.com/anacrolix/sync v0.5.1
 	github.com/anacrolix/torrent v1.52.6-0.20231201115409-7ea994b6bbd8
 	github.com/apolloconfig/agollo/v4 v4.0.9
+	github.com/benbjohnson/immutable v0.4.3
 	github.com/benesch/cgosymbolizer v0.0.0-20190515212042-bec6fe6e597b
 	github.com/btcsuite/btcd/btcec/v2 v2.2.0
 	github.com/c2h5oh/datasize v0.0.0-20231215233829-aa82cc1e6500
@@ -52,6 +53,7 @@ require (
 	github.com/goccy/go-json v0.9.11
 	github.com/gofrs/flock v0.8.1
 	github.com/golang-jwt/jwt/v4 v4.5.0
+	github.com/golang/protobuf v1.5.4
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb
 	github.com/google/btree v1.1.2
 	github.com/google/cel-go v0.18.2
@@ -93,6 +95,7 @@ require (
 	github.com/protolambda/ztyp v0.2.2
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20210809151128-385d8c5e3fb7
 	github.com/prysmaticlabs/gohashtree v0.0.3-alpha.0.20230502123415-aafd8b3ca202
+	github.com/psilva261/timsort/v2 v2.0.1
 	github.com/quasilyte/go-ruleguard/dsl v0.3.22
 	github.com/rs/cors v1.11.0
 	github.com/segmentio/kafka-go v0.4.47
@@ -159,7 +162,6 @@ require (
 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/benbjohnson/clock v1.3.5 // indirect
-	github.com/benbjohnson/immutable v0.4.3 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.12.0 // indirect
 	github.com/bradfitz/iter v0.0.0-20191230175014-e8f45d346db8 // indirect
@@ -277,7 +279,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
-	github.com/psilva261/timsort/v2 v2.0.1 // indirect
 	github.com/quic-go/qpack v0.4.0 // indirect
 	github.com/quic-go/qtls-go1-20 v0.3.3 // indirect
 	github.com/quic-go/quic-go v0.38.2 // indirect
