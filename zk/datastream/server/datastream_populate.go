@@ -265,29 +265,15 @@ func (srv *ZkEVMDataStreamServer) WriteBlockWithBatchStartToStream(
 	}
 
 	if blockEntries != nil && blockEntries.Size() > 0 {
-		utils.WriteToTraceLog("%s,%s,%s,%s,%s,%s,%d,%d,%s,%d,%d,%d,%s,%s,%d,%s,%d,%s,%s,%s,%s,%s",
-			utils.Chain,                // chain
-			"",                         // hash
-			"",                         // status
+		utils.LogTrace(
+			"",                         // txhash
 			utils.ServiceNameSequencer, // serviceName
-			utils.Business,             // business
-			"",                         // client
-			utils.ChainID,              // chainId
-			utils.StepSeqDsSent.ID,     // process ID
+			utils.StepSeqDsSent.ID,     // processId
 			utils.StepSeqDsSent.Key,    // processWord
-			-1,                         // index
-			-1,                         // innerIndex
-			time.Now().UnixNano()/int64(time.Millisecond), // currentTime
-			"",           // referId
-			"",           // contractAddress
-			blockNum,     // blockHeight
-			block.Hash(), // blockHash
-			block.Time(), // blockTime
-			"",           // depositConfirmHeight
-			"",           // tokenID
-			"",           // mevSupplier
-			"",           // businessHash
-			"",           // transactionType
+			blockNum,                   // blockHeight
+			block.Hash().String(),      // blockHash
+			block.Time(),               // blockTime
+			"",                         // transactionType (using tx count)
 		)
 	}
 

@@ -41,6 +41,8 @@ type XLayerConfig struct {
 
 	SequencerSkipEmptyBlocks  bool
 	SequencerMaxBlockSealTime time.Duration
+
+	TraceLogPath string
 }
 
 var DefaultXLayerConfig = XLayerConfig{}

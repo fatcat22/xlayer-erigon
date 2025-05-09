@@ -8,8 +8,6 @@ import (
 	"runtime"
 	"sync"
 
-	"time"
-
 	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/kv"
 
@@ -63,29 +61,15 @@ func getNextPoolTransactions(ctx context.Context, cfg SequenceBlockCfg, executio
 	ids = append(ids, yieldedIds...)
 
 	for _, tx := range transactions {
-		utils.WriteToTraceLog("%s,%s,%s,%s,%s,%s,%d,%d,%s,%d,%d,%d,%s,%s,%d,%s,%d,%s,%s,%s,%s,%s",
-			utils.Chain,                // chain
-			tx.Hash(),                  // hash
-			"",                         // status
+		utils.LogTrace(
+			tx.Hash().String(),         // txhash
 			utils.ServiceNameSequencer, // serviceName
-			utils.Business,             // business
-			"",                         // client
-			utils.ChainID,              // chainId
-			utils.StepSeqReceiveTx.ID,  // process ID
+			utils.StepSeqReceiveTx.ID,  // processId
 			utils.StepSeqReceiveTx.Key, // processWord
-			-1,                         // index
-			-1,                         // innerIndex
-			time.Now().UnixNano()/int64(time.Millisecond), // currentTime
-			"",            // referId
-			"",            // contractAddress
-			executionAt+1, // blockHeight
-			"",            // blockHash
-			"",            // blockTime
-			"",            // depositConfirmHeight
-			"",            // tokenID
-			"",            // mevSupplier
-			"",            // businessHash
-			tx.Type(),     // transactionType
+			executionAt+1,              // blockHeight
+			"",                         // blockHash
+			0,                          // blockTime
+			string(tx.Type()),          // transactionType (using tx count)
 		)
 	}
 
@@ -293,29 +277,15 @@ func attemptAddTransaction(
 	)
 
 	if err == nil && receipt != nil {
-		utils.WriteToTraceLog("%s,%s,%s,%s,%s,%s,%d,%d,%s,%d,%d,%d,%s,%s,%d,%s,%d,%s,%s,%s,%s,%s",
-			utils.Chain,                // chain
-			transaction.Hash(),         // hash
-			"",                         // status
-			utils.ServiceNameSequencer, // serviceName
-			utils.Business,             // business
-			"",                         // client
-			utils.ChainID,              // chainId
-			utils.StepSeqPackageTx.ID,  // process ID
-			utils.StepSeqPackageTx.Key, // processWord
-			-1,                         // index
-			-1,                         // innerIndex
-			time.Now().UnixNano()/int64(time.Millisecond), // currentTime
-			"",                            // referId
-			receipt.ContractAddress.Hex(), // contractAddress
-			header.Number.Uint64(),        // blockHeight
-			"",                            // blockHash
-			header.Time,                   // blockTime
-			"",                            // depositConfirmHeight
-			"",                            // tokenID
-			"",                            // mevSupplier
-			"",                            // businessHash
-			transaction.Type(),            // transactionType
+		utils.LogTrace(
+			transaction.Hash().String(), // txhash
+			utils.ServiceNameSequencer,  // serviceName
+			utils.StepSeqPackageTx.ID,   // processId
+			utils.StepSeqPackageTx.Key,  // processWord
+			header.Number.Uint64(),      // blockHeight
+			"",                          // blockHash
+			0,                           // blockTime
+			string(transaction.Type()),  // transactionType (using tx count)
 		)
 	}
 

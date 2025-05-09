@@ -1429,6 +1429,9 @@ func (s *Ethereum) Init(stack *node.Node, config *ethconfig.Config, chainConfig 
 		s.txPool2.SetGpCacheForXLayer(gpCache)
 	}
 
+	// For X Layer full trace monitor
+	utils.SetTraceLogPath(config.Zk.XLayer.TraceLogPath)
+
 	if config.SilkwormRpcDaemon && httpRpcCfg.Enabled {
 		interface_log_settings := silkworm.RpcInterfaceLogSettings{
 			Enabled:         config.SilkwormRpcLogEnabled,

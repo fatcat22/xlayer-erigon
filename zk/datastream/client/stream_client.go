@@ -750,29 +750,15 @@ func ReadParsedProto(iterator FileEntryIterator) (
 		parsedEntry = l2Block
 
 		if fullBlock, ok := parsedEntry.(*types.FullL2Block); ok && fullBlock != nil {
-			utils.WriteToTraceLog("%s,%s,%s,%s,%s,%s,%d,%d,%s,%d,%d,%d,%s,%s,%d,%s,%d,%s,%s,%s,%s,%s",
-				utils.Chain,                   // chain
-				"",                            // hash
-				"",                            // status
-				utils.ServiceNameRPC,          // serviceName
-				utils.Business,                // business
-				"",                            // client
-				utils.ChainID,                 // chainId
-				utils.StepRPCReceiveBlock.ID,  // process ID
-				utils.StepRPCReceiveBlock.Key, // processWord
-				-1,                            // index
-				-1,                            // innerIndex
-				time.Now().UnixNano()/int64(time.Millisecond), // currentTime
-				"",                      // referId
-				"",                      // contractAddress
-				fullBlock.L2BlockNumber, // blockHeight
-				fullBlock.L2Blockhash,   // blockHash
-				fullBlock.Timestamp,     // blockTime
-				"",                      // depositConfirmHeight
-				"",                      // tokenID
-				"",                      // mevSupplier
-				"",                      // businessHash
-				"",                      // transactionType
+			utils.LogTrace(
+				"",                             // txhash
+				utils.ServiceNameSequencer,     // serviceName
+				utils.StepSeqDsSent.ID,         // processId
+				utils.StepSeqDsSent.Key,        // processWord
+				fullBlock.L2BlockNumber,        // blockHeight
+				fullBlock.L2Blockhash.String(), // blockHash
+				uint64(fullBlock.Timestamp),    // blockTime
+				"",                             // transactionType (using tx count)
 			)
 		}
 		return

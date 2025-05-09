@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"time"
 
 	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/common/hexutility"
@@ -21,29 +20,17 @@ import (
 
 // SendRawTransaction implements eth_sendRawTransaction. Creates new message call transaction or a contract creation for previously-signed transactions.
 func (api *APIImpl) SendRawTransaction(ctx context.Context, encodedTx hexutility.Bytes) (common.Hash, error) {
-	utils.WriteToTraceLog("%s,%s,%s,%s,%s,%s,%d,%d,%s,%d,%d,%d,%s,%s,%d,%s,%d,%s,%s,%s,%s,%s",
-		utils.Chain,                // chain
-		"",                         // hash
-		"",                         // status
+	utils.LogTrace(
+		"",                         // txhash
 		utils.ServiceNameRPC,       // serviceName
-		utils.Business,             // business
-		"",                         // client
-		utils.ChainID,              // chainId
-		utils.StepRPCReceiveTx.ID,  // process
+		utils.StepRPCReceiveTx.ID,  // processId
 		utils.StepRPCReceiveTx.Key, // processWord
-		-1,                         // index
-		-1,                         // innerIndex
-		time.Now().UnixNano()/int64(time.Millisecond), // currentTime
-		"", // referId
-		"", // contractAddress
-		"", // blockHeight
-		"", // blockHash
-		"", // blockTime
-		"", // depositConfirmHeight
-		"", // tokenID
-		"", // mevSupplier
-		"", // businessHash
-		"") // transactionType
+		0,                          // blockHeight
+		"",                         // blockHash
+		0,                          // blockTime
+		"",                         // transactionType (using tx count)
+	)
+
 	// For X Layer, optimize tx pool
 	if !api.BulkAddTxs {
 		return api.sendRawTransactionSingle(ctx, encodedTx)
@@ -72,30 +59,17 @@ func (api *APIImpl) sendRawTransactionSingle(ctx context.Context, encodedTx hexu
 	if api.isZkNonSequencer(chainId) {
 		// [zkevm] - proxy the request to the pool manager if the pool manager is set
 		if api.isPoolManagerAddressSet() {
-
-			utils.WriteToTraceLog("%s,%s,%s,%s,%s,%s,%d,%d,%s,%d,%d,%d,%s,%s,%d,%s,%d,%s,%s,%s,%s,%s",
-				utils.Chain,                // chain
+			utils.LogTrace(
 				"",                         // txhash
-				"",                         // status
 				utils.ServiceNameRPC,       // serviceName
-				utils.Business,             // business
-				"",                         // client
-				utils.ChainID,              // chainId
-				utils.StepRPCForwardTx.ID,  // process
+				utils.StepRPCForwardTx.ID,  // processId
 				utils.StepRPCForwardTx.Key, // processWord
-				-1,                         // index
-				-1,                         // innerIndex
-				time.Now().UnixNano()/int64(time.Millisecond), // currentTime
-				"", // referId
-				"", // contractAddress
-				"", // blockHeight
-				"", // blockHash
-				"", // blockTime
-				"", // depositConfirmHeight
-				"", // tokenID
-				"", // mevSupplier
-				"", // businessHash
-				"") // transactionType
+				0,                          // blockHeight
+				"",                         // blockHash
+				0,                          // blockTime
+				"",                         // transactionType (using tx count)
+			)
+
 			return api.sendTxZk(api.PoolManagerUrl, encodedTx, chainId.Uint64())
 		}
 

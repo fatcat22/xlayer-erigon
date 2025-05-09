@@ -616,29 +616,16 @@ Loop:
 					return err
 				}
 				if logHeaderForCommit != nil {
-					utils.WriteToTraceLog("%s,%s,%s,%s,%s,%s,%d,%d,%s,%d,%d,%d,%s,%s,%d,%s,%d,%s,%s,%s,%s,%s",
-						utils.Chain,                  // chain
+					utils.LogTrace(
 						"",                           // txhash
-						"",                           // status
 						utils.ServiceNameRPC,         // serviceName
-						utils.Business,               // business
-						"",                           // client
-						utils.ChainID,                // chainId
-						utils.StepRPCFinishBlock.ID,  // process
+						utils.StepRPCFinishBlock.ID,  // processId
 						utils.StepRPCFinishBlock.Key, // processWord
-						-1,                           // index
-						-1,                           // innerIndex
-						time.Now().UnixNano()/int64(time.Millisecond), // currentTime
-						"",                                 // referId
-						"",                                 // contractAddress
-						logHeaderForCommit.Number.Uint64(), // blockHeight
-						logHeaderForCommit.Hash(),          // blockHash
-						logHeaderForCommit.Time,            // blockTime
-						"",                                 // depositConfirmHeight
-						"",                                 // tokenID
-						"",                                 // mevSupplier
-						"",                                 // businessHash
-						"")                                 // transactionType
+						0,                            // blockHeight
+						"",                           // blockHash
+						0,                            // blockTime
+						"",                           // transactionType (using tx count)
+					)
 				}
 				txc.Tx, err = cfg.db.BeginRw(context.Background())
 				if err != nil {

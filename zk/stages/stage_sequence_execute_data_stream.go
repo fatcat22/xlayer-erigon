@@ -3,7 +3,6 @@ package stages
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
@@ -47,31 +46,17 @@ func (sbc *SequencerBatchStreamWriter) CommitNewUpdates() ([]*verifier.VerifierB
 
 			for _, blockResp := range vb.Response.ExecutorResponse.BlockResponses {
 				if blockResp != nil {
-
-					utils.WriteToTraceLog("%s,%s,%s,%s,%s,%s,%d,%d,%s,%d,%d,%d,%s,%s,%d,%s,%d,%s,%s,%s,%s,%s",
-						utils.Chain,                     // chain
-						"",                              // hash
-						"",                              // status
+					utils.LogTrace(
+						"",                              // txhash
 						utils.ServiceNameSequencer,      // serviceName
-						utils.Business,                  // business
-						"",                              // client
-						utils.ChainID,                   // chainId
-						utils.StepSeqVerifyTxResult.ID,  // process ID
+						utils.StepSeqVerifyTxResult.ID,  // processId
 						utils.StepSeqVerifyTxResult.Key, // processWord
-						-1,                              // index
-						-1,                              // innerIndex
-						time.Now().UnixNano()/int64(time.Millisecond), // currentTime
-						"",                    // referId
-						"",                    // contractAddress
-						blockResp.BlockNumber, // blockHeight
-						blockResp.BlockHash,   // blockHash
-						blockResp.Timestamp,   // blockTime
-						"",                    // depositConfirmHeight
-						"",                    // tokenID
-						"",                    // mevSupplier
-						"",                    // businessHash
-						"",                    // transactionType
+						blockResp.BlockNumber,           // blockHeight
+						string(blockResp.BlockHash),     // blockHash
+						blockResp.Timestamp,             // blockTime
+						"",                              // transactionType (using tx count)
 					)
+
 				}
 			}
 		}
