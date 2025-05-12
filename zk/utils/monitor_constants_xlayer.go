@@ -10,7 +10,6 @@ type ProcessStep struct {
 var (
 	// RPC
 	StepRPCReceiveTx    = ProcessStep{15010, "xlayer_rpc_receive_tx"}
-	StepRPCForwardTx    = ProcessStep{15012, "xlayer_rpc_forward_tx"}
 	StepRPCReceiveBlock = ProcessStep{15060, "xlayer_rpc_receive_block"}
 	StepRPCFinishBlock  = ProcessStep{15062, "xlayer_rpc_finish_block"}
 
@@ -27,9 +26,8 @@ var (
 const (
 	Chain = "xlayer"
 
-	ServiceNameRPC         = "okx-defi-xlayer-rpcpay-pro"
-	ServiceNamePoolManager = "okx-defi-xlayer-plmgr-pro"
-	ServiceNameSequencer   = "okx-defi-xlayer-egseqz-pro"
+	ServiceNameRPC       = "okx-defi-xlayer-rpcpay-pro"
+	ServiceNameSequencer = "okx-defi-xlayer-egseqz-pro"
 
 	Business = "xlayer"
 	ChainID  = 196

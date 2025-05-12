@@ -619,9 +619,9 @@ Loop:
 						utils.ServiceNameRPC,         // serviceName
 						utils.StepRPCFinishBlock.ID,  // processId
 						utils.StepRPCFinishBlock.Key, // processWord
-						0,                            // blockHeight
-						"",                           // blockHash
-						0,                            // blockTime
+						blockNum,                     // blockHeight
+						blockHash.Hex(),              // blockHash
+						header.Time,                  // blockTime
 						"",                           // transactionType
 					)
 				}

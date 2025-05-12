@@ -3,43 +3,35 @@ package utils
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
 
-	log "github.com/ledgerwatch/erigon/zkevm/log"
+	erigonlog "github.com/ledgerwatch/erigon/zkevm/log"
 )
 
 var (
 	traceLogPath string
+	traceLogFile *os.File
+	traceLogger  *log.Logger
 )
 
-// Internal logging function with hardcoded format string
+// Write a trace log line
 func writeTraceLogInternal(v ...interface{}) {
-	// Format string defining 22 fields
 	format := "%s,%s,%s,%s,%s,%s,%d,%d,%s,%s,%s,%d,%s,%s,%d,%s,%d,%s,%s,%s,%s,%s"
-
-	logFilePath := traceLogPath
-
-	f, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Errorf("Error: Failed to open trace log file %s: %v\n", logFilePath, err)
-		return
-	}
-	defer f.Close()
-
 	message := fmt.Sprintf(format, v...)
-
 	if len(message) == 0 || message[len(message)-1] != '\n' {
 		message += "\n"
 	}
-
-	if _, err := f.WriteString(message); err != nil {
-		log.Errorf("Error: Failed to write to trace log file %s: %v\n", logFilePath, err)
+	if traceLogger != nil {
+		traceLogger.Print(message)
+	} else {
+		erigonlog.Warnf("traceLogger is not initialized, log not written")
 	}
 }
 
-// Public logging function with standardized parameters
+// Public logging function
 func LogTrace(
 	txhash string,
 	serviceName string,
@@ -74,23 +66,29 @@ func LogTrace(
 		BusinessHash,
 		transactionType,
 	}
-
 	writeTraceLogInternal(allArgs...)
 }
 
-// Set the path for trace logs, creating directories if needed
+// Set the path for trace logs and initialize logger
 func SetTraceLogPath(newPath string) {
 	if newPath != "" {
 		logDir := filepath.Dir(newPath)
 		if _, err := os.Stat(logDir); os.IsNotExist(err) {
-			errMkdir := os.MkdirAll(logDir, 0755)
-			if errMkdir != nil {
-				log.Errorf("Failed to create trace log directory %s: %v", logDir, errMkdir)
-			}
+			_ = os.MkdirAll(logDir, 0755)
 		}
+		if traceLogFile != nil {
+			traceLogFile.Close()
+		}
+		f, err := os.OpenFile(newPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			erigonlog.Errorf("Failed to open trace log file %s: %v", newPath, err)
+			return
+		}
+		traceLogFile = f
+		traceLogger = log.New(traceLogFile, "", 0)
 		traceLogPath = newPath
-		log.Infof("Trace log path set to: %s", traceLogPath)
+		erigonlog.Infof("Trace log path set to: %s", traceLogPath)
 	} else {
-		log.Warnf("Attempted to set an empty trace log path. Current path remains: %s", traceLogPath)
+		erigonlog.Warnf("Attempted to set an empty trace log path. Current path remains: %s", traceLogPath)
 	}
 }

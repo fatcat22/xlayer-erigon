@@ -17,20 +17,25 @@ import (
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	"github.com/ledgerwatch/erigon/zk/sequencer"
 	"github.com/ledgerwatch/erigon/zk/utils"
+	"github.com/ledgerwatch/erigon/zkevm/log"
 )
 
 // SendRawTransaction implements eth_sendRawTransaction. Creates new message call transaction or a contract creation for previously-signed transactions.
 func (api *APIImpl) SendRawTransaction(ctx context.Context, encodedTx hexutility.Bytes) (common.Hash, error) {
+	txn, err := types.DecodeWrappedTransaction(encodedTx)
+	if err != nil {
+		log.Error("Failed to decode transaction", "error", err)
+	}
 	if !sequencer.IsSequencer() {
 		utils.LogTrace(
-			"",                         // txhash
+			txn.Hash().Hex(),           // txhash
 			utils.ServiceNameRPC,       // serviceName
 			utils.StepRPCReceiveTx.ID,  // processId
 			utils.StepRPCReceiveTx.Key, // processWord
 			0,                          // blockHeight
 			"",                         // blockHash
 			0,                          // blockTime
-			"",                         // transactionType
+			string(txn.Type()),         // transactionType
 		)
 	}
 
@@ -62,17 +67,6 @@ func (api *APIImpl) sendRawTransactionSingle(ctx context.Context, encodedTx hexu
 	if api.isZkNonSequencer(chainId) {
 		// [zkevm] - proxy the request to the pool manager if the pool manager is set
 		if api.isPoolManagerAddressSet() {
-			utils.LogTrace(
-				"",                         // txhash
-				utils.ServiceNameRPC,       // serviceName
-				utils.StepRPCForwardTx.ID,  // processId
-				utils.StepRPCForwardTx.Key, // processWord
-				0,                          // blockHeight
-				"",                         // blockHash
-				0,                          // blockTime
-				"",                         // transactionType
-			)
-
 			return api.sendTxZk(api.PoolManagerUrl, encodedTx, chainId.Uint64())
 		}
 

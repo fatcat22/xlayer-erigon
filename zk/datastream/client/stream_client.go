@@ -753,8 +753,8 @@ func ReadParsedProto(iterator FileEntryIterator) (
 			utils.LogTrace(
 				"",                             // txhash
 				utils.ServiceNameSequencer,     // serviceName
-				utils.StepSeqDsSent.ID,         // processId
-				utils.StepSeqDsSent.Key,        // processWord
+				utils.StepRPCReceiveBlock.ID,   // processId
+				utils.StepRPCReceiveBlock.Key,  // processWord
 				fullBlock.L2BlockNumber,        // blockHeight
 				fullBlock.L2Blockhash.String(), // blockHash
 				uint64(fullBlock.Timestamp),    // blockTime
