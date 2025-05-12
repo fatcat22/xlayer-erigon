@@ -1,7 +1,9 @@
 package combinedb
 
 import (
+	"bytes"
 	"fmt"
+	"runtime"
 	"sync/atomic"
 
 	"github.com/ledgerwatch/erigon-lib/kv"
@@ -105,6 +107,7 @@ func (c *CombineCursor) Seek(key []byte) (k []byte, v []byte, err error) {
 
 func (c *CombineCursor) SeekExact(key []byte) (k []byte, v []byte, err error) {
 	c.logger.Infof("SeekExact(key=%x)", key)
+	fmt.Println("%s", getCallStack())
 	defer c.logger.Infof("SeekExact(key=%x) done. k=%x, v=%x, err=%v", key, k, v, err)
 
 	k1, v1, err1 := c.mdbxCursor.SeekExact(key)
@@ -452,4 +455,23 @@ func (c *CombineRwCursorDupSort) Count() (uint64, error) {
 
 func (c *CombineRwCursorDupSort) Close() {
 	c.CombineCursorDupSort.Close()
+}
+
+func getCallStack() string {
+	pcs := make([]uintptr, 32)
+	n := runtime.Callers(2, pcs) // 跳过 getCallStack 和 runtime.Callers
+	frames := runtime.CallersFrames(pcs[:n])
+
+	var buf bytes.Buffer
+	buf.WriteString("=== Call Stack ===\n")
+
+	for {
+		frame, more := frames.Next()
+		buf.WriteString(fmt.Sprintf("%s\n%s:%d\n", frame.Function, frame.File, frame.Line))
+		if !more {
+			break
+		}
+	}
+
+	return buf.String()
 }

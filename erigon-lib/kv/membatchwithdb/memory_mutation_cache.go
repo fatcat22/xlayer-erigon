@@ -2,7 +2,7 @@ package membatchwithdb
 
 import (
 	"bytes"
-
+	"fmt"
 	"github.com/ledgerwatch/erigon-lib/common"
 
 	"github.com/c2h5oh/datasize"
@@ -54,6 +54,11 @@ func (m *MemoryMutationWithCache) GetOne(table string, key []byte) ([]byte, erro
 		return nil, err
 	}
 	_, v, err := c.SeekExact(key)
+	todo: SeekExact could return valid value but GetOne can not.
+	v2, err2 := m.db.GetOne(table, key)
+	if !bytes.Equal(v, v2) {
+		fmt.Printf("yangzhe: table=%s, key=%x. MemDB.GetOne(v=%x, err=%v) vs SeekExact(v=%x, err=%v)\n", table, key, v2, err2, v, err)
+	}
 	if err == nil && v != nil {
 		// Store in modifyCache (not cache, as cache is read-only)
 		if _, ok := m.modifyCache[table]; !ok {
