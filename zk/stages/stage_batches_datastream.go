@@ -3,6 +3,7 @@ package stages
 import (
 	"fmt"
 	"math/rand"
+	"strings"
 	"sync/atomic"
 
 	"time"
@@ -72,22 +73,37 @@ func (r *DatastreamClientRunner) StartRangeRead(
 		r.isReading.Store(true)
 		defer r.isReading.Store(false)
 
-		// Check for conn health
-		if err := r.dsClient.HandleStart(); err != nil {
-			time.Sleep(1 * time.Second)
-			errorChan <- struct{}{}
-			log.Warn(fmt.Sprintf("[%s] Error on handle start datastream connection", r.logPrefix), "error", err)
-			return
-		}
+		// Reconnect and send
+		// if err := r.dsClient.HandleStart(); err != nil {
+		// 	errorChan <- struct{}{}
+		// 	log.Warn(fmt.Sprintf("[%s] Error on handle start datastream connection", r.logPrefix), "error", err)
+		// 	return
+		// }
 
 		// first load up the header of the stream
 		if _, err := r.dsClient.GetHeader(); err != nil {
-			errorChan <- struct{}{}
-			log.Warn(fmt.Sprintf("[%s] Error getting block header from datastream", r.logPrefix), "error", err)
-			return
+			if strings.Contains(err.Error(), "broken pipe") {
+				// reconnenct to ds if the last error is casued by broken pipe
+				if err := r.dsClient.HandleStart(); err != nil {
+					errorChan <- struct{}{}
+					log.Warn(fmt.Sprintf("[%s] Error on retry handle start datastream connection", r.logPrefix), "error", err)
+					return
+				}
+				// get header from ds again
+				if _, err := r.dsClient.GetHeader(); err != nil {
+					errorChan <- struct{}{}
+					log.Warn(fmt.Sprintf("[%s] Error on retring getting block header from datastream", r.logPrefix), "error", err)
+					return
+				}
+			} else {
+				errorChan <- struct{}{}
+				log.Warn(fmt.Sprintf("[%s] Error getting block header from datastream", r.logPrefix), "error", err)
+				return
+			}
 		}
 
 		lastFrom := uint64(0)
+		lastTo := uint64(0)
 		errorFlag := false
 		progress := r.dsClient.GetProgressAtomic()
 		for !r.stopRunner.Load() {
@@ -99,19 +115,32 @@ func (r *DatastreamClientRunner) StartRangeRead(
 				}
 			}
 
+			// Check for conn health
+			if err := r.dsClient.HandleStart(); err != nil {
+				time.Sleep(1 * time.Second)
+				errorChan <- struct{}{}
+				log.Warn(fmt.Sprintf("[%s] Error on handle start datastream connection", r.logPrefix), "error", err)
+				return
+			}
+
 			from := progress.Load()
 			log.Info("StartRangeRead", "from", from, "highestDSL2Block", highestDSL2Block)
 			if from >= highestDSL2Block {
 				break
 			}
 
-			if lastFrom == from {
-				log.Info("StartRangeRead lastFrom equals to from", "from", from, "lastFrom", lastFrom)
+			if lastFrom == from && from > 0 {
+				log.Info("StartRangeRead from equals to lastFrom", "from", from, "lastFrom", lastFrom)
 				time.Sleep(1 * time.Second)
 				continue
 			}
 
 			to := min(from+blockRange, highestDSL2Block)
+			if lastTo == to {
+				log.Info("StartRangeRead to equals to lastTo", "to", to, "lastTo", lastTo)
+				break
+			}
+
 			log.Info("ReadRangeEntriesToChannel", "to", to)
 			if err := r.dsClient.ReadRangeEntriesToChannel(to); err != nil {
 				if !errorFlag {
@@ -128,6 +157,7 @@ func (r *DatastreamClientRunner) StartRangeRead(
 				errorFlag = false
 			}
 			lastFrom = from
+			lastTo = to
 		}
 
 		// Send stop signal
