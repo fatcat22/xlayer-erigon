@@ -123,7 +123,6 @@ Loop:
 		}
 
 		//fetch values pre execute
-		log.Info("XHG getPreexecuteValues", "blockNum", blockNum, "prevBlockHash", prevBlockHash)
 		datastreamBlockHash, block, senders, err := getPreexecuteValues(cfg, ctx, tx, blockNum, prevBlockHash)
 		if err != nil {
 			stoppedErr = fmt.Errorf("getPreexecuteValues: %w", err)
@@ -299,12 +298,10 @@ func getPreexecuteValues(cfg ExecuteBlockCfg, ctx context.Context, tx kv.RwTx, b
 		return common.Hash{}, nil, nil, fmt.Errorf("ReadCanonicalHash: %w", err)
 	}
 
-	log.Info("XHG getPreexecuteValues ReadCanonicalHash", "preExecuteHeaderHash", preExecuteHeaderHash)
 	block, senders, err := cfg.blockReader.BlockWithSenders(ctx, tx, preExecuteHeaderHash, blockNum)
 	if err != nil {
 		return common.Hash{}, nil, nil, fmt.Errorf("BlockWithSenders: %w", err)
 	}
-	log.Info(fmt.Sprintf("XHG getPreexecuteValues BlockWithSenders, block=%+v", block))
 	if block == nil {
 		return common.Hash{}, nil, nil, fmt.Errorf("empty block blocknum: %d", blockNum)
 	}
