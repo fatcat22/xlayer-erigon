@@ -34,12 +34,6 @@ const (
 	Business = "xlayer"
 	ChainID  = 196
 
-	StatusPending        TransactionStatus = "pending"
-	StatusConfirm        TransactionStatus = "confirm"
-	StatusDropAndReplace TransactionStatus = "drop&replace"
-	StatusDrop           TransactionStatus = "drop"
-	StatusFilter         TransactionStatus = "filter"
-
 	Client               string = ""
 	Status               string = ""
 	Index                string = ""

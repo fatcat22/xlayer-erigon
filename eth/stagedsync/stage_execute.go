@@ -603,8 +603,6 @@ Loop:
 			currentStateGas = 0
 			commitTime := time.Now()
 
-			var logHeaderForCommit *types.Header = header
-
 			if err = batch.Flush(ctx, txc.Tx); err != nil {
 				return err
 			}
@@ -615,7 +613,7 @@ Loop:
 				if err = txc.Tx.Commit(); err != nil {
 					return err
 				}
-				if logHeaderForCommit != nil {
+				if header != nil {
 					utils.LogTrace(
 						"",                           // txhash
 						utils.ServiceNameRPC,         // serviceName

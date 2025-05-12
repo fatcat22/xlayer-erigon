@@ -15,21 +15,24 @@ import (
 	"github.com/ledgerwatch/erigon/rpc"
 	"github.com/ledgerwatch/erigon/turbo/rpchelper"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
+	"github.com/ledgerwatch/erigon/zk/sequencer"
 	"github.com/ledgerwatch/erigon/zk/utils"
 )
 
 // SendRawTransaction implements eth_sendRawTransaction. Creates new message call transaction or a contract creation for previously-signed transactions.
 func (api *APIImpl) SendRawTransaction(ctx context.Context, encodedTx hexutility.Bytes) (common.Hash, error) {
-	utils.LogTrace(
-		"",                         // txhash
-		utils.ServiceNameRPC,       // serviceName
-		utils.StepRPCReceiveTx.ID,  // processId
-		utils.StepRPCReceiveTx.Key, // processWord
-		0,                          // blockHeight
-		"",                         // blockHash
-		0,                          // blockTime
-		"",                         // transactionType
-	)
+	if !sequencer.IsSequencer() {
+		utils.LogTrace(
+			"",                         // txhash
+			utils.ServiceNameRPC,       // serviceName
+			utils.StepRPCReceiveTx.ID,  // processId
+			utils.StepRPCReceiveTx.Key, // processWord
+			0,                          // blockHeight
+			"",                         // blockHash
+			0,                          // blockTime
+			"",                         // transactionType
+		)
+	}
 
 	// For X Layer, optimize tx pool
 	if !api.BulkAddTxs {
