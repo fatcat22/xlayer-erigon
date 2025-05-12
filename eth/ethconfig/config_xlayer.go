@@ -42,6 +42,9 @@ type XLayerConfig struct {
 	SequencerSkipEmptyBlocks  bool
 	SequencerMaxBlockSealTime time.Duration
 
+	GetLogsTimeout time.Duration
+	GetLogsRetries int
+
 	TraceLogPath string
 }
 
