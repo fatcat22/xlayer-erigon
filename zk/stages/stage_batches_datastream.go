@@ -112,6 +112,7 @@ func (r *DatastreamClientRunner) StartRangeRead(
 				break
 			}
 
+			// If the block of the previous height is not yet processed, we should wait for it to be processed completely
 			if lastFrom == from {
 				time.Sleep(1 * time.Second)
 				continue
