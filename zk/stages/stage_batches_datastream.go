@@ -100,19 +100,16 @@ func (r *DatastreamClientRunner) StartRangeRead(
 			}
 
 			from := progress.Load()
-			log.Info("StartRangeRead", "from", from, "highestDSL2Block", highestDSL2Block)
 			if from >= highestDSL2Block {
 				break
 			}
 
 			if lastFrom == from {
-				log.Info("StartRangeRead lastFrom equals to from", "from", from, "lastFrom", lastFrom)
 				time.Sleep(1 * time.Second)
 				continue
 			}
 
 			to := min(from+blockRange, highestDSL2Block)
-			log.Info("ReadRangeEntriesToChannel", "to", to)
 			if err := r.dsClient.ReadRangeEntriesToChannel(to); err != nil {
 				if !errorFlag {
 					// Try to reconnect and get range again
