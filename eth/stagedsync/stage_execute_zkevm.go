@@ -302,6 +302,7 @@ func getPreexecuteValues(cfg ExecuteBlockCfg, ctx context.Context, tx kv.RwTx, b
 	if err != nil {
 		return common.Hash{}, nil, nil, fmt.Errorf("BlockWithSenders: %w", err)
 	}
+
 	if block == nil {
 		return common.Hash{}, nil, nil, fmt.Errorf("empty block blocknum: %d", blockNum)
 	}

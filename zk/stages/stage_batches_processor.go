@@ -347,7 +347,6 @@ func (p *BatchesProcessor) processFullBlock(blockEntry *types.FullL2Block) (endL
 	p.lastBlockRoot = blockEntry.StateRoot
 
 	p.lastBlockHeight = blockEntry.L2BlockNumber
-
 	p.blocksWritten++
 	p.progressChan <- p.blocksWritten
 
