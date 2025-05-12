@@ -99,6 +99,14 @@ func (r *DatastreamClientRunner) StartRangeRead(
 				}
 			}
 
+			// Check for conn health
+			if err := r.dsClient.HandleStart(); err != nil {
+				time.Sleep(1 * time.Second)
+				errorChan <- struct{}{}
+				log.Warn(fmt.Sprintf("[%s] Error on handle start datastream connection", r.logPrefix), "error", err)
+				return
+			}
+
 			from := progress.Load()
 			if from >= highestDSL2Block {
 				break
