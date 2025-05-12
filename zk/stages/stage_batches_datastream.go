@@ -66,11 +66,19 @@ func (r *DatastreamClientRunner) StartRangeRead(
 	go func() {
 		routineId := rand.Intn(1000000)
 
-		log.Info(fmt.Sprintf("[%s] Started downloading L2Blocks routine ID: %d", r.logPrefix, routineId))
-		defer log.Info(fmt.Sprintf("[%s] Ended downloading L2Blocks routine ID: %d", r.logPrefix, routineId))
+		log.Info(fmt.Sprintf("[%s] Started range downloading L2Blocks routine ID: %d", r.logPrefix, routineId))
+		defer log.Info(fmt.Sprintf("[%s] Ended range downloading L2Blocks routine ID: %d", r.logPrefix, routineId))
 
 		r.isReading.Store(true)
 		defer r.isReading.Store(false)
+
+		// Check for conn health
+		if err := r.dsClient.HandleStart(); err != nil {
+			time.Sleep(1 * time.Second)
+			errorChan <- struct{}{}
+			log.Warn(fmt.Sprintf("[%s] Error on handle start datastream connection", r.logPrefix), "error", err)
+			return
+		}
 
 		// first load up the header of the stream
 		if _, err := r.dsClient.GetHeader(); err != nil {
@@ -79,6 +87,7 @@ func (r *DatastreamClientRunner) StartRangeRead(
 			return
 		}
 
+		lastFrom := uint64(0)
 		errorFlag := false
 		progress := r.dsClient.GetProgressAtomic()
 		for !r.stopRunner.Load() {
@@ -103,6 +112,12 @@ func (r *DatastreamClientRunner) StartRangeRead(
 				break
 			}
 
+			// If the block of the previous height is not yet processed, we should wait for it to be processed completely
+			if lastFrom == from {
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
 			to := min(from+blockRange, highestDSL2Block)
 			if err := r.dsClient.ReadRangeEntriesToChannel(to); err != nil {
 				if !errorFlag {
@@ -118,6 +133,7 @@ func (r *DatastreamClientRunner) StartRangeRead(
 			} else {
 				errorFlag = false
 			}
+			lastFrom = from
 		}
 
 		// Send stop signal
