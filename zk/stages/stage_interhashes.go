@@ -414,6 +414,8 @@ func zkIncrementIntermediateHashes(ctx context.Context, logPrefix string, s *sta
 	psr := state2.NewPlainState(db, from+1, systemcontracts.SystemContractCodeLookup["Hermez"])
 	defer psr.Close()
 
+	log.Info("zkIncrementIntermediateHashes begin loop", "from", from, "to", to)
+
 	for i := from; i <= to; i++ {
 		dupSortKey := dbutils.EncodeBlockNumber(i)
 		psr.SetBlockNr(i + 1)
@@ -469,11 +471,19 @@ func zkIncrementIntermediateHashes(ctx context.Context, logPrefix string, s *sta
 		if err != nil {
 			return trie.EmptyRoot, err
 		}
+
+		if _, _, err := dbSmt.SetStorage(ctx, logPrefix, accChanges, codeChanges, storageChanges); err != nil {
+			return trie.EmptyRoot, err
+		}
+		lr := dbSmt.LastRoot()
+		hash = common.BigToHash(lr)
+
+		log.Info(fmt.Sprintf("[%s] Incremented trie hashes for block %d", logPrefix, i), "root", hash.Hex())
 	}
 
-	if _, _, err := dbSmt.SetStorage(ctx, logPrefix, accChanges, codeChanges, storageChanges); err != nil {
-		return trie.EmptyRoot, err
-	}
+	// if _, _, err := dbSmt.SetStorage(ctx, logPrefix, accChanges, codeChanges, storageChanges); err != nil {
+	// 	return trie.EmptyRoot, err
+	// }
 
 	// For X Layer, split db and ac
 	if err := dbSmt.SetLastHeight(to); err != nil {

@@ -255,6 +255,7 @@ func SpawnStageBatches(
 			panic(fmt.Sprintf("getMismatchHeight returns error: %v", err))
 		}
 		if highestDSL2Block > 1 && isMismatch {
+			log.Info("getMismatchHeight", "unwindHeight", unwindHeight)
 			if _, err := unwindFn(unwindHeight); err != nil {
 				return err
 			}
@@ -707,7 +708,7 @@ func rollback(
 	if err != nil {
 		return 0, fmt.Errorf("findCommonAncestor: %w", err)
 	}
-	log.Debug(fmt.Sprintf("[%s] The common ancestor for datastream and db is block %d (%s)", logPrefix, ancestorBlockNum, ancestorBlockHash))
+	log.Info(fmt.Sprintf("[%s] The common ancestor for datastream and db is block %d (%s)", logPrefix, ancestorBlockNum, ancestorBlockHash))
 
 	unwindBlockNum, unwindBlockHash, batchNum, err := getUnwindPoint(eriDb, hermezDb, ancestorBlockNum, ancestorBlockHash)
 	if err != nil {
