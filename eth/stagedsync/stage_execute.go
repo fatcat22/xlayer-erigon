@@ -53,7 +53,6 @@ import (
 	"github.com/ledgerwatch/erigon/turbo/silkworm"
 	"github.com/ledgerwatch/erigon/zk/erigon_db"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
-	"github.com/ledgerwatch/erigon/zk/utils"
 )
 
 const (
@@ -612,18 +611,6 @@ Loop:
 			if !useExternalTx {
 				if err = txc.Tx.Commit(); err != nil {
 					return err
-				}
-				if header != nil {
-					utils.LogTrace(
-						"",                           // txhash
-						utils.ServiceNameRPC,         // serviceName
-						utils.StepRPCFinishBlock.ID,  // processId
-						utils.StepRPCFinishBlock.Key, // processWord
-						blockNum,                     // blockHeight
-						blockHash.Hex(),              // blockHash
-						header.Time,                  // blockTime
-						"",                           // transactionType
-					)
 				}
 				txc.Tx, err = cfg.db.BeginRw(context.Background())
 				if err != nil {

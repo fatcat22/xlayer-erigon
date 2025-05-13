@@ -749,18 +749,17 @@ func ReadParsedProto(iterator FileEntryIterator) (
 		l2Block.L2Txs = txs
 		parsedEntry = l2Block
 
-		if fullBlock, ok := parsedEntry.(*types.FullL2Block); ok && fullBlock != nil {
-			utils.LogTrace(
-				"",                             // txhash
-				utils.ServiceNameSequencer,     // serviceName
-				utils.StepRPCReceiveBlock.ID,   // processId
-				utils.StepRPCReceiveBlock.Key,  // processWord
-				fullBlock.L2BlockNumber,        // blockHeight
-				fullBlock.L2Blockhash.String(), // blockHash
-				uint64(fullBlock.Timestamp),    // blockTime
-				"",                             // transactionType
-			)
-		}
+		utils.LogTrace(
+			"",                            // txhash
+			utils.ServiceNameSequencer,    // serviceName
+			utils.StepRPCReceiveBlock.ID,  // processId
+			utils.StepRPCReceiveBlock.Key, // processWord
+			l2Block.L2BlockNumber,         // blockHeight
+			l2Block.L2Blockhash.String(),  // blockHash
+			uint64(l2Block.Timestamp),     // blockTime
+			"",                            // transactionType
+		)
+
 		return
 	case types.EntryTypeL2BlockEnd:
 		log.Debug(fmt.Sprintf("retrieved EntryTypeL2BlockEnd: %+v", file))
