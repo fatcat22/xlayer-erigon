@@ -1,0 +1,148 @@
+version: "3.5"
+networks:
+  default:
+    name: erigon
+services:
+  xlayer-approve:
+    container_name: xlayer-approve
+    image: hermeznetwork/zkevm-node:v0.6.6
+    volumes:
+      - ./keystore/sequencer.keystore:/pk/keystore
+      - ./config/test.node.config.toml:/app/config.toml
+      - ./config/test.genesis.config.json:/app/genesis.json
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/zkevm-node approve --network custom --custom-network-file /app/genesis.json --key-store-path /pk/keystore --pw testonly --am 115792089237316195423570985008687907853269984665640564039457584007913129639935 -y --cfg /app/config.toml"
+
+  xlayer-seq:
+    container_name: xlayer-seq
+    image: cdk-erigon
+    environment:
+      - CDK_ERIGON_SEQUENCER=1
+      - WRITE_MAP=true
+    ports:
+      - 6060:6060
+      - 8123:8545
+      - 6900:6900
+      - 9092:9095
+    volumes:
+      - ./data/seq/:/home/erigon/data/
+      - ./config/test.erigon.seq.config.yaml:/usr/src/app/config.yaml
+      - ./config/dynamic-mynetwork-allocs.json:/usr/src/app/dynamic-mynetwork-allocs.json
+      - ./config/dynamic-mynetwork-chainspec.json:/usr/src/app/dynamic-mynetwork-chainspec.json
+      - ./config/dynamic-mynetwork-conf.json:/usr/src/app/dynamic-mynetwork-conf.json
+    command: >
+      cdk-erigon --http.vhosts=* --http.corsdomain=* --ws --config=/usr/src/app/config.yaml
+
+  xlayer-rpc:
+    container_name: xlayer-rpc
+    image: cdk-erigon
+    environment:
+      - CDK_ERIGON_SEQUENCER=0
+      - WRITE_MAP=true
+    ports:
+      - 6061:6060
+      - 8124:8545
+      - 6901:6900
+      - 9091:9095
+    volumes:
+      - ./data/rpc/:/home/erigon/data/
+      - ./config/test.erigon.rpc.config.yaml:/usr/src/app/config.yaml
+      - ./config/dynamic-mynetwork-allocs.json:/usr/src/app/dynamic-mynetwork-allocs.json
+      - ./config/dynamic-mynetwork-chainspec.json:/usr/src/app/dynamic-mynetwork-chainspec.json
+      - ./config/dynamic-mynetwork-conf.json:/usr/src/app/dynamic-mynetwork-conf.json
+    command: >
+      cdk-erigon --http.vhosts=* --http.corsdomain=* --ws --config=/usr/src/app/config.yaml
+
+  xlayer-mock-l1-network:
+    container_name: xlayer-mock-l1-network
+    image: zjg555543/geth:fork13-v0.0.3
+    ports:
+      - 8545:8545
+      - 8546:8546
+    command:
+      - "--http"
+      - "--http.api"
+      - "admin,eth,debug,miner,net,txpool,personal,web3"
+      - "--http.addr"
+      - "0.0.0.0"
+      - "--http.corsdomain"
+      - "*"
+      - "--http.vhosts"
+      - "*"
+      - "--ws"
+      - "--ws.origins"
+      - "*"
+      - "--ws.addr"
+      - "0.0.0.0"
+      - "--dev"
+      - "--dev.period"
+      - "1"
+      - "--datadir"
+      - "/geth_data"
+      - "--syncmode"
+      - "full"
+      - "--rpc.allow-unprotected-txs"
+
+  xlayer-bridge-db:
+    container_name: xlayer-bridge-db
+    image: postgres:15
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    ports:
+      - 5439:5432
+    environment:
+      - POSTGRES_USER=test_user
+      - POSTGRES_PASSWORD=test_password
+      - POSTGRES_DB=test_db
+    command: [ "postgres", "-N", "500" ]
+
+  xlayer-bridge-service:
+    container_name: xlayer-bridge-service
+    image: zjg555543/xlayer-bridge-service:v0.3.1_17ef00f
+    ports:
+      - 8080:8080
+      - 9090:9090
+    environment:
+      - ZKEVM_BRIDGE_DATABASE_USER=test_user
+      - ZKEVM_BRIDGE_DATABASE_PASSWORD=test_password
+      - ZKEVM_BRIDGE_DATABASE_NAME=test_db
+      - ZKEVM_BRIDGE_DATABASE_HOST=xlayer-bridge-db
+      - ZKEVM_BRIDGE_DATABASE_PORT=5432
+    volumes:
+      - ./keystore/sequencer.keystore:/pk/keystore.claimtxmanager
+      - ./config/test.bridge.config.toml:/app/config.toml
+      - ./config/test.sentinel.config.json:/app/sentinel_config.json
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/xlayer-bridge run --cfg /app/config.toml"
+
+  xlayer-bridge-ui:
+    container_name: xlayer-bridge-ui
+    image: hermeznetwork/zkevm-bridge-ui:latest
+    ports:
+      - 8090:80
+    environment:
+      - ETHEREUM_RPC_URL=http://127.0.0.1:8545
+      - ETHEREUM_EXPLORER_URL=http://127.0.0.1:4000
+      - ETHEREUM_ROLLUP_MANAGER_ADDRESS=0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a
+      - ETHEREUM_BRIDGE_CONTRACT_ADDRESS=0x3a277Fa4E78cc1266F32E26c467F99A8eAEfF7c3
+      - ETHEREUM_FORCE_UPDATE_GLOBAL_EXIT_ROOT=true
+      - ETHEREUM_PROOF_OF_EFFICIENCY_CONTRACT_ADDRESS=0xeb173087729c88a47568AF87b17C653039377BA6
+      - POLYGON_ZK_EVM_RPC_URL=http://127.0.0.1:8123
+      - POLYGON_ZK_EVM_EXPLORER_URL=http://127.0.0.1:4001
+      - POLYGON_ZK_EVM_BRIDGE_CONTRACT_ADDRESS=0x3a277Fa4E78cc1266F32E26c467F99A8eAEfF7c3
+      - POLYGON_ZK_EVM_NETWORK_ID=1
+      - BRIDGE_API_URL=http://127.0.0.1:8080
+      - ENABLE_FIAT_EXCHANGE_RATES=false
+      - ENABLE_OUTDATED_NETWORK_MODAL=false
+      - ENABLE_DEPOSIT_WARNING=true
+      - ENABLE_REPORT_FORM=false
+      - USE_FIAT_EXCHANGE_RATES=false
+      - SHOW_OUTDATED_NETWORK_MODAL=false
