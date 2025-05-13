@@ -33,13 +33,10 @@ func getMismatchHeight(ctx context.Context, cfg BatchesCfg, dataStreamCatchupCfg
 
 	log.Warn("Starting blockhash mismatch check", "highestBlockRemote", highestBlockRemote, "highestBlockLocal", highestBlockLocal, "working highestBlockNumber", highestBlockNumber)
 
-	lowestBlockNumber := uint64(0)
-	checkBlockNumber := highestBlockNumber
-
 	var blockRemote *types.Block
 	var blockLocal *dstypes.FullL2Block
 
-	for {
+	for checkBlockNumber := highestBlockNumber; checkBlockNumber > 0; checkBlockNumber-- {
 		log.Warn("Checking for block", "blockNumber", checkBlockNumber)
 		// get blocks
 		blockLocal, blockRemote, err = getBlocks(ctx, rpcClientRemote, checkBlockNumber, dataStreamCatchupCfg)
@@ -47,32 +44,32 @@ func getMismatchHeight(ctx context.Context, cfg BatchesCfg, dataStreamCatchupCfg
 			log.Error(fmt.Sprintf("blockNum: %d, error getBlocks: %s", checkBlockNumber, err))
 			return 0, false, err
 		}
-		// if they match, go higher
-		if blockRemote.Hash() == blockLocal.L2Blockhash {
-			lowestBlockNumber = checkBlockNumber + 1
-			log.Warn("Blockhash match")
-		} else {
-			highestBlockNumber = checkBlockNumber
-			log.Warn("Blockhash MISMATCH")
+
+		isMatch := blockRemote.Hash() == blockLocal.L2Blockhash
+		log.Warn("Blockhash check", "blockNumber", checkBlockNumber, "match", isMatch)
+
+		if isMatch {
+			return 0, false, nil
 		}
 
-		checkBlockNumber = (lowestBlockNumber + highestBlockNumber) / 2
-		if lowestBlockNumber >= highestBlockNumber {
-			break
+		if checkBlockNumber == 1 {
+			return checkBlockNumber, true, nil
 		}
+
+		prevBlockNumber := checkBlockNumber - 1
+		prevBlockLocal, prevBlockRemote, err := getBlocks(ctx, rpcClientRemote, prevBlockNumber, dataStreamCatchupCfg)
+		if err != nil {
+			log.Error(fmt.Sprintf("prevBlockNum: %d, error getBlocks: %s", prevBlockNumber, err))
+			return 0, false, err
+		}
+
+		if prevBlockRemote.Hash() == prevBlockLocal.L2Blockhash {
+			return checkBlockNumber, true, nil
+		}
+
 	}
 
-	// get blocks
-	blockLocal, blockRemote, err = getBlocks(ctx, rpcClientRemote, checkBlockNumber, dataStreamCatchupCfg)
-	if err != nil {
-		log.Error(fmt.Sprintf("blockNum: %d, error getBlocks: %s", checkBlockNumber, err))
-		return 0, false, err
-	}
-
-	if blockRemote.Hash() != blockLocal.L2Blockhash {
-		return checkBlockNumber, true, nil
-	}
-	return checkBlockNumber, false, nil
+	return 0, true, nil
 }
 
 func getBlocks(ctx context.Context, clientRemote *ethclient.Client, blockNum uint64, dataStreamCatchupCfg DataStreamCatchupCfg) (*dstypes.FullL2Block, *types.Block, error) {
