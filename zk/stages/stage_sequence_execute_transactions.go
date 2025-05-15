@@ -69,7 +69,7 @@ func getNextPoolTransactions(ctx context.Context, cfg SequenceBlockCfg, executio
 			executionAt+1,              // blockHeight
 			"",                         // blockHash
 			0,                          // blockTime
-			string(tx.Type()),          // transactionType
+			int8(tx.Type()),            // transactionType
 		)
 	}
 
@@ -277,6 +277,7 @@ func attemptAddTransaction(
 	)
 
 	if err == nil && receipt != nil {
+
 		utils.LogTrace(
 			transaction.Hash().String(), // txhash
 			utils.ServiceNameSequencer,  // serviceName
@@ -285,7 +286,7 @@ func attemptAddTransaction(
 			header.Number.Uint64(),      // blockHeight
 			"",                          // blockHash
 			0,                           // blockTime
-			string(transaction.Type()),  // transactionType
+			int8(transaction.Type()),    // transactionType
 		)
 	}
 

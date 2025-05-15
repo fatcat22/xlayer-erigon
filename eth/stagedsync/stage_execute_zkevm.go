@@ -178,7 +178,7 @@ Loop:
 			blockNum,                     // blockHeight
 			prevBlockHash.Hex(),          // blockHash
 			header.Time,                  // blockTime
-			"",                           // transactionType
+			-1,                           // transactionType
 		)
 
 		// should update progress

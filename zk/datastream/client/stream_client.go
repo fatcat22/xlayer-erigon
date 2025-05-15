@@ -757,7 +757,7 @@ func ReadParsedProto(iterator FileEntryIterator) (
 			l2Block.L2BlockNumber,         // blockHeight
 			l2Block.L2Blockhash.String(),  // blockHash
 			uint64(l2Block.Timestamp),     // blockTime
-			"",                            // transactionType
+			-1,                            // transactionType
 		)
 
 		return

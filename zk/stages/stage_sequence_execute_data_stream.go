@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
@@ -52,9 +53,9 @@ func (sbc *SequencerBatchStreamWriter) CommitNewUpdates() ([]*verifier.VerifierB
 						utils.StepSeqVerifyTxResult.ID,  // processId
 						utils.StepSeqVerifyTxResult.Key, // processWord
 						blockResp.BlockNumber,           // blockHeight
-						string(blockResp.BlockHash),     // blockHash
-						blockResp.Timestamp,             // blockTime
-						"",                              // transactionType
+						common.BytesToHash(blockResp.BlockHash).Hex(), // blockHash
+						blockResp.Timestamp,                           // blockTime
+						-1,                                            // transactionType
 					)
 
 				}

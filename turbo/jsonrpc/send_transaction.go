@@ -35,7 +35,7 @@ func (api *APIImpl) SendRawTransaction(ctx context.Context, encodedTx hexutility
 			0,                          // blockHeight
 			"",                         // blockHash
 			0,                          // blockTime
-			string(txn.Type()),         // transactionType
+			int8(txn.Type()),           // transactionType
 		)
 	}
 

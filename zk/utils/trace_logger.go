@@ -19,7 +19,7 @@ var (
 
 // Write a trace log line
 func writeTraceLogInternal(v ...interface{}) {
-	format := "%s,%s,%s,%s,%s,%s,%d,%d,%s,%s,%s,%d,%s,%s,%d,%s,%d,%s,%s,%s,%s,%s"
+	format := "%s,%s,%s,%s,%s,%s,%d,%d,%s,%s,%s,%d,%s,%s,%d,%s,%d,%s,%s,%s,%s,%d"
 	message := fmt.Sprintf(format, v...)
 	if len(message) == 0 || message[len(message)-1] != '\n' {
 		message += "\n"
@@ -40,7 +40,7 @@ func LogTrace(
 	blockHeight uint64,
 	blockHash string,
 	blockTime uint64,
-	transactionType string,
+	transactionType int8,
 ) {
 	allArgs := []interface{}{
 		Chain,
