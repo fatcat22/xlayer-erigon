@@ -256,9 +256,9 @@ func (c *StreamClient) stopStreaming() error {
 }
 
 func (c *StreamClient) getLatestL2Block() (l2Block *types.FullL2Block, err error) {
-	h, err := c.getHeader()
+	h, err := c.GetHeader()
 	if err != nil {
-		return nil, fmt.Errorf("getHeader: %w", err)
+		return nil, fmt.Errorf("GetHeader: %w", err)
 	}
 
 	latestEntryNum := h.TotalEntries - 1
@@ -323,26 +323,10 @@ func (c *StreamClient) Stop() error {
 	return nil
 }
 
-func (c *StreamClient) GetHeader() (*types.HeaderEntry, error) {
-	select {
-	case <-c.ctx.Done():
-		return nil, errors.New("context done - stopping")
-	default:
-	}
-
-	header, err := c.getHeader()
-	if err != nil {
-		c.lastError = err
-		return nil, err
-	}
-
-	return header, nil
-}
-
 // Command header: Get status
 // Returns the current status of the header.
 // If started, terminate the connection.
-func (c *StreamClient) getHeader() (*types.HeaderEntry, error) {
+func (c *StreamClient) GetHeader() (*types.HeaderEntry, error) {
 	log.Info("[Datastream client] Getting header", "client", c.conn)
 	if err := c.stopStreaming(); err != nil {
 		return nil, fmt.Errorf("stopStreaming: %w", err)
@@ -395,9 +379,9 @@ func (c *StreamClient) sendEntryCmdWrapper(entryNum uint64) error {
 
 func (c *StreamClient) ExecutePerFile(bookmark *types.BookmarkProto, function func(file *types.FileEntry) error) error {
 	// Get header from server
-	header, err := c.getHeader()
+	header, err := c.GetHeader()
 	if err != nil {
-		return fmt.Errorf("getHeader: %w", err)
+		return fmt.Errorf("GetHeader: %w", err)
 	}
 
 	protoBookmark, err := bookmark.Marshal()
@@ -467,8 +451,8 @@ func (c *StreamClient) ReadAllEntriesToChannel() (err error) {
 	}
 
 	// first load up the header of the stream
-	if _, err = c.getHeader(); err != nil {
-		err = fmt.Errorf("getHeader: %w", err)
+	if _, err = c.GetHeader(); err != nil {
+		err = fmt.Errorf("GetHeader: %w", err)
 		return err
 	}
 
@@ -509,46 +493,6 @@ func (c *StreamClient) readAllEntriesToChannel() (err error) {
 	return
 }
 
-// Get all entries from the DS server from the current stage progress until to block number,
-// and sends the data into FllL2Blocks with transactions into the channel.
-func (c *StreamClient) ReadRangeEntriesToChannel(to uint64) (err error) {
-	defer func() {
-		if err != nil {
-			c.lastError = err
-		}
-	}()
-	select {
-	case <-c.ctx.Done():
-		return fmt.Errorf("context done - stopping")
-	default:
-	}
-
-	if err = c.readRangeEntriesToChannel(to); err != nil {
-		return fmt.Errorf("readRangeEntriesToChannel: %w", err)
-	}
-
-	return
-}
-
-func (c *StreamClient) readRangeEntriesToChannel(to uint64) error {
-	c.stopReadingToChannel.Store(false)
-
-	// Send start command
-	toEntry, err := c.initiateRangeDownload(to)
-	if err != nil {
-		return err
-	}
-
-	err = c.readRangeFullL2BlocksToChannel(toEntry)
-	c.setStreaming(false)
-
-	if err != nil {
-		return fmt.Errorf("readRangeFullL2BlocksToChannel: %w", err)
-	}
-
-	return nil
-}
-
 // runs the prerequisites for entries download
 func (c *StreamClient) initiateDownloadBookmark(bookmark []byte) (*types.ResultEntry, error) {
 	if err := c.stopStreaming(); err != nil {
@@ -558,27 +502,6 @@ func (c *StreamClient) initiateDownloadBookmark(bookmark []byte) (*types.ResultE
 	// send CmdStartBookmark command
 	if err := c.sendBookmarkCmd(bookmark, true); err != nil {
 		return nil, fmt.Errorf("sendBookmarkCmd: %w", err)
-	}
-
-	c.setStreaming(true)
-
-	re, err := c.afterStartCommand()
-	if err != nil {
-		return re, fmt.Errorf("afterStartCommand: %w", err)
-	}
-
-	return re, nil
-}
-
-// Runs the prerequisites for range entries download (excluding end)
-func (c *StreamClient) initiateRangeDownloadBookmark(startBookmark []byte, endBookmark []byte) (*types.ResultEntry, error) {
-	if err := c.stopStreaming(); err != nil {
-		return nil, fmt.Errorf("stopStreaming: %w", err)
-	}
-
-	// send CmdStartBookmark command
-	if err := c.sendRangeBookmarkCmd(startBookmark, endBookmark); err != nil {
-		return nil, fmt.Errorf("sendRangeBookmarkCmd: %w", err)
 	}
 
 	c.setStreaming(true)
@@ -622,7 +545,7 @@ LOOP:
 			if parsedProto, entryNum, err = ReadParsedProto(c); err != nil {
 				// For X Layer, fix ds receive issue
 				if err == ErrReachedEntryNumberLimit {
-					return c.TrySendStopSignal()
+					return c.trySendStopSignal()
 				}
 				return err
 			}
@@ -655,7 +578,7 @@ LOOP:
 			log.Trace("[Datastream client] reached the current end of the stream", "header_totalEntries", c.header.TotalEntries, "entryNum", entryNum)
 
 			// For X Layer, fix ds receive issue
-			if err := c.TrySendStopSignal(); err != nil {
+			if err := c.trySendStopSignal(); err != nil {
 				return err
 			}
 			break LOOP
@@ -665,99 +588,7 @@ LOOP:
 	return nil
 }
 
-// Read all entries from the server until the end of the range toBlock.
-// Parses the data into FullL2Blocks with transactions and sends them to a channel
-func (c *StreamClient) readRangeFullL2BlocksToChannel(toEntry uint64) (err error) {
-	readNewProto := true
-	entryNum := uint64(0)
-	parsedProto := interface{}(nil)
-LOOP:
-	for {
-		select {
-		default:
-		case <-c.ctx.Done():
-			return fmt.Errorf("context done - stopping")
-		}
-
-		if c.stopReadingToChannel.Load() {
-			break LOOP
-		}
-
-		if err := c.resetReadTimeout(); err != nil {
-			return err
-		}
-
-		if readNewProto {
-			if parsedProto, entryNum, err = ReadParsedProto(c); err != nil {
-				return err
-			}
-			readNewProto = false
-		}
-		c.lastWrittenTime.Store(time.Now().UnixNano())
-
-		switch parsedProto := parsedProto.(type) {
-		case *types.BookmarkProto:
-			readNewProto = true
-			continue
-		case *types.BatchStart:
-			c.currentFork = parsedProto.ForkId
-		case *types.GerUpdate:
-		case *types.BatchEnd:
-		case *types.FullL2Block:
-			parsedProto.ForkId = c.currentFork
-			log.Trace("[Datastream client] writing block to channel", "blockNumber", parsedProto.L2BlockNumber, "batchNumber", parsedProto.BatchNumber)
-		default:
-			return fmt.Errorf("unexpected entry type: %v", parsedProto)
-		}
-		select {
-		case c.entryChan <- parsedProto:
-			readNewProto = true
-		default:
-			time.Sleep(10 * time.Microsecond)
-		}
-
-		// Reach the end of range. Do not send stop signal here as range read may continue
-		if entryNum == toEntry || c.header.TotalEntries < entryNum {
-			log.Trace("[Datastream client] reached the current end of the range read", "toEntry", toEntry, "entryNum", entryNum, "header_totalEntries", c.header.TotalEntries)
-			break LOOP
-		}
-	}
-
-	return nil
-}
-
-func (c *StreamClient) initiateRangeDownload(to uint64) (uint64, error) {
-	var start *types.BookmarkProto
-	progress := c.progress.Load()
-	if progress == 0 {
-		start = types.NewBookmarkProto(0, datastream.BookmarkType_BOOKMARK_TYPE_BATCH)
-	} else {
-		start = types.NewBookmarkProto(progress+1, datastream.BookmarkType_BOOKMARK_TYPE_L2_BLOCK)
-	}
-
-	sb, err := start.Marshal()
-	if err != nil {
-		return 0, err
-	}
-
-	end := types.NewBookmarkProto(to, datastream.BookmarkType_BOOKMARK_TYPE_L2_BLOCK)
-	eb, err := end.Marshal()
-	if err != nil {
-		return 0, err
-	}
-
-	if _, err := c.initiateRangeDownloadBookmark(sb, eb); err != nil {
-		return 0, fmt.Errorf("initiateRangeDownloadBookmark: %w", err)
-	}
-
-	packet, err := c.readBuffer(8)
-	if err != nil {
-		return 0, err
-	}
-	return types.UnmarshalToEntryNumber(packet)
-}
-
-func (c *StreamClient) TrySendStopSignal() error {
+func (c *StreamClient) trySendStopSignal() error {
 	retries := 0
 	for {
 		select {

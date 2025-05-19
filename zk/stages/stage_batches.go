@@ -61,17 +61,16 @@ type HermezDb interface {
 type DatastreamClient interface {
 	RenewEntryChannel()
 	ReadAllEntriesToChannel() error
-	ReadRangeEntriesToChannel(to uint64) error
 	StopReadingToChannel()
 	GetEntryChan() *chan interface{}
-	GetHeader() (*types.HeaderEntry, error)
 	GetL2BlockByNumber(blockNum uint64) (*types.FullL2Block, error)
 	GetLatestL2Block() (*types.FullL2Block, error)
 	GetProgressAtomic() *atomic.Uint64
 	Start() error
 	Stop() error
 	HandleStart() error
-	TrySendStopSignal() error
+	// For X Layer
+	ReadEntriesToChannelXLayer(highestDSL2Block uint64, blockRange uint64) error
 }
 
 type dsClientCreatorHandler func(context.Context, *ethconfig.Zk, uint64) (DatastreamClient, error)
@@ -281,7 +280,7 @@ func SpawnStageBatches(
 		return fmt.Errorf("NewBatchesProcessor: %w", err)
 	}
 
-	// Set maximum block range to be 50% of the entry channel capacity
+	// For X Layer, set maximum block range to be 50% of the entry channel capacity
 	dsQueryClient.RenewEntryChannel()
 	entryChan := dsQueryClient.GetEntryChan()
 	blockRange := uint64(cap(*entryChan) / 2)
@@ -289,7 +288,8 @@ func SpawnStageBatches(
 	// start routine to download blocks and push them to the channel
 	errorChan := make(chan struct{})
 	dsClientRunner := NewDatastreamClientRunner(dsQueryClient, logPrefix)
-	dsClientRunner.StartRangeRead(errorChan, highestDSL2Block, blockRange)
+	// For X Layer
+	dsClientRunner.StartReadForXLayer(errorChan, highestDSL2Block, blockRange)
 	defer dsClientRunner.StopRead()
 
 	prevAmountBlocksWritten := uint64(0)

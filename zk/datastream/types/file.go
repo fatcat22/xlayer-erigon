@@ -97,7 +97,3 @@ func DecodeFileEntry(b []byte) (*FileEntry, error) {
 		Data:       data,
 	}, nil
 }
-
-func UnmarshalToEntryNumber(data []byte) (uint64, error) {
-	return binary.BigEndian.Uint64(data[:8]), nil
-}
