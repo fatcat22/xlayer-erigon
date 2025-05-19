@@ -5,9 +5,8 @@ import (
 	"math/rand"
 	"sync/atomic"
 
-	"time"
-
 	"github.com/ledgerwatch/log/v3"
+	"time"
 )
 
 type DatastreamClientRunner struct {
