@@ -50,7 +50,6 @@ func (api *APIImpl) SendRawTransaction(ctx context.Context, encodedTx hexutility
 
 // For X Layer, optimize tx pool
 func (api *APIImpl) sendRawTransactionSingle(ctx context.Context, encodedTx hexutility.Bytes) (common.Hash, error) {
-
 	t := utils.StartTimer("rpc", "sendrawtransaction")
 	defer t.LogTimer()
 

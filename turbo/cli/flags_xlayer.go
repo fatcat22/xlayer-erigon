@@ -56,9 +56,8 @@ func ApplyFlagsForEthXLayerConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		EnableAddTxNotify:                 ctx.Bool(utils.EnableAddTxNotify.Name),
 		SequencerSkipEmptyBlocks:          ctx.Bool(utils.SequencerSkipEmptyBlocks.Name),
 		SequencerMaxBlockSealTime:         sequencerMaxBlockSealTime,
-
-		GetLogsTimeout: ctx.Duration(utils.GetLogsTimeout.Name),
-		GetLogsRetries: ctx.Int(utils.GetLogsRetries.Name),
+		GetLogsTimeout:                    ctx.Duration(utils.GetLogsTimeout.Name),
+		GetLogsRetries:                    ctx.Int(utils.GetLogsRetries.Name),
 
 		TraceLogPath:   ctx.String(utils.TraceLogPath.Name),
 		EnableTraceLog: ctx.Bool(utils.EnableTraceLog.Name),

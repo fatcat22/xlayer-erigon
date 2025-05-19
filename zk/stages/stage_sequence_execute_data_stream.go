@@ -42,9 +42,7 @@ func (sbc *SequencerBatchStreamWriter) CommitNewUpdates() ([]*verifier.VerifierB
 	verifierBundles, verifierBundleForUnwind := sbc.legacyVerifier.ProcessResultsSequentially(sbc.logPrefix)
 
 	for _, vb := range verifierBundles {
-
 		if vb != nil && vb.Response != nil && vb.Response.ExecutorResponse != nil {
-
 			for _, blockResp := range vb.Response.ExecutorResponse.BlockResponses {
 				if blockResp != nil {
 					utils.LogTrace(

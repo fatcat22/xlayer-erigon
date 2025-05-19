@@ -601,7 +601,6 @@ Loop:
 			log.Info("Committed State", "gas reached", currentStateGas, "gasTarget", gasState)
 			currentStateGas = 0
 			commitTime := time.Now()
-
 			if err = batch.Flush(ctx, txc.Tx); err != nil {
 				return err
 			}

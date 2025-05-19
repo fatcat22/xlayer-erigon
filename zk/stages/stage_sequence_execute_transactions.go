@@ -3,7 +3,6 @@ package stages
 import (
 	"context"
 	"errors"
-
 	"fmt"
 	"runtime"
 	"sync"
@@ -277,7 +276,6 @@ func attemptAddTransaction(
 	)
 
 	if err == nil && receipt != nil {
-
 		utils.LogTrace(
 			transaction.Hash().String(), // txhash
 			utils.ServiceNameSequencer,  // serviceName
