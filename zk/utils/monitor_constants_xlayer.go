@@ -33,7 +33,7 @@ const (
 	Client               string = ""
 	Status               string = ""
 	Index                string = ""
-	innerIndex           string = ""
+	InnerIndex           string = ""
 	ReferId              string = ""
 	DepositConfirmHeight string = ""
 	TokenID              string = ""
