@@ -371,4 +371,5 @@ var DefaultFlags = []cli.Flag{
 	&utils.RejectLowGasPriceTolerance,
 
 	&utils.TraceLogPath,
+	&utils.EnableTraceLog,
 }

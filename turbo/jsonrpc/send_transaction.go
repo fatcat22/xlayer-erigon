@@ -22,21 +22,23 @@ import (
 
 // SendRawTransaction implements eth_sendRawTransaction. Creates new message call transaction or a contract creation for previously-signed transactions.
 func (api *APIImpl) SendRawTransaction(ctx context.Context, encodedTx hexutility.Bytes) (common.Hash, error) {
-	txn, err := types.DecodeWrappedTransaction(encodedTx)
-	if err != nil {
-		log.Error("Failed to decode transaction", "error", err)
-	}
 	if !sequencer.IsSequencer() {
-		utils.LogTrace(
-			txn.Hash().Hex(),           // txhash
-			utils.ServiceNameRPC,       // serviceName
-			utils.StepRPCReceiveTx.ID,  // processId
-			utils.StepRPCReceiveTx.Key, // processWord
-			0,                          // blockHeight
-			"",                         // blockHash
-			0,                          // blockTime
-			int8(txn.Type()),           // transactionType
-		)
+		txn, err := types.DecodeWrappedTransaction(encodedTx)
+		if err != nil {
+			log.Error("Failed to decode transaction", "error", err)
+		}
+		if err == nil {
+			utils.LogTrace(
+				txn.Hash().Hex(),           // txhash
+				utils.ServiceNameRPC,       // serviceName
+				utils.StepRPCReceiveTx.ID,  // processId
+				utils.StepRPCReceiveTx.Key, // processWord
+				0,                          // blockHeight
+				"",                         // blockHash
+				0,                          // blockTime
+				int8(txn.Type()),           // transactionType
+			)
+		}
 	}
 
 	// For X Layer, optimize tx pool

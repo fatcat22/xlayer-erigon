@@ -1438,7 +1438,7 @@ func (s *Ethereum) Init(stack *node.Node, config *ethconfig.Config, chainConfig 
 	}
 
 	// For X Layer full trace monitor
-	utils.SetTraceLogPath(config.Zk.XLayer.TraceLogPath)
+	utils.SetTraceLogConfig(config.Zk.XLayer.EnableTraceLog, config.Zk.XLayer.TraceLogPath)
 
 	if config.SilkwormRpcDaemon && httpRpcCfg.Enabled {
 		interface_log_settings := silkworm.RpcInterfaceLogSettings{

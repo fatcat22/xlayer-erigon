@@ -328,6 +328,11 @@ var (
 		Usage: "Path of trace.log for Monitoring Xlayer",
 		Value: "/home/erigon/data/logs/trace.log",
 	}
+	EnableTraceLog = cli.BoolFlag{
+		Name:  "zkevm.enable-trace-log",
+		Usage: "Enable full trace log",
+		Value: true,
+	}
 )
 
 func setGPOXLayer(ctx *cli.Context, cfg *gaspricecfg.Config) {
