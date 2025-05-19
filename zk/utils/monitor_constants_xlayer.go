@@ -16,8 +16,8 @@ var (
 	StepSeqReceiveTx      = ProcessStep{15032, "xlayer_seq_receive_tx"}
 	StepSeqPackageTx      = ProcessStep{15034, "xlayer_seq_package_tx"}
 	StepSeqEndBlock       = ProcessStep{15036, "xlayer_seq_end_block"}
-	StepSeqVerifyTxBegin  = ProcessStep{15038, "xlayer_seq_verify_tx_begin"}
-	StepSeqVerifyTxResult = ProcessStep{15040, "xlayer_seq_verify_tx_result"}
+	StepSeqVerifyTxBegin  = ProcessStep{15038, "xlayer_seq_verify_block_begin"}
+	StepSeqVerifyTxResult = ProcessStep{15040, "xlayer_seq_verify_block_result"}
 	StepSeqDsSent         = ProcessStep{15042, "xlayer_seq_ds_sent"}
 )
 
