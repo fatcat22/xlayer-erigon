@@ -3,26 +3,26 @@ package utils
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
 
-	erigonlog "github.com/ledgerwatch/erigon/zkevm/log"
+	log "github.com/ledgerwatch/erigon/zkevm/log"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 var (
 	traceLogEnabled bool
 	traceLogPath    string
-	traceLogFile    *os.File
-	traceLogger     *log.Logger
+	traceLogger     *zap.SugaredLogger
 )
 
 // Write a trace log line
 func writeTraceLogInternal(v ...interface{}) {
 	format := "%s,%s,%s,%s,%s,%s,%d,%d,%s,%s,%s,%d,%s,%s,%d,%s,%d,%s,%s,%s,%s,%d"
 	message := fmt.Sprintf(format, v...)
-	traceLogger.Print(message)
+	traceLogger.Info(message)
 }
 
 // Public logging function
@@ -69,35 +69,59 @@ func LogTrace(
 func SetTraceLogConfig(enabled bool, path string) {
 	if !enabled {
 		traceLogEnabled = false
-		erigonlog.Info("Trace logging is disabled.")
+		log.Info("Trace logging is disabled.")
 		return
 	}
 
 	if path == "" {
 		traceLogEnabled = false
-		erigonlog.Warn("Trace logging enabled in config, but no path provided. Logger will not be initialized.")
+		log.Warn("Trace logging enabled in config, but no path provided. Logger will not be initialized.")
 		return
 	}
 
 	logDir := filepath.Dir(path)
 	if _, err := os.Stat(logDir); os.IsNotExist(err) {
 		if mkErr := os.MkdirAll(logDir, 0755); mkErr != nil {
-			erigonlog.Errorf("Failed to create trace log directory %s: %v. Trace logging will be off.", logDir, mkErr)
+			log.Errorf("Failed to create trace log directory %s: %v. Trace logging will be off.", logDir, mkErr)
 			traceLogEnabled = false
 			return
 		}
 	}
 
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	config := zap.NewProductionConfig()
+	config.OutputPaths = []string{path}
+	config.Encoding = "console"
+
+	config.EncoderConfig = zapcore.EncoderConfig{
+		MessageKey:    "msg",
+		LevelKey:      "",
+		TimeKey:       "",
+		NameKey:       "",
+		CallerKey:     "",
+		FunctionKey:   "",
+		StacktraceKey: "",
+		LineEnding:    zapcore.DefaultLineEnding,
+		EncodeLevel: func(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
+		},
+		EncodeTime: func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+		},
+		EncodeDuration: func(d time.Duration, enc zapcore.PrimitiveArrayEncoder) {
+		},
+		EncodeCaller: func(caller zapcore.EntryCaller, enc zapcore.PrimitiveArrayEncoder) {
+		},
+		EncodeName: func(loggerName string, enc zapcore.PrimitiveArrayEncoder) {
+		},
+	}
+
+	logger, err := config.Build(zap.AddCallerSkip(1))
 	if err != nil {
-		erigonlog.Errorf("Failed to open trace log file %s: %v. Trace logging will be off.", path, err)
+		log.Errorf("Failed to create trace logger: %v. Trace logging will be off.", err)
 		traceLogEnabled = false
 		return
 	}
 
-	traceLogFile = f
-	traceLogger = log.New(traceLogFile, "", 0)
+	traceLogger = logger.Sugar()
 	traceLogPath = path
 	traceLogEnabled = true
-	erigonlog.Infof("Trace logging enabled. Path set to: %s", traceLogPath)
+	log.Infof("Trace logging enabled. Path set to: %s", traceLogPath)
 }
