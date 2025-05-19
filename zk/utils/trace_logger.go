@@ -14,7 +14,6 @@ import (
 
 var (
 	traceLogEnabled bool
-	traceLogPath    string
 	traceLogger     *zap.SugaredLogger
 )
 
@@ -121,7 +120,6 @@ func SetTraceLogConfig(enabled bool, path string) {
 	}
 
 	traceLogger = logger.Sugar()
-	traceLogPath = path
 	traceLogEnabled = true
-	log.Infof("Trace logging enabled. Path set to: %s", traceLogPath)
+	log.Infof("Trace logging enabled. Path set to: %s", path)
 }
