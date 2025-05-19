@@ -61,21 +61,23 @@ cd deployment/v2
 echo "创建create_rollup_parameters.json..."
 cat > create_rollup_parameters.json << EOF
 {
-    "realVerifier": false,
-    "trustedSequencerURL": "http://xlayer-rpc:8545",
-    "networkName": "zkevm",
-    "description":"0.0.1",
-    "trustedSequencer":"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "adminZkEVM": "$DEPLOYER_ADDRESS",
     "chainID": 195,
-    "adminZkEVM":"$DEPLOYER_ADDRESS",
-    "forkID": 13,
     "consensusContract": "PolygonPessimisticConsensus",
     "dataAvailabilityProtocol": "PolygonDataCommittee",
-    "gasTokenAddress":"0x5FbDB2315678afecb367f032d93F642f64180aa3",
     "deployerPvtKey": "",
-    "maxFeePerGas":"",
-    "maxPriorityFeePerGas":"",
-    "multiplierGas": ""
+    "description": "",
+    "forkID": 13,
+    "gasTokenAddress":"0x5FbDB2315678afecb367f032d93F642f64180aa3",
+    "maxFeePerGas": "",
+    "maxPriorityFeePerGas": "",
+    "multiplierGas": "",
+    "networkName": "zkevm",
+    "realVerifier": false,
+    "trustedSequencer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "trustedSequencerURL": "http://xlayer-seq:8545",
+    "trustedAggregator":"0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+    "programVKey": "0x00d6e4bdab9cac75a50d58262bb4e60b3107a6b61131ccdff649576c624b6fb7"
 }
 EOF
 
@@ -83,22 +85,32 @@ EOF
 echo "创建deploy_parameters.json..."
 cat > deploy_parameters.json << EOF
 {
-    "test": true,
-    "timelockAdminAddress": "$DEPLOYER_ADDRESS",
-    "minDelayTimelock": 600,
-    "salt": "0x0000000000000000000000000000000000000000000000000000000000000000",
-    "initialZkEVMDeployerOwner": "$DEPLOYER_ADDRESS",
     "admin": "$DEPLOYER_ADDRESS",
+    "deployerPvtKey": "",
+    "emergencyCouncilAddress": "$DEPLOYER_ADDRESS",
+    "initialZkEVMDeployerOwner": "$DEPLOYER_ADDRESS",
+    "maxFeePerGas": "",
+    "maxPriorityFeePerGas": "",
+    "minDelayTimelock": 60,
+    "multiplierGas": "",
+    "pendingStateTimeout": 604799,
+    "polTokenAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+    "salt": "0x0000000000000000000000000000000000000000000000000000000000000001",
+    "timelockAdminAddress": "$DEPLOYER_ADDRESS",
+    "trustedSequencer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "trustedSequencerURL": "http://xlayer-seq:8545",
     "trustedAggregator": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
     "trustedAggregatorTimeout": 604799,
-    "pendingStateTimeout": 604799,
-    "emergencyCouncilAddress": "$DEPLOYER_ADDRESS",
-    "polTokenAddress":"0x5FbDB2315678afecb367f032d93F642f64180aa3",
-    "zkEVMDeployerAddress":"$DEPLOYER_ADDRESS",
-    "deployerPvtKey": "",
-    "maxFeePerGas":"",
-    "maxPriorityFeePerGas":"",
-    "multiplierGas": ""
+    "forkID": 13,
+    "test": true,
+    "ppVKey": "0x00d6e4bdab9cac75a50d58262bb4e60b3107a6b61131ccdff649576c624b6fb7",
+    "ppVKeySelector": "0x00000001",
+    "realVerifier": false,
+    "defaultAdminAddress": "$DEPLOYER_ADDRESS",
+    "aggchainDefaultVKeyRoleAddress": "$DEPLOYER_ADDRESS",
+    "addRouteRoleAddress": "$DEPLOYER_ADDRESS",
+    "freezeRouteRoleAddress": "$DEPLOYER_ADDRESS",
+    "zkEVMDeployerAddress": "$DEPLOYER_ADDRESS"
 }
 EOF
 
