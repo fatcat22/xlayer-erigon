@@ -49,7 +49,7 @@ func LogTrace(
 		processId,
 		processWord,
 		Index,
-		innerIndex,
+		InnerIndex,
 		time.Now().UnixMilli(),
 		ReferId,
 		ContractAddress,
