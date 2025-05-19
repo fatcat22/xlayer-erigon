@@ -1,71 +1,19 @@
 
+DOCKER_COMPOSE := docker compose -f docker-compose.yml
+
+STOP := $(DOCKER_COMPOSE) down --remove-orphans; sleep 3; rm -rf data
 
 .PHONY: run
-run: ## Runs a full node
-	# base services
-	$(RUN_DOCKER_STATELESS_EXECUTOR)
-	$(RUN_DOCKER_L1_NETWORK)
-	$(RUN_DOCKER_DATA_AVAILABILITY_DB)
-	$(RUN_DOCKER_POOL_DB)
-	$(RUN_DOCKER_AGGREGATOR_DB)
+run:
+	$(DOCKER_COMPOSE) up -d xlayer-mock-l1-network
+	$(DOCKER_COMPOSE) up xlayer-approve
 	sleep 3
-	$(RUN_DOCKER_DATA_AVAILABILITY)
-	$(RUN_DOCKER_APPROVE)
-
-	# app services
+	$(DOCKER_COMPOSE) up -d xlayer-seq
 	sleep 3
-	$(RUN_DOCKER_SEQ)
-	$(RUN_DOCKER_PROVER)
-	sleep 10
-	$(RUN_DOCKER_DS)
-	$(RUN_DOCKER_SIGNER)
-	$(RUN_DOCKER_SEQ_SENDER)
-	$(RUN_DOCKER_AGGREGATOR)
-	$(RUN_DOCKER_POOL_MANAGER)
-	$(RUN_DOCKER_RPC)
-
-	# monitoring services
-	$(RUN_DOCKER_PROMETHEUS)
-	$(RUN_DOCKER_GRAFANA)
-
-.PHONY: all
-all: build-docker ## Runs a full node
-	# base services
-	$(RUN_DOCKER_STATELESS_EXECUTOR)
-	$(RUN_DOCKER_L1_NETWORK)
-	$(RUN_DOCKER_DATA_AVAILABILITY_DB)
-	$(RUN_DOCKER_POOL_DB)
-	$(RUN_DOCKER_AGGREGATOR_DB)
-	$(RUN_DOCKER_BRIDGE_DB)
-	$(RUN_DOCKER_BRIDGE_REDIS)
-	$(RUN_DOCKER_BRIDGE_ZOOKEEPER)
-	$(RUN_DOCKER_BRIDGE_COIN_KAFKA)
-	sleep 3
-	$(RUN_DOCKER_DATA_AVAILABILITY)
-	$(RUN_DOCKER_APPROVE)
-
-	# app services
-	sleep 3
-	$(RUN_DOCKER_SEQ)
-	$(RUN_DOCKER_PROVER)
-	sleep 10
-	$(RUN_DOCKER_DS)
-	$(RUN_DOCKER_SIGNER)
-	$(RUN_DOCKER_SEQ_SENDER)
-	$(RUN_DOCKER_AGGREGATOR)
-	$(RUN_DOCKER_POOL_MANAGER)
-	$(RUN_DOCKER_RPC)
-
-	# bridge services
-	sleep 30
-	$(RUN_DOCKER_BRIDGE_SERVICE)
-	sleep 3
-	$(RUN_DOCKER_BRIDGE_UI)
-
-	# monitoring services
-	$(RUN_DOCKER_PROMETHEUS)
-	$(RUN_DOCKER_GRAFANA)
-
+	$(DOCKER_COMPOSE) up -d xlayer-bridge-db
+	$(DOCKER_COMPOSE) up -d xlayer-bridge-service
+	$(DOCKER_COMPOSE) up -d xlayer-bridge-ui
+	 
 .PHONY: stop
 stop: ## Stops all services
 	$(STOP)
