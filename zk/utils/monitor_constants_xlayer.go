@@ -1,7 +1,5 @@
 package utils
 
-type TransactionStatus string
-
 type ProcessStep struct {
 	ID  uint64
 	Key string
