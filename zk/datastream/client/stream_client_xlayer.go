@@ -28,6 +28,7 @@ func (c *StreamClient) ReadEntriesToChannelXLayer(highestDSL2Block uint64, block
 		return err
 	}
 
+	lastTo := uint64(0)
 	errorFlag := false
 	progress := c.GetProgressAtomic()
 	for {
@@ -43,7 +44,18 @@ func (c *StreamClient) ReadEntriesToChannelXLayer(highestDSL2Block uint64, block
 		}
 
 		from := progress.Load()
-		if from >= highestDSL2Block {
+		if from != lastTo {
+			if !errorFlag {
+				time.Sleep(5 * time.Millisecond)
+				errorFlag = true
+				continue
+			}
+
+			return fmt.Errorf("ReadEntriesToChannelXLayer: last toBlock do not match current progress height")
+		}
+
+		// Check if we reached target height
+		if from == highestDSL2Block {
 			break
 		}
 
@@ -59,6 +71,7 @@ func (c *StreamClient) ReadEntriesToChannelXLayer(highestDSL2Block uint64, block
 		}
 
 		errorFlag = false
+		lastTo = to
 	}
 
 	// Send stop signal
