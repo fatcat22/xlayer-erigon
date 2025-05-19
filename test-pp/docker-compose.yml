@@ -96,7 +96,6 @@ services:
     volumes:
       - ./keystore/sequencer.keystore:/pk/keystore.claimtxmanager
       - ./config/test.bridge.config.toml:/app/config.toml
-      - ./config/test.sentinel.config.json:/app/sentinel_config.json
     command:
       - "/bin/sh"
       - "-c"
