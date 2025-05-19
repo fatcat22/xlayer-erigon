@@ -28,9 +28,9 @@ func (c *StreamClient) ReadEntriesToChannelXLayer(highestDSL2Block uint64, block
 		return err
 	}
 
-	lastTo := uint64(0)
 	errorFlag := false
 	progress := c.GetProgressAtomic()
+	lastTo := progress.Load()
 	for {
 		// Wait until all entries in the entry channel is consumed
 		for len(c.entryChan) > 0 {
