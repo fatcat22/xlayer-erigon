@@ -9,10 +9,13 @@ run:
 	sleep 3
 	$(DOCKER_COMPOSE) up -d xlayer-approve
 	$(DOCKER_COMPOSE) up -d xlayer-seq
+
 	sleep 3
-	$(DOCKER_COMPOSE) up -d xlayer-bridge-db
-	$(DOCKER_COMPOSE) up -d xlayer-bridge-service
-	$(DOCKER_COMPOSE) up -d xlayer-bridge-ui
+	$(DOCKER_COMPOSE) up -d xlayer-cdk
+
+	# $(DOCKER_COMPOSE) up -d xlayer-bridge-db
+	# $(DOCKER_COMPOSE) up -d xlayer-bridge-service
+	# $(DOCKER_COMPOSE) up -d xlayer-bridge-ui
 	 
 .PHONY: stop
 stop: ## Stops all services

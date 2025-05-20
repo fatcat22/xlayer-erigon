@@ -1,0 +1,63 @@
+PathRWData = "/tmp/"
+L1URL="http://zkevm-mock-l1-network:8545"
+L2URL="http://xlayer-seq:8123"
+AggLayerURL="http://agglayer:4444"
+ForkId = 13
+IsValidiumMode = false
+NetworkID = 1
+
+
+ContractVersions = "banana"
+
+
+L2Coinbase =  "0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534"
+SequencerPrivateKeyPath = "/etc/cdk/sequencer.keystore"
+SequencerPrivateKeyPassword  = "testonly"
+
+AggregatorPrivateKeyPath = "/etc/cdk/aggregator.keystore"
+AggregatorPrivateKeyPassword  = "testonly"
+ # TODO X Layer?
+SenderProofToL1Addr = "0x351e560852ee001d5D19b5912a269F849f59479a"
+polygonBridgeAddr = "0x9D86b4ec07d7e292F296Dad324b14C06F058a4f1"
+
+
+RPCURL = "http://xlayer-seq:8123"
+WitnessURL = "http://xlayer-seq:8123"
+
+# This values can be override directly from genesis.json
+rollupCreationBlockNumber = "34"
+rollupManagerCreationBlockNumber = "34"
+genesisBlockNumber = "34"
+[L1Config]
+	chainId = "1337"
+	polygonZkEVMGlobalExitRootAddress = "0x1f7ad7caA53e35b4f0D138dC5CBF91aC108a2674"
+	polygonRollupManagerAddress = "0x6c6c009cC348976dB4A908c92B24433d4F6edA43"
+	polTokenAddress = "0xEdE9cf798E0fE25D35469493f43E88FeA4a5da0E"
+	polygonZkEVMAddress = "0x414e9E227e4b589aF92200508aF5399576530E4e"
+
+[L2Config]
+	GlobalExitRootAddr = "0xa40d5f56745a118d0906a34e69aec8c0db1cb8fa"
+
+[Log]
+Environment = "development" # "production" or "development"
+Level = "info"
+Outputs = ["stderr"]
+
+[Aggregator]
+        Port = "50081"
+        RetryTime = "30s"
+        VerifyProofInterval = "10s"
+        GasOffset = 150000
+        SettlementBackend = "agglayer"
+        [Aggregator.DB]
+                Name = "aggregator_db"
+                User = "aggregator_user"
+                Password = "redacted"
+                Host = "postgres-001"
+                Port = "5432"
+                EnableLog = false
+                MaxConns = 200
+
+[AggSender]
+CertificateSendInterval = "1m"
+CheckSettledInterval = "5s"

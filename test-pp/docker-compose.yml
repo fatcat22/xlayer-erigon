@@ -192,3 +192,37 @@ services:
       - "/bin/sh"
       - "-c"
       - "/app/zkevm-pool-manager run --cfg /app/poolmanager.toml"
+
+  xlayer-cdk-node:
+    container_name: xlayer-cdk-node
+    image: cdk
+    volumes:
+      - ./data/cdk-node:/tmp
+      - ./keystore/aggregator.keystore:/etc/cdk/aggregator.keystore
+      - ./keystore/sequencer.keystore:/etc/cdk/sequencer.keystore
+      - ./config/cdk-node-config.toml:/etc/cdk/cdk-node-config.toml
+      - ./config/test.genesis.config.json:/etc/cdk/genesis.json
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "cdk-node run --cfg=/etc/cdk/cdk-node-config.toml --custom-network-file=/etc/cdk/genesis.json --save-config-path=/tmp/ --components=aggsender"
+
+  xlayer-agglayer:
+    container_name: xlayer-agglayer
+    image: agglayer
+    volumes:
+      - ./config/agglayer-config.toml:/etc/zkevm/agglayer-config.toml
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/usr/local/bin/agglayer run --cfg /etc/zkevm/agglayer-config.toml"
+
+  xlayer-agglayer-prover:
+    container_name: xlayer-agglayer-prover
+    image: agglayer
+    volumes:
+      - ./agglayer-prover-config.toml:/etc/zkevm/agglayer-prover-config.toml
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/usr/local/bin/agglayer prover --cfg /etc/zkevm/agglayer-prover-config.toml"
