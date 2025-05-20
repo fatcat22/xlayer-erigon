@@ -73,7 +73,6 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 
 	l2ShortCircuitToVerifiedBatchVal := ctx.Bool(utils.L2ShortCircuitToVerifiedBatchFlag.Name)
 
-	enableSequencerBlockSingleBlockVerify := ctx.Bool(utils.SequencerBlockSingleBlockVerify.Name)
 	sequencerBlockSealTimeVal := ctx.String(utils.SequencerBlockSealTime.Name)
 	sequencerBlockSealTime, err := time.ParseDuration(sequencerBlockSealTimeVal)
 	if err != nil {
@@ -179,7 +178,7 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		RebuildTreeAfter:                       ctx.Uint64(utils.RebuildTreeAfterFlag.Name),
 		IncrementTreeAlways:                    ctx.Bool(utils.IncrementTreeAlways.Name),
 		SmtRegenerateInMemory:                  ctx.Bool(utils.SmtRegenerateInMemory.Name),
-		SequencerBlockSingleBlockVerify:        enableSequencerBlockSingleBlockVerify,
+		SequencerBlockSingleBlockVerify:        ctx.Bool(utils.SequencerBlockSingleBlockVerify.Name),
 		SequencerBlockSealTime:                 sequencerBlockSealTime,
 		SequencerBatchSealTime:                 sequencerBatchSealTime,
 		SequencerBatchVerificationTimeout:      sequencerBatchVerificationTimeout,
