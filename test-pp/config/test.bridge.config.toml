@@ -86,7 +86,7 @@ MaxPageLimit = 1000
 # L1 bridge genesis block.
 [NetworkConfig]
 # Block number where the L1 bridge smart contract was deployed. The bridge needs to compute the merkle tree based on events from that block.
-GenBlockNumber = 314
+GenBlockNumber = 100
 # Address of the Polygon bridge smc
 PolygonBridgeAddress = "0x4B24266C13AFEf2bb60e2C69A4C08A482d81e3CA"
 # Address of the Global exit root smc
