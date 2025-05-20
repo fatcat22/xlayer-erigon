@@ -216,7 +216,7 @@ services:
       - 4443:4443
       - 4444:4444
       - 4446:4446
-      - 9092:9092
+      - 9094:9092
     volumes:
       - ./keystore/agglayer.keystore:/etc/zkevm/agglayer.keystore
       - ./config/agglayer-config.toml:/etc/zkevm/agglayer-config.toml
@@ -231,7 +231,7 @@ services:
     container_name: xlayer-agglayer-prover
     image: agglayer
     volumes:
-      - ./agglayer-prover-config.toml:/etc/zkevm/agglayer-prover-config.toml
+      - ./config/agglayer-prover-config.toml:/etc/zkevm/agglayer-prover-config.toml
     ports:
       - 4445:4445
       - 9093:9093

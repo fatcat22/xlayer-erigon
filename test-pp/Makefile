@@ -6,12 +6,15 @@ STOP := $(DOCKER_COMPOSE) down --remove-orphans; sleep 3; rm -rf data
 .PHONY: run
 run:
 	$(DOCKER_COMPOSE) up -d xlayer-mock-l1-network
+	$(DOCKER_COMPOSE) up -d xlayer-agg-db
+	$(DOCKER_COMPOSE) up -d xlayer-agglayer-prover
 	sleep 3
 	$(DOCKER_COMPOSE) up -d xlayer-approve
 	$(DOCKER_COMPOSE) up -d xlayer-seq
 
 	sleep 3
-	$(DOCKER_COMPOSE) up -d xlayer-cdk
+	$(DOCKER_COMPOSE) up -d xlayer-agglayer
+	$(DOCKER_COMPOSE) up -d xlayer-cdk-node
 
 	# $(DOCKER_COMPOSE) up -d xlayer-bridge-db
 	# $(DOCKER_COMPOSE) up -d xlayer-bridge-service
