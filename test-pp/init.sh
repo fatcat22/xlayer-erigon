@@ -168,11 +168,11 @@ echo "Viewing running containers..."
 docker ps
 
 # Get container ID
-CONTAINER_ID=$(docker ps | grep zkevm-mock-l1-network | awk '{print $1}')
-if [ -n "$CONTAINER_ID" ]; then
-  echo "Entering container $CONTAINER_ID..."
-  docker exec -it $CONTAINER_ID /bin/sh -c "ps -ef | grep geth; kill -15 \$(ps -ef | grep geth | grep -v grep | awk '{print \$1}')"
-fi
+# CONTAINER_ID=$(docker ps | grep zkevm-mock-l1-network | awk '{print $1}')
+# if [ -n "$CONTAINER_ID" ]; then
+#   echo "Entering container $CONTAINER_ID..."
+#   docker exec -it $CONTAINER_ID /bin/sh -c "ps -ef | grep geth; kill -15 \$(ps -ef | grep geth | grep -v grep | awk '{print \$1}')"
+# fi
 
 echo "------------------------------------------------------------"
 echo "Image creation ends here, you can refer to the following to commit the image"
@@ -230,14 +230,14 @@ if [ ! -f "$DEPLOY_OUTPUT_PATH" ]; then
 fi
 
 # Read new address values
-ZKEVM_ADDRESS=$(cat $DEPLOY_OUTPUT_PATH | grep -o '"polygonRollupManagerAddress": "[^"]*"' | cut -d'"' -f4)
-if [ -z "$ZKEVM_ADDRESS" ]; then
+ROLLUP_ADDRESS=$(cat $DEPLOY_OUTPUT_PATH | grep -o '"polygonRollupManagerAddress": "[^"]*"' | cut -d'"' -f4)
+if [ -z "$ROLLUP_ADDRESS" ]; then
   echo "Error: polygonRollupManagerAddress field not found in $DEPLOY_OUTPUT_PATH"
   exit 1
 fi
 
-ROLLUP_ADDRESS=$(cat $ROLLUP_OUTPUT_PATH | grep -o '"rollupAddress": "[^"]*"' | cut -d'"' -f4)
-if [ -z "$ROLLUP_ADDRESS" ]; then
+ZKEVM_ADDRESS=$(cat $ROLLUP_OUTPUT_PATH | grep -o '"rollupAddress": "[^"]*"' | cut -d'"' -f4)
+if [ -z "$ZKEVM_ADDRESS" ]; then
   echo "Error: rollupAddress field not found in $ROLLUP_OUTPUT_PATH"
   exit 1
 fi
@@ -266,5 +266,9 @@ sed -i '' "s|zkevm.address-rollup: \"[^\"]*\"|zkevm.address-rollup: \"$ROLLUP_AD
 sed -i '' "s|zkevm.address-ger-manager: \"[^\"]*\"|zkevm.address-ger-manager: \"$GER_MANAGER_ADDRESS\"|g" $CONFIG_FILE
 sed -i '' "s|zkevm.l1-first-block: [0-9]*|zkevm.l1-first-block: $L1_FIRST_BLOCK|g" $CONFIG_FILE
 
+# Export firstBatchData to ./test-pp/config/first-batch-config.json
+mkdir -p "$BASE_DIR/config"
+jq '.firstBatchData' "$BASE_DIR/agglayer-contracts/deployment/v2/create_rollup_output_2025-05-20T04:01:16.688Z.json" > "$BASE_DIR/config/first-batch-config.json"
+echo "Successfully exported firstBatchData to $BASE_DIR/config/first-batch-config.json"
 echo "test.erigon.seq.config.yaml file updated"
 echo "Initialization script completed!"
