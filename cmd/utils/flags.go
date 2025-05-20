@@ -546,10 +546,10 @@ var (
 		Usage: "Regenerate the SMT in memory (requires a lot of RAM for most chains)",
 		Value: false,
 	}
-	SequencerBlockMaxTxs = cli.IntFlag{
-		Name:  "zkevm.sequencer-block-max-txs",
-		Usage: "Block max container txs. Defaults to 15",
-		Value: 15,
+	SequencerBlockSingleBlockVerify = cli.BoolFlag{
+		Name:  "zkevm.sequencer-block-single-block-verify",
+		Usage: "Enable single block verify with Executor. Defaults to false",
+		Value: false,
 	}
 	SequencerBlockSealTime = cli.StringFlag{
 		Name:  "zkevm.sequencer-block-seal-time",

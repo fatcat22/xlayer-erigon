@@ -584,13 +584,6 @@ BatchLoop:
 				default:
 				}
 
-				if len(batchState.blockState.builtBlockElements.transactions) >= cfg.zk.SequencerBlockMaxTxs {
-					if !batchState.isAnyRecovery() {
-						innerBreak = true
-						break InnerLoopTransactions
-					}
-				}
-
 				txHash := transaction.Hash()
 
 				txSender, ok := transaction.GetSender()
@@ -926,9 +919,12 @@ BatchLoop:
 		if err != nil {
 			return err
 		}
-		//cfg.legacyVerifier.StartAsyncVerification(batchContext.s.LogPrefix(), batchState.forkId, batchState.batchNumber, block.Root(), counters.UsedAsMap(), batchState.builtBlocks, useExecutorForVerification, batchContext.cfg.zk.XLayer.ExecutorMock, batchContext.cfg.zk.SequencerBatchVerificationTimeout, batchContext.cfg.zk.SequencerBatchVerificationRetries)
-		cfg.legacyVerifier.StartAsyncVerification(batchContext.s.LogPrefix(), batchState.forkId, batchState.batchNumber, block.Root(), vm.GetDifferUsedAsMap(counters, olderBatchCounters), []uint64{blockNumber}, useExecutorForVerification, batchContext.cfg.zk.XLayer.ExecutorMock, batchContext.cfg.zk.SequencerBatchVerificationTimeout, batchContext.cfg.zk.SequencerBatchVerificationRetries)
-		olderBatchCounters = counters
+		if cfg.zk.SequencerBlockSingleBlockVerify {
+			cfg.legacyVerifier.StartAsyncVerification(batchContext.s.LogPrefix(), batchState.forkId, batchState.batchNumber, block.Root(), vm.GetDifferUsedAsMap(counters, olderBatchCounters), []uint64{blockNumber}, useExecutorForVerification, batchContext.cfg.zk.XLayer.ExecutorMock, batchContext.cfg.zk.SequencerBatchVerificationTimeout, batchContext.cfg.zk.SequencerBatchVerificationRetries)
+			olderBatchCounters = counters
+		} else {
+			cfg.legacyVerifier.StartAsyncVerification(batchContext.s.LogPrefix(), batchState.forkId, batchState.batchNumber, block.Root(), counters.UsedAsMap(), batchState.builtBlocks, useExecutorForVerification, batchContext.cfg.zk.XLayer.ExecutorMock, batchContext.cfg.zk.SequencerBatchVerificationTimeout, batchContext.cfg.zk.SequencerBatchVerificationRetries)
+		}
 
 		// For X Layer, local replay and smt alignment's feature of stateroot mismatch detection
 		if cfg.zk.XLayer.SequencerReplay || shouldCheckForExecutionAndSMTAlignment == SMTAlignmentPendingResequence {

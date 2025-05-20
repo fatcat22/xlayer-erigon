@@ -37,7 +37,7 @@ type Zk struct {
 	RpcRateLimits                          int
 	RpcGetBatchWitnessConcurrencyLimit     int
 	DatastreamVersion                      int
-	SequencerBlockMaxTxs                   int
+	SequencerBlockSingleBlockVerify        bool
 	SequencerBlockSealTime                 time.Duration
 	SequencerBatchSealTime                 time.Duration
 	SequencerBatchVerificationTimeout      time.Duration
