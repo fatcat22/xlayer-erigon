@@ -1,6 +1,5 @@
-prover-entrypoint = "http://172.16.0.19:4445"
+prover-entrypoint = "http://xlayer-agglayer-prover:4445"
 debug-mode = true
-
 
 # Only supported by fork 12+
 mock-verifier = true
@@ -10,7 +9,7 @@ mock-verifier = true
 1 = "http://xlayer-seq:8545"
 
 [proof-signers]
-1 = "0x5b06837A43bdC3dD9F114558DAf4B26ed49842Ed"
+1 = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
 
 [rpc]
 grpc-port = 4443
@@ -44,15 +43,15 @@ format = "json"
 
 [auth.local]
 private-keys = [
-    { path = "/etc/zkevm/agglayer.keystore", password = "pSnv6Dh5s9ahuzGzH9RoCDrKAMddaX3m" },
+    { path = "/etc/zkevm/agglayer.keystore", password = "testonly" },
 ]
 
 [l1]
-chain-id = 271828
+chain-id = 1337
 node-url = "http://zkevm-mock-l1-network:8545"
 ws-node-url = "ws://zkevm-mock-l1-network:8546"
-rollup-manager-contract = "0x6c6c009cC348976dB4A908c92B24433d4F6edA43"
-polygon-zkevm-global-exit-root-v2-contract = "0x1f7ad7caA53e35b4f0D138dC5CBF91aC108a2674"
+rollup-manager-contract = "0xE96dBF374555C6993618906629988d39184716B3"
+polygon-zkevm-global-exit-root-v2-contract = "0xB8cedD4B9eF683f0887C44a6E4312dC7A6e2fcdB"
 rpc-timeout = 45
 
 [l2]

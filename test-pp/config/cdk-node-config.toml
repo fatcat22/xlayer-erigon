@@ -6,9 +6,7 @@ ForkId = 13
 IsValidiumMode = false
 NetworkID = 1
 
-
 ContractVersions = "banana"
-
 
 L2Coinbase =  "0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534"
 SequencerPrivateKeyPath = "/etc/cdk/sequencer.keystore"
@@ -17,23 +15,22 @@ SequencerPrivateKeyPassword  = "testonly"
 AggregatorPrivateKeyPath = "/etc/cdk/aggregator.keystore"
 AggregatorPrivateKeyPassword  = "testonly"
  # TODO X Layer?
-SenderProofToL1Addr = "0x351e560852ee001d5D19b5912a269F849f59479a"
-polygonBridgeAddr = "0x9D86b4ec07d7e292F296Dad324b14C06F058a4f1"
-
+SenderProofToL1Addr = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8"
+polygonBridgeAddr = "0x4B24266C13AFEf2bb60e2C69A4C08A482d81e3CA"
 
 RPCURL = "http://xlayer-seq:8123"
 WitnessURL = "http://xlayer-seq:8123"
 
 # This values can be override directly from genesis.json
-rollupCreationBlockNumber = "34"
-rollupManagerCreationBlockNumber = "34"
-genesisBlockNumber = "34"
+rollupCreationBlockNumber = "225"
+rollupManagerCreationBlockNumber = "225"
+genesisBlockNumber = "225"
 [L1Config]
 	chainId = "1337"
-	polygonZkEVMGlobalExitRootAddress = "0x1f7ad7caA53e35b4f0D138dC5CBF91aC108a2674"
-	polygonRollupManagerAddress = "0x6c6c009cC348976dB4A908c92B24433d4F6edA43"
-	polTokenAddress = "0xEdE9cf798E0fE25D35469493f43E88FeA4a5da0E"
-	polygonZkEVMAddress = "0x414e9E227e4b589aF92200508aF5399576530E4e"
+	polygonZkEVMGlobalExitRootAddress = "0xB8cedD4B9eF683f0887C44a6E4312dC7A6e2fcdB"
+	polygonRollupManagerAddress = "0xE96dBF374555C6993618906629988d39184716B3"
+	polTokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+	polygonZkEVMAddress = "0xE45CCD0757670580a4a3600DE5cef1e45F0Ec2bd"
 
 [L2Config]
 	GlobalExitRootAddr = "0xa40d5f56745a118d0906a34e69aec8c0db1cb8fa"
@@ -52,8 +49,8 @@ Outputs = ["stderr"]
         [Aggregator.DB]
                 Name = "aggregator_db"
                 User = "aggregator_user"
-                Password = "redacted"
-                Host = "postgres-001"
+                Password = "aggregator_password"
+                Host = "xlayer-agg-db"
                 Port = "5432"
                 EnableLog = false
                 MaxConns = 200

@@ -272,4 +272,158 @@ ROLLUP_OUTPUT_PATH=$(find ./test-pp/agglayer-contracts/deployment/v2 -name "crea
 jq '.firstBatchData' "$ROLLUP_OUTPUT_PATH" > "$BASE_DIR/config/first-batch-config.json"
 echo "Successfully exported firstBatchData to $BASE_DIR/config/first-batch-config.json"
 echo "test.erigon.seq.config.yaml file updated"
+
+cd $BASE_DIR
+# Reset contract environment
+if [ ! -d "./cdk" ]; then
+  echo "Cloning contract repository..."
+  git clone -b v0.5.4-rc1 https://github.com/0xPolygon/cdk.git
+fi
+
+cd ./cdk
+make build-docker
+cd -
+
+if [ ! -d "./agglayer" ]; then
+  echo "Cloning contract repository..."
+  git clone -b v0.3.0-rc.16 https://github.com/agglayer/agglayer.git
+fi
+
+cd ./agglayer
+docker build -t agglayer .
+cd $ROOT_DIR
+DEPLOY_OUTPUT_PATH="./test-pp/agglayer-contracts/deployment/v2/deploy_output.json"
+
+echo "Updating polygonBridgeAddr parameter in cdk-node-config.toml..."
+# Find the latest deploy_output.json file
+if [ -f "$DEPLOY_OUTPUT_PATH" ]; then
+  # Extract polygonZkEVMBridgeAddress value from deploy_output.json
+  BRIDGE_ADDRESS=$(grep -o '"polygonZkEVMBridgeAddress": "[^"]*"' "$DEPLOY_OUTPUT_PATH" | cut -d'"' -f4)
+  echo "Bridge address obtained from deploy_output.json: $BRIDGE_ADDRESS"
+  
+  # Check if the address was successfully obtained
+  if [ -n "$BRIDGE_ADDRESS" ]; then
+    # Update polygonBridgeAddr parameter in cdk-node-config.toml
+    CONFIG_FILE="./test-pp/config/cdk-node-config.toml"
+    if [ -f "$CONFIG_FILE" ]; then
+      # Use sed to replace polygonBridgeAddr value in the config file
+      sed -i '' "s|polygonBridgeAddr = \"[^\"]*\"|polygonBridgeAddr = \"$BRIDGE_ADDRESS\"|" "$CONFIG_FILE"
+      echo "Successfully updated polygonBridgeAddr in cdk-node-config.toml to: $BRIDGE_ADDRESS"
+    else
+      echo "Error: Config file $CONFIG_FILE does not exist"
+    fi
+  else
+    echo "Error: Unable to extract Bridge address from deploy_output.json"
+  fi
+else
+  echo "Error: deploy_output.json file does not exist: $DEPLOY_OUTPUT_PATH"
+fi
+
+# Replace block number parameters in cdk-node-config.toml
+echo "Updating block number parameters in cdk-node-config.toml..."
+if [ -f "$DEPLOY_OUTPUT_PATH" ]; then
+  # Extract upgradeToULxLyBlockNumber value from deploy_output.json
+  BLOCK_NUMBER=$(grep -o '"upgradeToULxLyBlockNumber": [0-9]*' "$DEPLOY_OUTPUT_PATH" | cut -d' ' -f2)
+  echo "Block number obtained from deploy_output.json: $BLOCK_NUMBER"
+  
+  # Check if the block number was successfully obtained
+  if [ -n "$BLOCK_NUMBER" ]; then
+    # Update the three block number parameters in cdk-node-config.toml
+    CONFIG_FILE="./test-pp/config/cdk-node-config.toml"
+    if [ -f "$CONFIG_FILE" ]; then
+      # Use sed to replace block number values in the config file
+      sed -i '' "s|rollupCreationBlockNumber = \"[^\"]*\"|rollupCreationBlockNumber = \"$BLOCK_NUMBER\"|" "$CONFIG_FILE"
+      sed -i '' "s|rollupManagerCreationBlockNumber = \"[^\"]*\"|rollupManagerCreationBlockNumber = \"$BLOCK_NUMBER\"|" "$CONFIG_FILE"
+      sed -i '' "s|genesisBlockNumber = \"[^\"]*\"|genesisBlockNumber = \"$BLOCK_NUMBER\"|" "$CONFIG_FILE"
+      echo "Successfully updated block number parameters in cdk-node-config.toml to: $BLOCK_NUMBER"
+    else
+      echo "Error: Config file $CONFIG_FILE does not exist"
+    fi
+  else
+    echo "Error: Unable to extract block number from deploy_output.json"
+  fi
+else
+  echo "Error: deploy_output.json file does not exist: $DEPLOY_OUTPUT_PATH"
+fi
+
+# Read from DEPLOY_OUTPUT_PATH
+echo "Updating contract address parameters in cdk-node-config.toml..."
+
+# Check if files exist
+if [ ! -f "$DEPLOY_OUTPUT_PATH" ]; then
+  echo "Error: deploy_output.json file does not exist: $DEPLOY_OUTPUT_PATH"
+  exit 1
+fi
+
+if [ ! -f "$ROLLUP_OUTPUT_PATH" ]; then
+  echo "Error: create_rollup_output file does not exist: $ROLLUP_OUTPUT_PATH"
+  exit 1
+fi
+
+# Read variables from deploy_output.json
+ROLLUP_MANAGER_ADDRESS=$(grep -o '"polygonRollupManagerAddress": "[^"]*"' "$DEPLOY_OUTPUT_PATH" | cut -d'"' -f4)
+BRIDGE_ADDRESS=$(grep -o '"polygonZkEVMBridgeAddress": "[^"]*"' "$DEPLOY_OUTPUT_PATH" | cut -d'"' -f4)
+GLOBAL_EXIT_ROOT_ADDRESS=$(grep -o '"polygonZkEVMGlobalExitRootAddress": "[^"]*"' "$DEPLOY_OUTPUT_PATH" | cut -d'"' -f4)
+
+# Read rollupAddress from create_rollup_output file
+ROLLUP_ADDRESS=$(grep -o '"rollupAddress": "[^"]*"' "$ROLLUP_OUTPUT_PATH" | cut -d'"' -f4)
+
+# Check if all addresses were successfully obtained
+if [ -z "$ROLLUP_MANAGER_ADDRESS" ]; then
+  echo "Error: Unable to extract polygonRollupManagerAddress from deploy_output.json"
+  exit 1
+fi
+
+if [ -z "$BRIDGE_ADDRESS" ]; then
+  echo "Error: Unable to extract polygonZkEVMBridgeAddress from deploy_output.json"
+  exit 1
+fi
+
+if [ -z "$GLOBAL_EXIT_ROOT_ADDRESS" ]; then
+  echo "Error: Unable to extract polygonZkEVMGlobalExitRootAddress from deploy_output.json"
+  exit 1
+fi
+
+if [ -z "$ROLLUP_ADDRESS" ]; then
+  echo "Error: Unable to extract rollupAddress from create_rollup_output file"
+  exit 1
+fi
+
+# Output the obtained addresses
+echo "Addresses obtained from JSON files:"
+echo "polygonRollupManagerAddress: $ROLLUP_MANAGER_ADDRESS"
+echo "polygonZkEVMBridgeAddress: $BRIDGE_ADDRESS"
+echo "polygonZkEVMGlobalExitRootAddress: $GLOBAL_EXIT_ROOT_ADDRESS"
+echo "rollupAddress: $ROLLUP_ADDRESS"
+
+# Update address parameters in cdk-node-config.toml
+CONFIG_FILE="./test-pp/config/cdk-node-config.toml"
+if [ -f "$CONFIG_FILE" ]; then
+  # Use sed to replace address values in the config file
+  sed -i '' "s|polygonRollupManagerAddress = \"[^\"]*\"|polygonRollupManagerAddress = \"$ROLLUP_MANAGER_ADDRESS\"|" "$CONFIG_FILE"
+  sed -i '' "s|polygonZkEVMBridgeAddress = \"[^\"]*\"|polygonZkEVMBridgeAddress = \"$BRIDGE_ADDRESS\"|" "$CONFIG_FILE"
+  sed -i '' "s|polygonZkEVMGlobalExitRootAddress = \"[^\"]*\"|polygonZkEVMGlobalExitRootAddress = \"$GLOBAL_EXIT_ROOT_ADDRESS\"|" "$CONFIG_FILE"
+  sed -i '' "s|polygonZkEVMAddress = \"[^\"]*\"|polygonZkEVMAddress = \"$ROLLUP_ADDRESS\"|" "$CONFIG_FILE"
+  
+  echo "Successfully updated contract address parameters in cdk-node-config.toml"
+else
+  echo "Error: Config file $CONFIG_FILE does not exist"
+  exit 1
+fi
+
+# Replace rollup-manager-contract,polygon-zkevm-global-exit-root-v2-contract
+echo "Updating contract address parameters in agglayer-config.toml..."
+AGGLAYER_CONFIG_FILE="./test-pp/config/agglayer-config.toml"
+if [ -f "$AGGLAYER_CONFIG_FILE" ]; then
+  # Use sed to replace contract address values in the config file
+  sed -i '' "s|rollup-manager-contract = \"[^\"]*\"|rollup-manager-contract = \"$ROLLUP_MANAGER_ADDRESS\"|" "$AGGLAYER_CONFIG_FILE"
+  sed -i '' "s|polygon-zkevm-global-exit-root-v2-contract = \"[^\"]*\"|polygon-zkevm-global-exit-root-v2-contract = \"$GLOBAL_EXIT_ROOT_ADDRESS\"|" "$AGGLAYER_CONFIG_FILE"
+  echo "Successfully updated contract address parameters in agglayer-config.toml:"
+  echo "rollup-manager-contract = $ROLLUP_MANAGER_ADDRESS"
+  echo "polygon-zkevm-global-exit-root-v2-contract = $GLOBAL_EXIT_ROOT_ADDRESS"
+else
+  echo "Error: Config file $AGGLAYER_CONFIG_FILE does not exist"
+  exit 1
+fi
+
 echo "Initialization script completed!"
