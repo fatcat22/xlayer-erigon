@@ -268,7 +268,8 @@ sed -i '' "s|zkevm.l1-first-block: [0-9]*|zkevm.l1-first-block: $L1_FIRST_BLOCK|
 
 # Export firstBatchData to ./test-pp/config/first-batch-config.json
 mkdir -p "$BASE_DIR/config"
-jq '.firstBatchData' "$BASE_DIR/agglayer-contracts/deployment/v2/create_rollup_output_2025-05-20T04:01:16.688Z.json" > "$BASE_DIR/config/first-batch-config.json"
+ROLLUP_OUTPUT_PATH=$(find ./test-pp/agglayer-contracts/deployment/v2 -name "create_rollup_output_*.json" | sort -r | head -n 1)
+jq '.firstBatchData' "$ROLLUP_OUTPUT_PATH" > "$BASE_DIR/config/first-batch-config.json"
 echo "Successfully exported firstBatchData to $BASE_DIR/config/first-batch-config.json"
 echo "test.erigon.seq.config.yaml file updated"
 echo "Initialization script completed!"
