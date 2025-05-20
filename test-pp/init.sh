@@ -426,4 +426,42 @@ else
   exit 1
 fi
 
+# 从deploy_output.json读取deploymentRollupManagerBlockNumber
+echo "read deploy_output.json deploymentRollupManagerBlockNumber..."
+DEPLOYMENT_ROLLUP_MANAGER_BLOCK_NUMBER=$(grep -o '"deploymentRollupManagerBlockNumber": [0-9]*' "$DEPLOY_OUTPUT_PATH" | cut -d' ' -f2)
+
+# 检查是否成功获取到区块号
+if [ -z "$DEPLOYMENT_ROLLUP_MANAGER_BLOCK_NUMBER" ]; then
+  echo "Error: Unable to extract deploymentRollupManagerBlockNumber from deploy_output.json"
+  exit 1
+fi
+
+echo "deploymentRollupManagerBlockNumber: $DEPLOYMENT_ROLLUP_MANAGER_BLOCK_NUMBER"
+
+echo "update test.genesis.config.json rollupCreationBlockNumber..."
+GENESIS_CONFIG_FILE="./test-pp/config/test.genesis.config.json"
+if [ -f "$GENESIS_CONFIG_FILE" ]; then
+  sed -i '' "s|\"rollupCreationBlockNumber\": [0-9]*|\"rollupCreationBlockNumber\": $DEPLOYMENT_ROLLUP_MANAGER_BLOCK_NUMBER|" "$GENESIS_CONFIG_FILE"
+  
+  echo "update DEPLOYMENT_ROLLUP_MANAGER_BLOCK_NUMBER: $DEPLOYMENT_ROLLUP_MANAGER_BLOCK_NUMBER"
+else
+  echo "Error: Config file $GENESIS_CONFIG_FILE does not exist"
+  exit 1
+fi
+
+# Replace rollup-manager-contract,polygon-zkevm-global-exit-root-v2-contract
+echo "Updating contract address parameters in agglayer-config.toml..."
+AGGLAYER_CONFIG_FILE="./test-pp/config/agglayer-config.toml"
+if [ -f "$AGGLAYER_CONFIG_FILE" ]; then
+  # Use sed to replace contract address values in the config file
+  sed -i '' "s|rollup-manager-contract = \"[^\"]*\"|rollup-manager-contract = \"$ROLLUP_MANAGER_ADDRESS\"|" "$AGGLAYER_CONFIG_FILE"
+  sed -i '' "s|polygon-zkevm-global-exit-root-v2-contract = \"[^\"]*\"|polygon-zkevm-global-exit-root-v2-contract = \"$GLOBAL_EXIT_ROOT_ADDRESS\"|" "$AGGLAYER_CONFIG_FILE"
+  echo "Successfully updated contract address parameters in agglayer-config.toml:"
+  echo "rollup-manager-contract = $ROLLUP_MANAGER_ADDRESS"
+  echo "polygon-zkevm-global-exit-root-v2-contract = $GLOBAL_EXIT_ROOT_ADDRESS"
+else
+  echo "Error: Config file $AGGLAYER_CONFIG_FILE does not exist"
+  exit 1
+fi
+
 echo "Initialization script completed!"
