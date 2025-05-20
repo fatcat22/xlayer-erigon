@@ -1,7 +1,13 @@
 #!/bin/bash
 # Exit on error
 set -e
+# set -x
 
+# Define base working directory
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(dirname "$BASE_DIR")"
+echo "Base working directory: $BASE_DIR"
+echo "Parent directory: $ROOT_DIR"
 # Define configurable parameters
 DOCKER_IMAGE_NAME=${DOCKER_IMAGE_NAME:-"zjg555543/geth"}
 DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG:-"pp-v5"}
@@ -40,12 +46,14 @@ echo "Sending funds to deployer..."
 cast send -f $RICH_ADDRESS --private-key $RICH_PRIVATE_KEY --value 3ether --legacy $DEPLOYER_ADDRESS
 
 # Reset contract environment
-echo "Cloning contract repository..."
 if [ ! -d "./agglayer-contracts" ]; then
+  echo "Cloning contract repository..."
   git clone -b v10.0.0-rc.6 https://github.com/agglayer/agglayer-contracts.git
 fi
 
 cd ./agglayer-contracts
+echo "Cleaning and resting contract repository..."
+rm -rf *; git reset --hard
 
 # Create .env file
 echo "Creating .env file..."
@@ -125,7 +133,10 @@ npm run deploy:v2:localhost
 echo "Viewing genesis file..."
 cat deployment/v2/genesis.json
 cat deployment/v2/deploy_output.json 
-cat deployment/v2/create_rollup_output.json
+# find latest create_rollup_output file
+LATEST_ROLLUP_OUTPUT=$(find deployment/v2 -name "create_rollup_output_*.json" | sort -r | head -n 1)
+echo "Using rollup output file: $LATEST_ROLLUP_OUTPUT"
+cat $LATEST_ROLLUP_OUTPUT
 
 # Transfer ERC20 token to Sequencer
 echo "Transferring ERC20 token to Sequencer..."
@@ -134,10 +145,12 @@ SEQ_PRIVATE_KEY="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2f
 TOKEN_ADDRESS="0x5FbDB2315678afecb367f032d93F642f64180aa3"
 cast send --legacy --from $SEQ_ADDRESS --private-key $SEQ_PRIVATE_KEY $TOKEN_ADDRESS "transfer(address,uint256)" $SEQ_ADDRESS 1000
 
+cd "$ROOT_DIR"
 # Set Trusted RPC
 echo "Setting Trusted Sequencer URL..."
+echo "Current directory: $(pwd)"
 # Read rollupAddress from the latest create_rollup_output_*.json file
-ROLLUP_OUTPUT_PATH=$(find ./agglayer-contracts/deployment/v2 -name "create_rollup_output_*.json" | sort -r | head -n 1)
+ROLLUP_OUTPUT_PATH=$(find ./test-pp/agglayer-contracts/deployment/v2 -name "create_rollup_output_*.json" | sort -r | head -n 1)
 echo "Using output file: $ROLLUP_OUTPUT_PATH"
 POE_ADDRESS=$(cat $ROLLUP_OUTPUT_PATH | grep -o '"rollupAddress": "[^"]*"' | cut -d'"' -f4)
 echo "Using POE address from JSON: $POE_ADDRESS"
@@ -146,7 +159,7 @@ cast send --legacy --from $DEPLOYER_ADDRESS --private-key $DEPLOYER_PRIVATE_KEY 
 # Cross-chain activation
 echo "Activating cross-chain functionality..."
 # Read BRIDGE_ADDRESS from deploy_output.json
-DEPLOY_OUTPUT_PATH="./agglayer-contracts/deployment/v2/deploy_output.json"
+DEPLOY_OUTPUT_PATH="./test-pp/agglayer-contracts/deployment/v2/deploy_output.json"
 BRIDGE_ADDRESS=$(cat $DEPLOY_OUTPUT_PATH | grep -o '"polygonZkEVMBridgeAddress": "[^"]*"' | cut -d'"' -f4)
 echo "Using Bridge address from JSON: $BRIDGE_ADDRESS"
 cast send --legacy --from $DEPLOYER_ADDRESS --private-key $DEPLOYER_PRIVATE_KEY $BRIDGE_ADDRESS 'function bridgeAsset(uint32 destinationNetwork, address destinationAddress, uint256 amount, address token, bool forceUpdateGlobalExitRoot, bytes permitData) returns()' 7 0x0000000000000000000000000000000000000000 0 0x0000000000000000000000000000000000000000 true 0x
@@ -163,12 +176,11 @@ fi
 
 echo "------------------------------------------------------------"
 echo "Image creation ends here, you can refer to the following to commit the image"
-echo "docker ps -a"
-echo "docker commit $CONTAINER_ID ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
-echo "docker push ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
+# echo "docker ps -a"
+# echo "docker commit $CONTAINER_ID ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
+# echo "docker push ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
 
 echo "Generating configuration files..."
-cd ../
 go install ./cmd/hack/allocs
 which allocs
 allocs ./test-pp/agglayer-contracts/deployment/v2/genesis.json
