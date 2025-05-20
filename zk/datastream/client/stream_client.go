@@ -256,9 +256,9 @@ func (c *StreamClient) stopStreaming() error {
 }
 
 func (c *StreamClient) getLatestL2Block() (l2Block *types.FullL2Block, err error) {
-	h, err := c.GetHeader()
+	h, err := c.getHeader()
 	if err != nil {
-		return nil, fmt.Errorf("GetHeader: %w", err)
+		return nil, fmt.Errorf("getHeader: %w", err)
 	}
 
 	latestEntryNum := h.TotalEntries - 1
@@ -326,7 +326,7 @@ func (c *StreamClient) Stop() error {
 // Command header: Get status
 // Returns the current status of the header.
 // If started, terminate the connection.
-func (c *StreamClient) GetHeader() (*types.HeaderEntry, error) {
+func (c *StreamClient) getHeader() (*types.HeaderEntry, error) {
 	log.Info("[Datastream client] Getting header", "client", c.conn)
 	if err := c.stopStreaming(); err != nil {
 		return nil, fmt.Errorf("stopStreaming: %w", err)
@@ -379,9 +379,9 @@ func (c *StreamClient) sendEntryCmdWrapper(entryNum uint64) error {
 
 func (c *StreamClient) ExecutePerFile(bookmark *types.BookmarkProto, function func(file *types.FileEntry) error) error {
 	// Get header from server
-	header, err := c.GetHeader()
+	header, err := c.getHeader()
 	if err != nil {
-		return fmt.Errorf("GetHeader: %w", err)
+		return fmt.Errorf("getHeader: %w", err)
 	}
 
 	protoBookmark, err := bookmark.Marshal()
@@ -451,8 +451,8 @@ func (c *StreamClient) ReadAllEntriesToChannel() (err error) {
 	}
 
 	// first load up the header of the stream
-	if _, err = c.GetHeader(); err != nil {
-		err = fmt.Errorf("GetHeader: %w", err)
+	if _, err = c.getHeader(); err != nil {
+		err = fmt.Errorf("getHeader: %w", err)
 		return err
 	}
 

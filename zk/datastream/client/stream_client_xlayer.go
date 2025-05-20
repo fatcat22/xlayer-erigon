@@ -2,6 +2,7 @@ package client
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"time"
 
@@ -22,13 +23,28 @@ func (c *StreamClient) ReadEntriesToChannelXLayer(highestDSL2Block uint64, block
 	default:
 	}
 
-	// first load up the header of the stream
-	if _, err = c.GetHeader(); err != nil {
-		err = fmt.Errorf("GetHeader: %w", err)
-		return err
+	retryFlag := false
+	for {
+		// Reset any client errors
+		if err = c.HandleStart(); err != nil {
+			err = fmt.Errorf("HandleStart: %w", err)
+			return err
+		}
+
+		// Load the header of the stream. Check for ds server inactivity timeout
+		if _, err = c.GetHeader(); err != nil {
+			if !retryFlag {
+				retryFlag = true
+				continue
+			}
+			err = fmt.Errorf("GetHeader: %w", err)
+			return err
+		}
+		retryFlag = false
+		break
 	}
 
-	errorFlag := false
+	mismatchFlag := false
 	progress := c.GetProgressAtomic()
 	lastTo := progress.Load()
 	for {
@@ -45,14 +61,15 @@ func (c *StreamClient) ReadEntriesToChannelXLayer(highestDSL2Block uint64, block
 
 		from := progress.Load()
 		if from != lastTo {
-			if !errorFlag {
+			if !mismatchFlag {
 				time.Sleep(5 * time.Millisecond)
-				errorFlag = true
+				mismatchFlag = true
 				continue
 			}
 
 			return fmt.Errorf("ReadEntriesToChannelXLayer: last toBlock do not match current progress height")
 		}
+		mismatchFlag = false
 
 		// Check if we reached target height
 		if from == highestDSL2Block {
@@ -62,15 +79,14 @@ func (c *StreamClient) ReadEntriesToChannelXLayer(highestDSL2Block uint64, block
 		to := min(from+blockRange, highestDSL2Block)
 		if err = c.readRangeEntriesToChannel(to); err != nil {
 			// Check for ds server inactivity timeout
-			if !errorFlag {
-				errorFlag = true
+			if !retryFlag {
+				retryFlag = true
 				continue
 			}
 
 			return fmt.Errorf("readRangeEntriesToChannel: %w", err)
 		}
-
-		errorFlag = false
+		retryFlag = false
 		lastTo = to
 	}
 
@@ -241,6 +257,22 @@ func (c *StreamClient) sendRangeBookmarkCmd(startBookmark []byte, endBookmark []
 	}
 
 	return nil
+}
+
+func (c *StreamClient) GetHeader() (*types.HeaderEntry, error) {
+	select {
+	case <-c.ctx.Done():
+		return nil, errors.New("context done - stopping")
+	default:
+	}
+
+	header, err := c.getHeader()
+	if err != nil {
+		c.lastError = err
+		return nil, err
+	}
+
+	return header, nil
 }
 
 func UnmarshalToEntryNumber(data []byte) (uint64, error) {
