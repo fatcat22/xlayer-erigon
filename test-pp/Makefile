@@ -17,3 +17,7 @@ run:
 .PHONY: stop
 stop: ## Stops all services
 	$(STOP)
+
+.PHONY: build-docker
+build-docker: ## Build cdk-erigoin for sequencer and rpc
+	docker build -t cdk-erigon -f ../Dockerfile.local ../

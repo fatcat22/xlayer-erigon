@@ -1,29 +1,29 @@
 #!/bin/bash
-# 设置错误时退出
+# Exit on error
 set -e
 
-# 定义可配置参数
+# Define configurable parameters
 DOCKER_IMAGE_NAME=${DOCKER_IMAGE_NAME:-"zjg555543/geth"}
 DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG:-"pp-v5"}
 
-echo "开始执行初始化脚本..."
+echo "Starting initialization script..."
 
-# 清理docker
-echo "清理所有docker容器..."
+# Clean docker
+echo "Cleaning all docker containers..."
 docker stop $(docker ps -aq) || true
 docker rm $(docker ps -aq) || true
 docker ps -a
 
-# 启动mock l1
-echo "启动zkevm-mock-l1-network..."
+# # Start mock l1
+echo "Starting zkevm-mock-l1-network..."
 docker-compose up -d zkevm-mock-l1-network
 
-# 等待几秒钟确保网络启动
-echo "等待网络启动..."
+# Wait a few seconds to ensure the network is up
+echo "Waiting for network to start..."
 sleep 5
 
-## 准备合约deployer
-echo "准备合约deployer..."
+# ## Prepare contract deployer
+# echo "Preparing contract deployer..."
 DEPLOYER_ADDRESS="0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534"
 DEPLOYER_PRIVATE_KEY="0x815405dddb0e2a99b12af775fd2929e526704e1d1aea6a0b4e74dc33e2f7fcd2"
 DEPLOYER_MNEMONIC="moment wine false celery win galaxy glide thumb tail setup choose city"
@@ -31,24 +31,24 @@ DEPLOYER_MNEMONIC="moment wine false celery win galaxy glide thumb tail setup ch
 RICH_ADDRESS="0x14dC79964da2C08b23698B3D3cc7Ca32193d9955"
 RICH_PRIVATE_KEY="0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356"
 
-### 查看余额
-echo "查看富地址余额..."
+### Check balance
+echo "Checking rich address balance..."
 cast rpc eth_getBalance $RICH_ADDRESS latest
 
-### 给deployer打钱
-echo "给deployer打钱..."
+### Send funds to deployer
+echo "Sending funds to deployer..."
 cast send -f $RICH_ADDRESS --private-key $RICH_PRIVATE_KEY --value 3ether --legacy $DEPLOYER_ADDRESS
 
-# 重置合约环境
-echo "克隆合约代码库..."
+# Reset contract environment
+echo "Cloning contract repository..."
 if [ ! -d "./agglayer-contracts" ]; then
   git clone -b v10.0.0-rc.6 https://github.com/agglayer/agglayer-contracts.git
 fi
 
 cd ./agglayer-contracts
 
-# 创建.env文件
-echo "创建.env文件..."
+# Create .env file
+echo "Creating .env file..."
 cat > .env << EOF
 MNEMONIC="$DEPLOYER_MNEMONIC"
 INFURA_PROJECT_ID="6d3d0adfe7c74dcb87642b37f1477aec"
@@ -57,8 +57,8 @@ EOF
 
 cd deployment/v2
 
-# 创建create_rollup_parameters.json
-echo "创建create_rollup_parameters.json..."
+# Create create_rollup_parameters.json
+echo "Creating create_rollup_parameters.json..."
 cat > create_rollup_parameters.json << EOF
 {
     "adminZkEVM": "$DEPLOYER_ADDRESS",
@@ -81,8 +81,8 @@ cat > create_rollup_parameters.json << EOF
 }
 EOF
 
-# 创建deploy_parameters.json
-echo "创建deploy_parameters.json..."
+# Create deploy_parameters.json
+echo "Creating deploy_parameters.json..."
 cat > deploy_parameters.json << EOF
 {
     "admin": "$DEPLOYER_ADDRESS",
@@ -115,62 +115,144 @@ cat > deploy_parameters.json << EOF
 }
 EOF
 
-# 编译合约
-echo "编译合约..."
+# Compile contracts
+echo "Compiling contracts..."
 cd ../../
 npm i
 npm run deploy:v2:localhost
 
-# 查看genesis文件
-# echo "查看genesis文件..."
-# cat deployment/v2/genesis.json
-# cat deployment/v2/deploy_output.json 
-# cat deployment/v2/create_rollup_output.json
+# View genesis file
+echo "Viewing genesis file..."
+cat deployment/v2/genesis.json
+cat deployment/v2/deploy_output.json 
+cat deployment/v2/create_rollup_output.json
 
-# 查看当前的委员会个数
-# echo "查看当前的委员会个数..."
-# DATA_COMMITTEE_ADDRESS="0x3bFa19E4588962D1834B2e4007F150f4447Aa9fe"
-# cast call $DATA_COMMITTEE_ADDRESS 'function getAmountOfMembers() public returns (uint256)'
-
-# 转移给Seq ERC20 token
-echo "转移ERC20 token给Sequencer..."
+# Transfer ERC20 token to Sequencer
+echo "Transferring ERC20 token to Sequencer..."
 SEQ_ADDRESS="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 SEQ_PRIVATE_KEY="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 TOKEN_ADDRESS="0x5FbDB2315678afecb367f032d93F642f64180aa3"
 cast send --legacy --from $SEQ_ADDRESS --private-key $SEQ_PRIVATE_KEY $TOKEN_ADDRESS "transfer(address,uint256)" $SEQ_ADDRESS 1000
 
-# 设置1个委员会
-# echo "设置委员会..."
-# cast send --legacy --from $DEPLOYER_ADDRESS --private-key $DEPLOYER_PRIVATE_KEY $DATA_COMMITTEE_ADDRESS 'function setupCommittee(uint256 _requiredAmountOfSignatures, string[] urls, bytes addrsBytes) returns()' 1 [http://xlayer-da:8444] $SEQ_ADDRESS
-
-# 设置Trust RPC
-echo "设置Trusted Sequencer URL..."
-POE_ADDRESS="0xeb173087729c88a47568AF87b17C653039377BA6"
+# Set Trusted RPC
+echo "Setting Trusted Sequencer URL..."
+# Read rollupAddress from the latest create_rollup_output_*.json file
+ROLLUP_OUTPUT_PATH=$(find ./agglayer-contracts/deployment/v2 -name "create_rollup_output_*.json" | sort -r | head -n 1)
+echo "Using output file: $ROLLUP_OUTPUT_PATH"
+POE_ADDRESS=$(cat $ROLLUP_OUTPUT_PATH | grep -o '"rollupAddress": "[^"]*"' | cut -d'"' -f4)
+echo "Using POE address from JSON: $POE_ADDRESS"
 cast send --legacy --from $DEPLOYER_ADDRESS --private-key $DEPLOYER_PRIVATE_KEY $POE_ADDRESS "setTrustedSequencerURL(string)" "http://xlayer-rpc:8545"
 
-# 跨链激活
-echo "激活跨链功能..."
-BRIDGE_ADDRESS="0x3a277Fa4E78cc1266F32E26c467F99A8eAEfF7c3"
+# Cross-chain activation
+echo "Activating cross-chain functionality..."
+# Read BRIDGE_ADDRESS from deploy_output.json
+DEPLOY_OUTPUT_PATH="./agglayer-contracts/deployment/v2/deploy_output.json"
+BRIDGE_ADDRESS=$(cat $DEPLOY_OUTPUT_PATH | grep -o '"polygonZkEVMBridgeAddress": "[^"]*"' | cut -d'"' -f4)
+echo "Using Bridge address from JSON: $BRIDGE_ADDRESS"
 cast send --legacy --from $DEPLOYER_ADDRESS --private-key $DEPLOYER_PRIVATE_KEY $BRIDGE_ADDRESS 'function bridgeAsset(uint32 destinationNetwork, address destinationAddress, uint256 amount, address token, bool forceUpdateGlobalExitRoot, bytes permitData) returns()' 7 0x0000000000000000000000000000000000000000 0 0x0000000000000000000000000000000000000000 true 0x
 
-echo "查看运行中的容器..."
+echo "Viewing running containers..."
 docker ps
 
-# 获取容器ID
+# Get container ID
 CONTAINER_ID=$(docker ps | grep zkevm-mock-l1-network | awk '{print $1}')
 if [ -n "$CONTAINER_ID" ]; then
-  echo "进入容器 $CONTAINER_ID..."
+  echo "Entering container $CONTAINER_ID..."
   docker exec -it $CONTAINER_ID /bin/sh -c "ps -ef | grep geth; kill -15 \$(ps -ef | grep geth | grep -v grep | awk '{print \$1}')"
 fi
 
 echo "------------------------------------------------------------"
-echo "镜像到此位置结束，可以参考提交镜像"
+echo "Image creation ends here, you can refer to the following to commit the image"
 echo "docker ps -a"
 echo "docker commit $CONTAINER_ID ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
 echo "docker push ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
 
-echo "生成配置文件..."
-cd ../../
-go run cmd/hack/allocs/main.go ./test-pp/config/genesis.json
+echo "Generating configuration files..."
+cd ../
+go install ./cmd/hack/allocs
+which allocs
+allocs ./test-pp/agglayer-contracts/deployment/v2/genesis.json
+mv allocs.json ./test-pp/config/dynamic-mynetwork-allocs.json
 
-echo "初始化脚本执行完成！"
+# Update dynamic-mynetwork-conf.json file
+echo "Updating dynamic-mynetwork-conf.json file..."
+# Read genesis and timestamp from the latest create_rollup_output_*.json file
+ROLLUP_OUTPUT_PATH=$(find ./test-pp/agglayer-contracts/deployment/v2 -name "create_rollup_output_*.json" | sort -r | head -n 1)
+echo "Using output file: $ROLLUP_OUTPUT_PATH"
+GENESIS_VALUE=$(cat $ROLLUP_OUTPUT_PATH | grep -o '"genesis": "[^"]*"' | cut -d'"' -f4)
+TIMESTAMP_VALUE=$(cat $ROLLUP_OUTPUT_PATH | grep -o '"timestamp": [0-9]*' | cut -d' ' -f2)
+echo "Genesis value from JSON: $GENESIS_VALUE"
+echo "Timestamp value from JSON: $TIMESTAMP_VALUE"
+
+# Update dynamic-mynetwork-conf.json file
+cat > ./test-pp/config/dynamic-mynetwork-conf.json << EOF
+{
+  "root": "$GENESIS_VALUE",
+  "timestamp": $TIMESTAMP_VALUE,
+  "gasLimit": 0,
+  "difficulty": 0
+}
+EOF
+echo "dynamic-mynetwork-conf.json file updated"
+
+echo "Copy config files to ./test-pp/config"
+cp ./test-pp/agglayer-contracts/deployment/v2/genesis.json ./test-pp/config/genesis.json
+
+# Replace test.erigon.seq.config.yml
+echo "Updating test.erigon.seq.config.yaml file..."
+
+# Get addresses from deployment files
+ROLLUP_OUTPUT_PATH=$(find ./test-pp/agglayer-contracts/deployment/v2 -name "create_rollup_output_*.json" | sort -r | head -n 1)
+echo "Using output file: $ROLLUP_OUTPUT_PATH"
+DEPLOY_OUTPUT_PATH="./test-pp/agglayer-contracts/deployment/v2/deploy_output.json"
+
+# Check if files exist
+if [ ! -f "$ROLLUP_OUTPUT_PATH" ]; then
+  echo "Error: File not found $ROLLUP_OUTPUT_PATH"
+  exit 1
+fi
+
+if [ ! -f "$DEPLOY_OUTPUT_PATH" ]; then
+  echo "Error: File not found $DEPLOY_OUTPUT_PATH"
+  exit 1
+fi
+
+# Read new address values
+ZKEVM_ADDRESS=$(cat $DEPLOY_OUTPUT_PATH | grep -o '"polygonRollupManagerAddress": "[^"]*"' | cut -d'"' -f4)
+if [ -z "$ZKEVM_ADDRESS" ]; then
+  echo "Error: polygonRollupManagerAddress field not found in $DEPLOY_OUTPUT_PATH"
+  exit 1
+fi
+
+ROLLUP_ADDRESS=$(cat $ROLLUP_OUTPUT_PATH | grep -o '"rollupAddress": "[^"]*"' | cut -d'"' -f4)
+if [ -z "$ROLLUP_ADDRESS" ]; then
+  echo "Error: rollupAddress field not found in $ROLLUP_OUTPUT_PATH"
+  exit 1
+fi
+
+GER_MANAGER_ADDRESS=$(cat $DEPLOY_OUTPUT_PATH | grep -o '"polygonZkEVMGlobalExitRootAddress": "[^"]*"' | cut -d'"' -f4)
+if [ -z "$GER_MANAGER_ADDRESS" ]; then
+  echo "Error: polygonZkEVMGlobalExitRootAddress field not found in $DEPLOY_OUTPUT_PATH"
+  exit 1
+fi
+
+L1_FIRST_BLOCK=$(cat $DEPLOY_OUTPUT_PATH | grep -o '"upgradeToULxLyBlockNumber": [0-9]*' | cut -d' ' -f2)
+if [ -z "$L1_FIRST_BLOCK" ]; then
+  echo "Error: upgradeToULxLyBlockNumber field not found in $DEPLOY_OUTPUT_PATH"
+  exit 1
+fi
+
+echo "ZKEVM address: $ZKEVM_ADDRESS"
+echo "ROLLUP address: $ROLLUP_ADDRESS"
+echo "GER_MANAGER address: $GER_MANAGER_ADDRESS"
+echo "L1_FIRST_BLOCK: $L1_FIRST_BLOCK"
+
+# Use sed to replace values in config file
+CONFIG_FILE="./test-pp/config/test.erigon.seq.config.yaml"
+sed -i '' "s|zkevm.address-zkevm: \"[^\"]*\"|zkevm.address-zkevm: \"$ZKEVM_ADDRESS\"|g" $CONFIG_FILE
+sed -i '' "s|zkevm.address-rollup: \"[^\"]*\"|zkevm.address-rollup: \"$ROLLUP_ADDRESS\"|g" $CONFIG_FILE
+sed -i '' "s|zkevm.address-ger-manager: \"[^\"]*\"|zkevm.address-ger-manager: \"$GER_MANAGER_ADDRESS\"|g" $CONFIG_FILE
+sed -i '' "s|zkevm.l1-first-block: [0-9]*|zkevm.l1-first-block: $L1_FIRST_BLOCK|g" $CONFIG_FILE
+
+echo "test.erigon.seq.config.yaml file updated"
+echo "Initialization script completed!"

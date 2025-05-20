@@ -2247,18 +2247,24 @@ func l1ContractAddress(ctx context.Context, cfg *ethconfig.Zk, l1BlockSyncer *sy
 func l1ContractAdressFromZKevm(ctx context.Context, cfg *ethconfig.Zk, l1BlockSyncer *syncer.L1Syncer) error {
 	l1AddrRollup, err := l1BlockSyncer.CallRollupManager(ctx, &cfg.AddressZkevm)
 	if err != nil {
+		mes := fmt.Sprintf("Failed to retrieve contract addresses from L1-1: %v,%v", cfg.AddressZkevm, err)
+		log.Info(mes)
 		return err
 	}
 	cfg.AddressRollup = l1AddrRollup
 
 	l1AddrGerManager, err := l1BlockSyncer.CallGlobalExitRootManager(ctx, &cfg.AddressZkevm)
 	if err != nil {
+		mes := fmt.Sprintf("Failed to retrieve contract addresses from L1-2: %v,%v", cfg.AddressZkevm, err)
+		log.Info(mes)
 		return err
 	}
 	cfg.AddressGerManager = l1AddrGerManager
 
 	l1AddrSequencer, err := l1BlockSyncer.CallTrustedSequencer(ctx, &cfg.AddressZkevm)
 	if err != nil {
+		mes := fmt.Sprintf("Failed to retrieve contract addresses from L1-3: %v,%v", cfg.AddressZkevm, err)
+		log.Info(mes)
 		return err
 	}
 	cfg.AddressSequencer = l1AddrSequencer
