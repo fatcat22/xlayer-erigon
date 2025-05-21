@@ -48,8 +48,8 @@ private-keys = [
 
 [l1]
 chain-id = 1337
-node-url = "http://zkevm-mock-l1-network:8545"
-ws-node-url = "ws://zkevm-mock-l1-network:8546"
+node-url = "http://xlayer-mock-l1-network:8545"
+ws-node-url = "ws://xlayer-mock-l1-network:8546"
 rollup-manager-contract = "0xE96dBF374555C6993618906629988d39184716B3"
 polygon-zkevm-global-exit-root-v2-contract = "0xB8cedD4B9eF683f0887C44a6E4312dC7A6e2fcdB"
 rpc-timeout = 45

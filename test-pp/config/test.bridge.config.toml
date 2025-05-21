@@ -30,7 +30,7 @@ Database = "postgres"
 # This section specifies the RPC URLs for interacting with Layer 1 and Layer 2's.
 [Etherman]
 # URL for Layer 1 RPC endpoint to interact with the main blockchain
-L1URL = "http://zkevm-mock-l1-network:8545"
+L1URL = "http://xlayer-mock-l1-network:8545"
 # URLs for Layer 2 RPC endpoints
 L2URLs = ["http://xlayer-seq:8545"]
 

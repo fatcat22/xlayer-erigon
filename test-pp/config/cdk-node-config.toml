@@ -1,5 +1,5 @@
 PathRWData = "/tmp/"
-L1URL="http://zkevm-mock-l1-network:8545"
+L1URL="http://xlayer-mock-l1-network:8545"
 L2URL="http://xlayer-seq:8545"
 AggLayerURL="http://xlayer-agglayer:4444"
 ForkId = 13

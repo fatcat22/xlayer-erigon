@@ -6,7 +6,7 @@ zkevm.l2-chain-id: 195
 zkevm.l2-sequencer-rpc-url:
 zkevm.l2-datastreamer-url:
 zkevm.l1-chain-id: 1337
-zkevm.l1-rpc-url: http://zkevm-mock-l1-network:8545
+zkevm.l1-rpc-url: http://xlayer-mock-l1-network:8545
 zkevm.l1-highest-block-type: latest
 
 zkevm.address-sequencer: "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
