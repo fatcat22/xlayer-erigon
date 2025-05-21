@@ -37,7 +37,7 @@ services:
 
   xlayer-mock-l1-network:
     container_name: xlayer-mock-l1-network
-    image: zjg555543/geth:pp-v4
+    image: zjg555543/geth:pp-v5
     ports:
       - 8545:8545
       - 8546:8546
@@ -193,7 +193,7 @@ services:
 
   xlayer-cdk-node:
     container_name: xlayer-cdk-node
-    image: cdk
+    image: zjg555543/cdk:v0.5.4-rc1
     volumes:
       - ./data/cdk-node:/tmp
       - ./keystore/aggregator.keystore:/etc/cdk/aggregator.keystore
@@ -209,7 +209,7 @@ services:
 
   xlayer-agglayer:
     container_name: xlayer-agglayer
-    image: agglayer
+    image: zjg555543/agglayer:v0.3.0-rc.16
     ports:
       - 4443:4443
       - 4444:4444
@@ -227,7 +227,7 @@ services:
 
   xlayer-agglayer-prover:
     container_name: xlayer-agglayer-prover
-    image: agglayer
+    image: zjg555543/agglayer:v0.3.0-rc.16
     volumes:
       - ./config/agglayer-prover-config.toml:/etc/zkevm/agglayer-prover-config.toml
     ports:
