@@ -942,16 +942,16 @@ BatchLoop:
 		}
 
 		utils.LogTrace(
-			"",                             // txhash
-			utils.ServiceNameSequencer,     // serviceName
-			utils.StepSeqVerifyTxBegin.ID,  // processId
-			utils.StepSeqVerifyTxBegin.Key, // processWord
-			blockNumber,                    // blockHeight
-			block.Hash().String(),          // blockHash
-			block.Time(),                   // blockTime
-			-1,                             // transactionType
+			"",                                // txhash
+			utils.ServiceNameSequencer,        // serviceName
+			utils.StepSeqVerifyBlockBegin.ID,  // processId
+			utils.StepSeqVerifyBlockBegin.Key, // processWord
+			blockNumber,                       // blockHeight
+			block.Hash().String(),             // blockHash
+			block.Time(),                      // blockTime
+			-1,                                // transactionType
 		)
-    
+
 		if cfg.zk.SequencerBlockSingleBlockVerify {
 			cfg.legacyVerifier.StartAsyncVerification(batchContext.s.LogPrefix(), batchState.forkId, batchState.batchNumber, block.Root(), vm.GetDifferUsedAsMap(counters, olderBatchCounters), []uint64{blockNumber}, useExecutorForVerification, batchContext.cfg.zk.XLayer.ExecutorMock, batchContext.cfg.zk.SequencerBatchVerificationTimeout, batchContext.cfg.zk.SequencerBatchVerificationRetries)
 			olderBatchCounters = counters

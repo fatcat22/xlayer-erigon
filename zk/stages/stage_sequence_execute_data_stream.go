@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
@@ -40,26 +39,6 @@ func newSequencerBatchStreamWriter(batchContext *BatchContext, batchState *Batch
 
 func (sbc *SequencerBatchStreamWriter) CommitNewUpdates() ([]*verifier.VerifierBundle, *verifier.VerifierBundle, error) {
 	verifierBundles, verifierBundleForUnwind := sbc.legacyVerifier.ProcessResultsSequentially(sbc.logPrefix)
-
-	for _, vb := range verifierBundles {
-		if vb != nil && vb.Response != nil && vb.Response.ExecutorResponse != nil {
-			for _, blockResp := range vb.Response.ExecutorResponse.BlockResponses {
-				if blockResp != nil {
-					utils.LogTrace(
-						"",                              // txhash
-						utils.ServiceNameSequencer,      // serviceName
-						utils.StepSeqVerifyTxResult.ID,  // processId
-						utils.StepSeqVerifyTxResult.Key, // processWord
-						blockResp.BlockNumber,           // blockHeight
-						common.BytesToHash(blockResp.BlockHash).Hex(), // blockHash
-						blockResp.Timestamp,                           // blockTime
-						-1,                                            // transactionType
-					)
-
-				}
-			}
-		}
-	}
 	checkedVerifierBundles, err := sbc.writeBlockDetailsToDatastream(verifierBundles)
 	return checkedVerifierBundles, verifierBundleForUnwind, err
 }
