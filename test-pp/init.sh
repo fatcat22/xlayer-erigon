@@ -16,6 +16,14 @@ echo "Starting initialization script..."
 
 make stop
 
+sed_inplace() {
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    sed -i '' "$@"
+  else
+    sed -i "$@"
+  fi
+}
+
 # Clean docker
 echo "Cleaning all docker containers..."
 docker stop $(docker ps -aq) || true
@@ -263,10 +271,10 @@ echo "L1_FIRST_BLOCK: $L1_FIRST_BLOCK"
 
 # Use sed to replace values in config file
 CONFIG_FILE="./test-pp/config/test.erigon.seq.config.yaml"
-sed -i '' "s|zkevm.address-zkevm: \"[^\"]*\"|zkevm.address-zkevm: \"$ZKEVM_ADDRESS\"|g" $CONFIG_FILE
-sed -i '' "s|zkevm.address-rollup: \"[^\"]*\"|zkevm.address-rollup: \"$ROLLUP_ADDRESS\"|g" $CONFIG_FILE
-sed -i '' "s|zkevm.address-ger-manager: \"[^\"]*\"|zkevm.address-ger-manager: \"$GER_MANAGER_ADDRESS\"|g" $CONFIG_FILE
-sed -i '' "s|zkevm.l1-first-block: [0-9]*|zkevm.l1-first-block: $L1_FIRST_BLOCK|g" $CONFIG_FILE
+sed_inplace "s|zkevm.address-zkevm: \"[^\"]*\"|zkevm.address-zkevm: \"$ZKEVM_ADDRESS\"|g" $CONFIG_FILE
+sed_inplace "s|zkevm.address-rollup: \"[^\"]*\"|zkevm.address-rollup: \"$ROLLUP_ADDRESS\"|g" $CONFIG_FILE
+sed_inplace "s|zkevm.address-ger-manager: \"[^\"]*\"|zkevm.address-ger-manager: \"$GER_MANAGER_ADDRESS\"|g" $CONFIG_FILE
+sed_inplace "s|zkevm.l1-first-block: [0-9]*|zkevm.l1-first-block: $L1_FIRST_BLOCK|g" $CONFIG_FILE
 
 # Export firstBatchData to ./test-pp/config/first-batch-config.json
 mkdir -p "$BASE_DIR/config"
@@ -309,7 +317,7 @@ if [ -f "$DEPLOY_OUTPUT_PATH" ]; then
     CONFIG_FILE="./test-pp/config/cdk-node-config.toml"
     if [ -f "$CONFIG_FILE" ]; then
       # Use sed to replace polygonBridgeAddr value in the config file
-      sed -i '' "s|polygonBridgeAddr = \"[^\"]*\"|polygonBridgeAddr = \"$BRIDGE_ADDRESS\"|" "$CONFIG_FILE"
+      sed_inplace "s|polygonBridgeAddr = \"[^\"]*\"|polygonBridgeAddr = \"$BRIDGE_ADDRESS\"|" "$CONFIG_FILE"
       echo "Successfully updated polygonBridgeAddr in cdk-node-config.toml to: $BRIDGE_ADDRESS"
     else
       echo "Error: Config file $CONFIG_FILE does not exist"
@@ -334,9 +342,9 @@ if [ -f "$DEPLOY_OUTPUT_PATH" ]; then
     CONFIG_FILE="./test-pp/config/cdk-node-config.toml"
     if [ -f "$CONFIG_FILE" ]; then
       # Use sed to replace block number values in the config file
-      sed -i '' "s|rollupCreationBlockNumber = \"[^\"]*\"|rollupCreationBlockNumber = \"$BLOCK_NUMBER\"|" "$CONFIG_FILE"
-      sed -i '' "s|rollupManagerCreationBlockNumber = \"[^\"]*\"|rollupManagerCreationBlockNumber = \"$BLOCK_NUMBER\"|" "$CONFIG_FILE"
-      sed -i '' "s|genesisBlockNumber = \"[^\"]*\"|genesisBlockNumber = \"$BLOCK_NUMBER\"|" "$CONFIG_FILE"
+      sed_inplace "s|rollupCreationBlockNumber = \"[^\"]*\"|rollupCreationBlockNumber = \"$BLOCK_NUMBER\"|" "$CONFIG_FILE"
+      sed_inplace "s|rollupManagerCreationBlockNumber = \"[^\"]*\"|rollupManagerCreationBlockNumber = \"$BLOCK_NUMBER\"|" "$CONFIG_FILE"
+      sed_inplace "s|genesisBlockNumber = \"[^\"]*\"|genesisBlockNumber = \"$BLOCK_NUMBER\"|" "$CONFIG_FILE"
       echo "Successfully updated block number parameters in cdk-node-config.toml to: $BLOCK_NUMBER"
     else
       echo "Error: Config file $CONFIG_FILE does not exist"
@@ -402,10 +410,10 @@ echo "rollupAddress: $ROLLUP_ADDRESS"
 CONFIG_FILE="./test-pp/config/cdk-node-config.toml"
 if [ -f "$CONFIG_FILE" ]; then
   # Use sed to replace address values in the config file
-  sed -i '' "s|polygonRollupManagerAddress = \"[^\"]*\"|polygonRollupManagerAddress = \"$ROLLUP_MANAGER_ADDRESS\"|" "$CONFIG_FILE"
-  sed -i '' "s|polygonZkEVMBridgeAddress = \"[^\"]*\"|polygonZkEVMBridgeAddress = \"$BRIDGE_ADDRESS\"|" "$CONFIG_FILE"
-  sed -i '' "s|polygonZkEVMGlobalExitRootAddress = \"[^\"]*\"|polygonZkEVMGlobalExitRootAddress = \"$GLOBAL_EXIT_ROOT_ADDRESS\"|" "$CONFIG_FILE"
-  sed -i '' "s|polygonZkEVMAddress = \"[^\"]*\"|polygonZkEVMAddress = \"$ROLLUP_ADDRESS\"|" "$CONFIG_FILE"
+  sed_inplace "s|polygonRollupManagerAddress = \"[^\"]*\"|polygonRollupManagerAddress = \"$ROLLUP_MANAGER_ADDRESS\"|" "$CONFIG_FILE"
+  sed_inplace "s|polygonZkEVMBridgeAddress = \"[^\"]*\"|polygonZkEVMBridgeAddress = \"$BRIDGE_ADDRESS\"|" "$CONFIG_FILE"
+  sed_inplace "s|polygonZkEVMGlobalExitRootAddress = \"[^\"]*\"|polygonZkEVMGlobalExitRootAddress = \"$GLOBAL_EXIT_ROOT_ADDRESS\"|" "$CONFIG_FILE"
+  sed_inplace "s|polygonZkEVMAddress = \"[^\"]*\"|polygonZkEVMAddress = \"$ROLLUP_ADDRESS\"|" "$CONFIG_FILE"
   
   echo "Successfully updated contract address parameters in cdk-node-config.toml"
 else
@@ -418,8 +426,8 @@ echo "Updating contract address parameters in agglayer-config.toml..."
 AGGLAYER_CONFIG_FILE="./test-pp/config/agglayer-config.toml"
 if [ -f "$AGGLAYER_CONFIG_FILE" ]; then
   # Use sed to replace contract address values in the config file
-  sed -i '' "s|rollup-manager-contract = \"[^\"]*\"|rollup-manager-contract = \"$ROLLUP_MANAGER_ADDRESS\"|" "$AGGLAYER_CONFIG_FILE"
-  sed -i '' "s|polygon-zkevm-global-exit-root-v2-contract = \"[^\"]*\"|polygon-zkevm-global-exit-root-v2-contract = \"$GLOBAL_EXIT_ROOT_ADDRESS\"|" "$AGGLAYER_CONFIG_FILE"
+  sed_inplace "s|rollup-manager-contract = \"[^\"]*\"|rollup-manager-contract = \"$ROLLUP_MANAGER_ADDRESS\"|" "$AGGLAYER_CONFIG_FILE"
+  sed_inplace "s|polygon-zkevm-global-exit-root-v2-contract = \"[^\"]*\"|polygon-zkevm-global-exit-root-v2-contract = \"$GLOBAL_EXIT_ROOT_ADDRESS\"|" "$AGGLAYER_CONFIG_FILE"
   echo "Successfully updated contract address parameters in agglayer-config.toml:"
   echo "rollup-manager-contract = $ROLLUP_MANAGER_ADDRESS"
   echo "polygon-zkevm-global-exit-root-v2-contract = $GLOBAL_EXIT_ROOT_ADDRESS"
@@ -443,7 +451,7 @@ echo "deploymentRollupManagerBlockNumber: $DEPLOYMENT_ROLLUP_MANAGER_BLOCK_NUMBE
 echo "update test.genesis.config.json rollupCreationBlockNumber..."
 GENESIS_CONFIG_FILE="./test-pp/config/test.genesis.config.json"
 if [ -f "$GENESIS_CONFIG_FILE" ]; then
-  sed -i '' "s|\"rollupCreationBlockNumber\": [0-9]*|\"rollupCreationBlockNumber\": $DEPLOYMENT_ROLLUP_MANAGER_BLOCK_NUMBER|" "$GENESIS_CONFIG_FILE"
+  sed_inplace "s|\"rollupCreationBlockNumber\": [0-9]*|\"rollupCreationBlockNumber\": $DEPLOYMENT_ROLLUP_MANAGER_BLOCK_NUMBER|" "$GENESIS_CONFIG_FILE"
   
   echo "update DEPLOYMENT_ROLLUP_MANAGER_BLOCK_NUMBER: $DEPLOYMENT_ROLLUP_MANAGER_BLOCK_NUMBER"
 else
@@ -456,8 +464,8 @@ echo "Updating contract address parameters in agglayer-config.toml..."
 AGGLAYER_CONFIG_FILE="./test-pp/config/agglayer-config.toml"
 if [ -f "$AGGLAYER_CONFIG_FILE" ]; then
   # Use sed to replace contract address values in the config file
-  sed -i '' "s|rollup-manager-contract = \"[^\"]*\"|rollup-manager-contract = \"$ROLLUP_MANAGER_ADDRESS\"|" "$AGGLAYER_CONFIG_FILE"
-  sed -i '' "s|polygon-zkevm-global-exit-root-v2-contract = \"[^\"]*\"|polygon-zkevm-global-exit-root-v2-contract = \"$GLOBAL_EXIT_ROOT_ADDRESS\"|" "$AGGLAYER_CONFIG_FILE"
+  sed_inplace "s|rollup-manager-contract = \"[^\"]*\"|rollup-manager-contract = \"$ROLLUP_MANAGER_ADDRESS\"|" "$AGGLAYER_CONFIG_FILE"
+  sed_inplace "s|polygon-zkevm-global-exit-root-v2-contract = \"[^\"]*\"|polygon-zkevm-global-exit-root-v2-contract = \"$GLOBAL_EXIT_ROOT_ADDRESS\"|" "$AGGLAYER_CONFIG_FILE"
   echo "Successfully updated contract address parameters in agglayer-config.toml:"
   echo "rollup-manager-contract = $ROLLUP_MANAGER_ADDRESS"
   echo "polygon-zkevm-global-exit-root-v2-contract = $GLOBAL_EXIT_ROOT_ADDRESS"
@@ -470,4 +478,3 @@ echo "Initialization script completed!"
 
 cd $BASE_DIR
 #make run
-#cast send -f 0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534  --private-key 0x815405dddb0e2a99b12af775fd2929e526704e1d1aea6a0b4e74dc33e2f7fcd2 --value 0.01ether 0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266 --legacy --rpc-url http://127.0.0.1:8123
