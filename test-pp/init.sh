@@ -14,6 +14,8 @@ DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG:-"pp-v5"}
 
 echo "Starting initialization script..."
 
+make stop
+
 # Clean docker
 echo "Cleaning all docker containers..."
 docker stop $(docker ps -aq) || true
@@ -167,12 +169,14 @@ cast send --legacy --from $DEPLOYER_ADDRESS --private-key $DEPLOYER_PRIVATE_KEY 
 echo "Viewing running containers..."
 docker ps
 
+cast send -f 0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534  --private-key 0x815405dddb0e2a99b12af775fd2929e526704e1d1aea6a0b4e74dc33e2f7fcd2 --value 0.01ether 0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266 --legacy --rpc-url http://127.0.0.1:8123
+
 # Get container ID
-# CONTAINER_ID=$(docker ps | grep zkevm-mock-l1-network | awk '{print $1}')
-# if [ -n "$CONTAINER_ID" ]; then
-#   echo "Entering container $CONTAINER_ID..."
-#   docker exec -it $CONTAINER_ID /bin/sh -c "ps -ef | grep geth; kill -15 \$(ps -ef | grep geth | grep -v grep | awk '{print \$1}')"
-# fi
+CONTAINER_ID=$(docker ps | grep zkevm-mock-l1-network | awk '{print $1}')
+if [ -n "$CONTAINER_ID" ]; then
+  echo "Entering container $CONTAINER_ID..."
+  docker exec -it $CONTAINER_ID /bin/sh -c "ps -ef | grep geth; kill -15 \$(ps -ef | grep geth | grep -v grep | awk '{print \$1}')"
+fi
 
 echo "------------------------------------------------------------"
 echo "Image creation ends here, you can refer to the following to commit the image"
@@ -465,3 +469,6 @@ else
 fi
 
 echo "Initialization script completed!"
+
+cd $BASE_DIR
+make run

@@ -8,7 +8,7 @@ NetworkID = 1
 
 ContractVersions = "banana"
 
-L2Coinbase =  "0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534"
+L2Coinbase =  "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
 SequencerPrivateKeyPath = "/etc/cdk/sequencer.keystore"
 SequencerPrivateKeyPassword  = "testonly"
 
@@ -23,7 +23,7 @@ WitnessURL = "http://xlayer-seq:8545"
 
 # This values can be override directly from genesis.json
 rollupCreationBlockNumber = "240"
-rollupManagerCreationBlockNumber = "240"
+rollupManagerCreationBlockNumber = "249"
 genesisBlockNumber = "240"
 [L1Config]
 	chainId = "1337"
@@ -37,7 +37,7 @@ genesisBlockNumber = "240"
 
 [Log]
 Environment = "development" # "production" or "development"
-Level = "info"
+Level = "debug"
 Outputs = ["stderr"]
 
 [Aggregator]
