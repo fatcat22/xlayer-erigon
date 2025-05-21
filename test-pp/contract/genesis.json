@@ -1,15 +1,5 @@
 {
-    "L1Config": {
-        "chainId": 1337,
-        "polygonZkEVMAddress": "0xE45CCD0757670580a4a3600DE5cef1e45F0Ec2bd",
-        "polygonRollupManagerAddress": "0xE96dBF374555C6993618906629988d39184716B3",
-        "polTokenAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-        "polygonZkEVMGlobalExitRootAddress": "0xB8cedD4B9eF683f0887C44a6E4312dC7A6e2fcdB"
-    },
-    "genesisBlockNumber": 156,
-    "rollupCreationBlockNumber": 162,
-    "rollupManagerCreationBlockNumber": 156,
-    "root": "0xef7bb96e820d4d8440f9bae6b1d58427c06e324ac9d5f7a5156438dd42e837c5",
+ "root": "0xef7bb96e820d4d8440f9bae6b1d58427c06e324ac9d5f7a5156438dd42e837c5",
  "genesis": [
   {
    "contractName": "TokenWrappedBridgeInitCode",

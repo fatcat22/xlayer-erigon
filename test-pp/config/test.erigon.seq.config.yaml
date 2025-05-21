@@ -6,7 +6,7 @@ zkevm.l2-chain-id: 195
 zkevm.l2-sequencer-rpc-url:
 zkevm.l2-datastreamer-url:
 zkevm.l1-chain-id: 1337
-zkevm.l1-rpc-url: http://zkevm-mock-l1-network:8545
+zkevm.l1-rpc-url: http://xlayer-mock-l1-network:8545
 zkevm.l1-highest-block-type: latest
 
 zkevm.address-sequencer: "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
@@ -16,7 +16,7 @@ zkevm.address-rollup: "0xE96dBF374555C6993618906629988d39184716B3"
 zkevm.address-ger-manager: "0xB8cedD4B9eF683f0887C44a6E4312dC7A6e2fcdB"
 
 zkevm.l1-rollup-id: 1
-zkevm.l1-first-block: 225
+zkevm.l1-first-block: 156
 zkevm.l1-block-range: 10
 zkevm.l1-query-delay: 6000
 zkevm.rpc-ratelimit: 0
