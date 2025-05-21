@@ -471,4 +471,4 @@ fi
 echo "Initialization script completed!"
 
 cd $BASE_DIR
-make run
+#make run
