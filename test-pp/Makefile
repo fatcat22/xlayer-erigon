@@ -12,6 +12,7 @@ run: build-docker
 	$(DOCKER_COMPOSE) up -d xlayer-bridge-db
 	$(DOCKER_COMPOSE) up -d xlayer-pool-db
 	$(DOCKER_COMPOSE) up -d xlayer-agglayer-prover
+	$(DOCKER_COMPOSE) up -d xlayer-agglayer
 
 	sleep 3
 	$(DOCKER_COMPOSE) up -d xlayer-approve
@@ -20,8 +21,6 @@ run: build-docker
 
 	sleep 5
 	$(DOCKER_COMPOSE) up -d xlayer-rpc
-	sleep 3
-	$(DOCKER_COMPOSE) up -d xlayer-agglayer
 
 	sleep 10
 	$(DOCKER_COMPOSE) up -d xlayer-bridge-service
