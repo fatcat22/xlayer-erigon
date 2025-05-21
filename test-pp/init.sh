@@ -19,8 +19,8 @@ echo "Cleaning all docker containers..."
 docker stop $(docker ps -aq) || true
 docker rm $(docker ps -aq) || true
 
-echo "Starting zkevm-mock-l1-network..."
-docker-compose up -d zkevm-mock-l1-network
+echo "Starting xlayer-mock-l1-network..."
+docker-compose up -d xlayer-mock-l1-network
 sleep 5
 
 DEPLOYER_ADDRESS="0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534"
@@ -69,7 +69,7 @@ cat > create_rollup_parameters.json << EOF
     "maxPriorityFeePerGas": "",
     "multiplierGas": "",
     "networkName": "zkevm",
-    "realVerifier": false,
+    "realVerifier": true,
     "trustedSequencer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     "trustedSequencerURL": "http://xlayer-seq:8545",
     "trustedAggregator":"0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
@@ -101,7 +101,7 @@ cat > deploy_parameters.json << EOF
     "test": true,
     "ppVKey": "0x00d6e4bdab9cac75a50d58262bb4e60b3107a6b61131ccdff649576c624b6fb7",
     "ppVKeySelector": "0x00000001",
-    "realVerifier": false,
+    "realVerifier": true,
     "defaultAdminAddress": "$DEPLOYER_ADDRESS",
     "aggchainDefaultVKeyRoleAddress": "$DEPLOYER_ADDRESS",
     "addRouteRoleAddress": "$DEPLOYER_ADDRESS",
@@ -152,11 +152,11 @@ cast send --legacy --from $DEPLOYER_ADDRESS --private-key $DEPLOYER_PRIVATE_KEY 
 
 cast send --legacy --from $DEPLOYER_ADDRESS --private-key $DEPLOYER_PRIVATE_KEY $BRIDGE_ADDRESS 'function bridgeAsset(uint32 destinationNetwork, address destinationAddress, uint256 amount, address token, bool forceUpdateGlobalExitRoot, bytes permitData) returns()' 7 0x0000000000000000000000000000000000000000 0 0x0000000000000000000000000000000000000000 true 0x
 
-CONTAINER_ID=$(docker ps | grep zkevm-mock-l1-network | awk '{print $1}')
-if [ -n "$CONTAINER_ID" ]; then
-  echo "Entering container $CONTAINER_ID..."
-  docker exec -it $CONTAINER_ID /bin/sh -c "ps -ef | grep geth; kill -15 \$(ps -ef | grep geth | grep -v grep | awk '{print \$1}')"
-fi
+# CONTAINER_ID=$(docker ps | grep xlayer-mock-l1-network | awk '{print $1}')
+# if [ -n "$CONTAINER_ID" ]; then
+#   echo "Entering container $CONTAINER_ID..."
+#   docker exec -it $CONTAINER_ID /bin/sh -c "ps -ef | grep geth; kill -15 \$(ps -ef | grep geth | grep -v grep | awk '{print \$1}')"
+# fi
 
 echo "Generating configuration files..."
 go install ./cmd/hack/allocs
@@ -210,21 +210,23 @@ AGGLAYER_CONFIG_FILE="./test-pp/config/agglayer-config.toml"
 sed_inplace "s|polygon-zkevm-global-exit-root-v2-contract = \"[^\"]*\"|polygon-zkevm-global-exit-root-v2-contract = \"$GLOBAL_EXIT_ROOT_ADDRESS\"|" "$AGGLAYER_CONFIG_FILE"
 
 cd $PWD_DIR
-if [ ! -d "./cdk" ]; then
-  echo "Cloning contract repository..."
-  git clone -b v0.5.4-rc1 https://github.com/0xPolygon/cdk.git
-fi
+# if [ ! -d "./cdk" ]; then
+#   echo "Cloning contract repository..."
+#   git clone -b v0.5.4-rc1 https://github.com/0xPolygon/cdk.git
+# fi
 
-cd ./cdk
-make build-docker
-cd -
+# cd ./cdk
+# make build-docker
+# cd -
 
-if [ ! -d "./agglayer" ]; then
-  echo "Cloning contract repository..."
-  git clone -b v0.3.0-rc.16 https://github.com/agglayer/agglayer.git
-fi
+# if [ ! -d "./agglayer" ]; then
+#   echo "Cloning contract repository..."
+#   git clone -b v0.3.0-rc.16 https://github.com/agglayer/agglayer.git
+# fi
 
-cd ./agglayer
-docker build -t agglayer .
+# cd ./agglayer
+# docker build -t agglayer .
 
 echo "Initialization script completed!"
+
+make run

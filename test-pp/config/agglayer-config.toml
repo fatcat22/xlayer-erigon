@@ -2,7 +2,7 @@ prover-entrypoint = "http://xlayer-agglayer-prover:4445"
 debug-mode = true
 
 # Only supported by fork 12+
-mock-verifier = true
+mock-verifier = false
 
 [full-node-rpcs]
 # TODO switch this to permissionless
