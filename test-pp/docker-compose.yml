@@ -194,6 +194,7 @@ services:
   xlayer-cdk-node:
     container_name: xlayer-cdk-node
     image: zjg555543/cdk:v0.5.4-rc1
+    restart: on-failure
     volumes:
       - ./data/cdk-node:/tmp
       - ./keystore/aggregator.keystore:/etc/cdk/aggregator.keystore
