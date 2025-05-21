@@ -22,9 +22,9 @@ RPCURL = "http://xlayer-rpc8545"
 WitnessURL = "http://xlayer-rpc:8545"
 
 # This values can be override directly from genesis.json
-rollupCreationBlockNumber = "156"
-rollupManagerCreationBlockNumber = "162"
-genesisBlockNumber = "156"
+rollupCreationBlockNumber = "197"
+rollupManagerCreationBlockNumber = "205"
+genesisBlockNumber = "197"
 [L1Config]
 	chainId = "1337"
 	polygonZkEVMGlobalExitRootAddress = "0xB8cedD4B9eF683f0887C44a6E4312dC7A6e2fcdB"
