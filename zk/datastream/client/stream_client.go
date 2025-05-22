@@ -574,6 +574,7 @@ LOOP:
 			time.Sleep(10 * time.Microsecond)
 		}
 
+		log.Info("[Datastream client] XXX entry numbers", "totalEntries", c.header.TotalEntries, "entryNum", entryNum)
 		if c.header.TotalEntries <= entryNum+1 {
 			log.Trace("[Datastream client] reached the current end of the stream", "header_totalEntries", c.header.TotalEntries, "entryNum", entryNum)
 
