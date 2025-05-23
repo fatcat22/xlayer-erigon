@@ -50,7 +50,7 @@ private-keys = [
 chain-id = 1337
 node-url = "http://xlayer-mock-l1-network:8545"
 ws-node-url = "ws://xlayer-mock-l1-network:8546"
-rollup-manager-contract = "0xE96dBF374555C6993618906629988d39184716B3"
+rollup-manager-contract = "0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a"
 polygon-zkevm-global-exit-root-v2-contract = "0xB8cedD4B9eF683f0887C44a6E4312dC7A6e2fcdB"
 rpc-timeout = 45
 

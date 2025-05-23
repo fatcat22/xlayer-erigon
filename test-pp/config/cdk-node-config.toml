@@ -16,28 +16,28 @@ AggregatorPrivateKeyPath = "/etc/cdk/aggregator.keystore"
 AggregatorPrivateKeyPassword  = "testonly"
  # TODO X Layer?
 SenderProofToL1Addr = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8"
-polygonBridgeAddr = "0x4B24266C13AFEf2bb60e2C69A4C08A482d81e3CA"
+polygonBridgeAddr = "0x3a277Fa4E78cc1266F32E26c467F99A8eAEfF7c3"
 
 RPCURL = "http://xlayer-rpc8545"
 WitnessURL = "http://xlayer-rpc:8545"
 
 # This values can be override directly from genesis.json
-rollupCreationBlockNumber = "156"
-rollupManagerCreationBlockNumber = "162"
-genesisBlockNumber = "156"
+rollupCreationBlockNumber = "200"
+rollupManagerCreationBlockNumber = "207"
+genesisBlockNumber = "200"
 [L1Config]
 	chainId = "1337"
 	polygonZkEVMGlobalExitRootAddress = "0xB8cedD4B9eF683f0887C44a6E4312dC7A6e2fcdB"
-	polygonRollupManagerAddress = "0xE96dBF374555C6993618906629988d39184716B3"
+	polygonRollupManagerAddress = "0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a"
 	polTokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
-	polygonZkEVMAddress = "0xE45CCD0757670580a4a3600DE5cef1e45F0Ec2bd"
+	polygonZkEVMAddress = "0xeb173087729c88a47568AF87b17C653039377BA6"
 
 [L2Config]
 	GlobalExitRootAddr = "0xa40d5f56745a118d0906a34e69aec8c0db1cb8fa"
 
 [Log]
 Environment = "development" # "production" or "development"
-Level = "debug"
+Level = "info"
 Outputs = ["stderr"]
 
 [Aggregator]

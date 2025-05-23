@@ -28,7 +28,6 @@ services:
     volumes:
       - ./data/seq/:/home/erigon/data/
       - ./config/test.erigon.seq.config.yaml:/usr/src/app/config.yaml
-      - ./config/first-batch-config.json:/usr/src/app/first-batch-config.json
       - ./config/dynamic-mynetwork-allocs.json:/usr/src/app/dynamic-mynetwork-allocs.json
       - ./config/dynamic-mynetwork-chainspec.json:/usr/src/app/dynamic-mynetwork-chainspec.json
       - ./config/dynamic-mynetwork-conf.json:/usr/src/app/dynamic-mynetwork-conf.json
@@ -37,7 +36,7 @@ services:
 
   xlayer-mock-l1-network:
     container_name: xlayer-mock-l1-network
-    image: zjg555543/geth:pp-v5
+    image: hermeznetwork/geth-zkevm-contracts:1.5-integration
     ports:
       - 8545:8545
       - 8546:8546
@@ -110,13 +109,13 @@ services:
     environment:
       - ETHEREUM_RPC_URL=http://127.0.0.1:8545
       - ETHEREUM_EXPLORER_URL=http://127.0.0.1:4000
-      - ETHEREUM_ROLLUP_MANAGER_ADDRESS=0xE96dBF374555C6993618906629988d39184716B3
-      - ETHEREUM_BRIDGE_CONTRACT_ADDRESS=0x4B24266C13AFEf2bb60e2C69A4C08A482d81e3CA
+      - ETHEREUM_ROLLUP_MANAGER_ADDRESS=0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a
+      - ETHEREUM_BRIDGE_CONTRACT_ADDRESS=0x3a277Fa4E78cc1266F32E26c467F99A8eAEfF7c3
       - ETHEREUM_FORCE_UPDATE_GLOBAL_EXIT_ROOT=true
-      - ETHEREUM_PROOF_OF_EFFICIENCY_CONTRACT_ADDRESS=0xE45CCD0757670580a4a3600DE5cef1e45F0Ec2bd
+      - ETHEREUM_PROOF_OF_EFFICIENCY_CONTRACT_ADDRESS=0xeb173087729c88a47568AF87b17C653039377BA6
       - POLYGON_ZK_EVM_RPC_URL=http://127.0.0.1:8123
       - POLYGON_ZK_EVM_EXPLORER_URL=http://127.0.0.1:4001
-      - POLYGON_ZK_EVM_BRIDGE_CONTRACT_ADDRESS=0x4B24266C13AFEf2bb60e2C69A4C08A482d81e3CA
+      - POLYGON_ZK_EVM_BRIDGE_CONTRACT_ADDRESS=0x3a277Fa4E78cc1266F32E26c467F99A8eAEfF7c3
       - POLYGON_ZK_EVM_NETWORK_ID=1
       - BRIDGE_API_URL=http://127.0.0.1:8080
       - ENABLE_FIAT_EXCHANGE_RATES=false
@@ -124,38 +123,6 @@ services:
       - ENABLE_DEPOSIT_WARNING=false
       - ENABLE_REPORT_FORM=false
       - RESOLVE_RELATIVE_URLS=false
-
-  zkevm-mock-l1-network:
-    container_name: zkevm-mock-l1-network
-    # This image contains the contracts upgraded to Feijoa, disabled 
-    image: hermeznetwork/geth-zkevm-contracts:1.5-integration
-    # image: hermeznetwork/geth-zkevm-contracts:v2.1.3-fork.8-geth1.12.0
-    ports:
-      - 8545:8545
-      - 8546:8546
-    command:
-      - "--http"
-      - "--http.api"
-      - "admin,eth,debug,miner,net,txpool,personal,web3"
-      - "--http.addr"
-      - "0.0.0.0"
-      - "--http.corsdomain"
-      - "*"
-      - "--http.vhosts"
-      - "*"
-      - "--ws"
-      - "--ws.origins"
-      - "*"
-      - "--ws.addr"
-      - "0.0.0.0"
-      - "--dev"
-      - "--dev.period"
-      - "1"
-      - "--datadir"
-      - "/geth_data"
-      - "--syncmode"
-      - "full"
-      - "--rpc.allow-unprotected-txs"
 
   xlayer-pool-db:
     container_name: xlayer-pool-db
@@ -279,9 +246,66 @@ services:
     volumes:
       - ./data/rpc/:/home/erigon/data/
       - ./config/test.erigon.rpc.config.yaml:/usr/src/app/config.yaml
-      - ./config/first-batch-config.json:/usr/src/app/first-batch-config.json
       - ./config/dynamic-mynetwork-allocs.json:/usr/src/app/dynamic-mynetwork-allocs.json
       - ./config/dynamic-mynetwork-chainspec.json:/usr/src/app/dynamic-mynetwork-chainspec.json
       - ./config/dynamic-mynetwork-conf.json:/usr/src/app/dynamic-mynetwork-conf.json
     command: >
       cdk-erigon --http.vhosts=* --http.corsdomain=* --ws --config=/usr/src/app/config.yaml
+
+  xlayer-da:
+    container_name: xlayer-da
+    image: zjg555543/xlayer-da:merge-v0.0.10
+    ports:
+      - 8444:8444
+    volumes:
+      - ./config/test.da.toml:/app/config.toml
+      - ./keystore/test-member.keystore:/pk/test-member.keystore
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/xlayer-data-availability run --cfg /app/config.toml"
+
+  xlayer-da-db:
+    container_name: xlayer-da-db
+    image: postgres:15
+    ports:
+      - 5438:5432
+    environment:
+      - POSTGRES_USER=committee_user
+      - POSTGRES_PASSWORD=committee_password
+      - POSTGRES_DB=committee_db
+    command:
+      - "postgres"
+      - "-N"
+      - "500"
+
+
+  xlayer-seqs:
+    container_name: xlayer-seqs
+    image: zjg555543/cdk:v0.5.4-rc1
+    volumes:
+      - ./data/seqs:/tmp/cdk
+      - ./keystore/da.permit.keystore:/pk/da.permit.keystore
+      - ./keystore/sequencer.keystore:/pk/sequencer.keystore
+      - ./config/cdk-seqs-agg.config.toml:/app/config.toml
+      - ./config/test.genesis.config.json:/app/genesis.json
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/usr/local/bin/cdk-node run --cfg /app/config.toml --custom-network-file /app/genesis.json --components sequence-sender"
+
+  xlayer-agg:
+    container_name: xlayer-agg
+    image: zjg555543/cdk:v0.5.4-rc1
+    ports:
+      - 50081:50081
+    volumes:
+      - ./data/agg:/tmp/cdk
+      - ./keystore/aggregator.keystore:/pk/aggregator.keystore
+      - ./keystore/sequencer.keystore:/pk/sequencer.keystore
+      - ./config/cdk-node-config.toml:/app/config.toml
+      - ./config/test.genesis.config.json:/app/genesis.json
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/usr/local/bin/cdk-node run --cfg /app/config.toml --custom-network-file /app/genesis.json  --components aggregator"
