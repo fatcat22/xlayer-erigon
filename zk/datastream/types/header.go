@@ -3,6 +3,8 @@ package types
 import (
 	"encoding/binary"
 	"fmt"
+
+	"github.com/ledgerwatch/erigon/zkevm/log"
 )
 
 const (
@@ -37,6 +39,7 @@ func (e *HeaderEntry) Encode() []byte {
 
 // Decode/convert from binary bytes slice to a header entry type
 func DecodeHeaderEntryPreEtrog(b []byte) (*HeaderEntry, error) {
+	log.Info("XXX decoding pre-etrog header")
 	return &HeaderEntry{
 		PacketType:   b[0],
 		HeadLength:   binary.BigEndian.Uint32(b[1:5]),
@@ -54,6 +57,7 @@ func DecodeHeaderEntry(b []byte) (*HeaderEntry, error) {
 		}
 		return &HeaderEntry{}, fmt.Errorf("invalid header entry binary size. Expected: %d, got: %d", HeaderSize, len(b))
 	}
+	log.Info("XXX decoding header")
 	return &HeaderEntry{
 		PacketType:   b[0],
 		HeadLength:   binary.BigEndian.Uint32(b[1:5]),

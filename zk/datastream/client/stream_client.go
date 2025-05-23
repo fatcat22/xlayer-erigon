@@ -358,6 +358,14 @@ func (c *StreamClient) GetHeader() (*types.HeaderEntry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("readHeaderEntry: %w", err)
 	}
+	log.Info("XXX Header fields",
+		"packetType", h.PacketType,
+		"headLength", h.HeadLength,
+		"version", h.Version,
+		"systemId", h.SystemId,
+		"streamType", h.StreamType,
+		"totalLength", h.TotalLength,
+		"totalEntries", h.TotalEntries)
 
 	c.header = h
 
