@@ -159,7 +159,7 @@ func (p *TxPool) bestRead(n uint16, tx kv.Tx, onTopOf uint64, readContext *ReadC
 	best := p.pending.best
 
 	okPayTxPriorityCount := uint64(0)
-	maxOkPayTxPriorityCount := p.apolloCfg.GetOkPayBlockPriorityTxsLimit(p.xlayerCfg.OkPayBlockPriorityTxsLimit)
+	maxOkPayTxPriorityCount := p.getOkPayTxPriorityCount()
 
 	for i := 0; readContext.count < int(n) && i < len(best.ms); i++ {
 		// if we wouldn't have enough gas for a standard transaction then quit out early
@@ -400,6 +400,13 @@ func (p *TxPool) isOkPayAddrXLayer(senderAddr common.Address) bool {
 		return p.apolloCfg.CheckOkPayAddress(p.xlayerCfg.OkPaySenderAccountsList, senderAddr)
 	}
 	return p.xlayerCfg.OkPaySenderAccountsList.Contains(senderAddr)
+}
+
+func (p *TxPool) getOkPayTxPriorityCount() uint64 {
+	if p.apolloCfg != nil {
+		return p.apolloCfg.GetOkPayBlockPriorityTxsLimit(p.xlayerCfg.OkPayBlockPriorityTxsLimit)
+	}
+	return p.xlayerCfg.OkPayBlockPriorityTxsLimit
 }
 
 var requireTxPoolLock atomic.Bool
