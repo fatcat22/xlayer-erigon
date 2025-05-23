@@ -19,10 +19,14 @@ import (
 
 type DB interface {
 	Insert(key utils.NodeKey, value utils.NodeValue12) error
+	CollectSmt(key utils.NodeKey, value utils.NodeValue12)
 	InsertAccountValue(key utils.NodeKey, value utils.NodeValue8) error
+	CollectAccountValue(key utils.NodeKey, value utils.NodeValue8)
 	InsertKeySource(key utils.NodeKey, value []byte) error
+	CollectKeySource(key utils.NodeKey, value []byte)
 	DeleteKeySource(key utils.NodeKey) error
 	InsertHashKey(key utils.NodeKey, value utils.NodeKey) error
+	CollectHashKey(key utils.NodeKey, value utils.NodeKey)
 	AddCode(code []byte) error
 	DeleteHashKey(key utils.NodeKey) error
 	Delete(string) error
@@ -32,6 +36,8 @@ type DB interface {
 	CommitBatch() error
 	OpenBatch(quitCh <-chan struct{})
 	RollbackBatch()
+	CloseSmtCollectors()
+	LoadSmtCollectors() error
 	RoDB
 	// For X Layer, split db and ac
 	SetCache(cache map[string]map[string][]byte)
@@ -165,9 +171,6 @@ func (s *SMT) InsertStorage(ethAddr string, storage *map[string]string, chm *map
 	s.clearUpMutex.Lock()
 	defer s.clearUpMutex.Unlock()
 
-	a := utils.ConvertHexToBigInt(ethAddr)
-	add := utils.ScalarToArrayBig(a)
-
 	or, err := s.getLastRoot()
 	if err != nil {
 		return nil, err
@@ -177,7 +180,10 @@ func (s *SMT) InsertStorage(ethAddr string, storage *map[string]string, chm *map
 		NewRootScalar: &or,
 	}
 	for k := range *storage {
-		keyStoragePosition := utils.KeyContractStorage(add, k)
+		keyStoragePosition, err := utils.KeyContractStorage(ethAddr, k)
+		if err != nil {
+			return nil, err
+		}
 		smtr, err = s.insert(keyStoragePosition, *(*chm)[k], (*vhm)[k], *smtr.NewRootScalar)
 		if err != nil {
 			return nil, err
@@ -185,7 +191,7 @@ func (s *SMT) InsertStorage(ethAddr string, storage *map[string]string, chm *map
 
 		sp, _ := utils.StrValToBigInt(k)
 
-		ks := utils.EncodeKeySource(utils.SC_STORAGE, utils.ConvertHexToAddress(ethAddr), common.BigToHash(sp))
+		ks := utils.EncodeKeySource(utils.SC_STORAGE, common.HexToAddress(ethAddr), common.BigToHash(sp))
 		err = s.Db.InsertKeySource(keyStoragePosition, ks)
 
 		if err != nil {
@@ -254,18 +260,18 @@ func (s *SMT) insert(k utils.NodeKey, v utils.NodeValue8, newValH [4]uint64, old
 		}
 		siblings[level] = &sl
 		if siblings[level].IsFinalNode() {
-			foundOldValHash = utils.NodeKeyFromBigIntArray(siblings[level][4:8])
+			foundOldValHash = utils.NodeKeyFromUint64Array(siblings[level][4:8])
 			fva, err := s.Db.Get(foundOldValHash)
 			if err != nil {
 				return nil, err
 			}
-			foundValA := utils.Value8FromBigIntArray(fva[0:8])
-			foundRKey = utils.NodeKeyFromBigIntArray(siblings[level][0:4])
+			foundValA := utils.Value8FromUint64Array(fva[0:8])
+			foundRKey = utils.NodeKeyFromUint64Array(siblings[level][0:4])
 			foundVal = foundValA
 
 			foundKey = utils.JoinKey(usedKey, foundRKey)
 		} else {
-			oldRoot = utils.NodeKeyFromBigIntArray(siblings[level][keys[level]*4 : keys[level]*4+4])
+			oldRoot = utils.NodeKeyFromUint64Array(siblings[level][keys[level]*4 : keys[level]*4+4])
 			usedKey = append(usedKey, keys[level])
 			level++
 		}
@@ -309,7 +315,7 @@ func (s *SMT) insert(k utils.NodeKey, v utils.NodeValue8, newValH [4]uint64, old
 				}
 				if level >= 0 {
 					for j := 0; j < 4; j++ {
-						siblings[level][keys[level]*4+j] = new(big.Int).SetUint64(newLeafHash[j])
+						siblings[level][keys[level]*4+j] = newLeafHash[j]
 					}
 				} else {
 					newRoot = newLeafHash
@@ -394,7 +400,7 @@ func (s *SMT) insert(k utils.NodeKey, v utils.NodeValue8, newValH [4]uint64, old
 
 				if level >= 0 {
 					for j := 0; j < 4; j++ {
-						siblings[level][keys[level]*4+j] = new(big.Int).SetUint64(r2[j])
+						siblings[level][keys[level]*4+j] = r2[j]
 					}
 				} else {
 					newRoot = r2
@@ -428,9 +434,7 @@ func (s *SMT) insert(k utils.NodeKey, v utils.NodeValue8, newValH [4]uint64, old
 
 			if level >= 0 {
 				for j := 0; j < 4; j++ {
-					nlh := big.Int{}
-					nlh.SetUint64(newLeafHash[j])
-					siblings[level][keys[level]*4+j] = &nlh
+					siblings[level][keys[level]*4+j] = newLeafHash[j]
 				}
 			} else {
 				newRoot = newLeafHash
@@ -439,7 +443,7 @@ func (s *SMT) insert(k utils.NodeKey, v utils.NodeValue8, newValH [4]uint64, old
 	} else if foundKey != nil && foundKey.IsEqualTo(k) { // we don't have a value so we're deleting
 		if level >= 0 {
 			for j := 0; j < 4; j++ {
-				siblings[level][keys[level]*4+j] = big.NewInt(0)
+				siblings[level][keys[level]*4+j] = 0
 			}
 
 			uKey, err := siblings[level].IsUniqueSibling()
@@ -450,7 +454,7 @@ func (s *SMT) insert(k utils.NodeKey, v utils.NodeValue8, newValH [4]uint64, old
 			if uKey >= 0 {
 				// DELETE FOUND
 				smtResponse.Mode = "deleteFound"
-				dk := utils.NodeKeyFromBigIntArray(siblings[level][uKey*4 : uKey*4+4])
+				dk := utils.NodeKeyFromUint64Array(siblings[level][uKey*4 : uKey*4+4])
 				sl, err := s.Db.Get(dk)
 				if err != nil {
 					return nil, err
@@ -485,7 +489,7 @@ func (s *SMT) insert(k utils.NodeKey, v utils.NodeValue8, newValH [4]uint64, old
 
 					if level >= 0 {
 						for j := 0; j < 4; j++ {
-							siblings[level][keys[level]*4+j] = new(big.Int).SetUint64(oldLeafHash[j])
+							siblings[level][keys[level]*4+j] = oldLeafHash[j]
 						}
 					} else {
 						newRoot = oldLeafHash
@@ -514,11 +518,8 @@ func (s *SMT) insert(k utils.NodeKey, v utils.NodeValue8, newValH [4]uint64, old
 	}
 
 	for level >= 0 {
-		hashValueIn, err := utils.NodeValue8FromBigIntArray(siblings[level][0:8])
-		if err != nil {
-			return nil, err
-		}
-		hashCapIn := utils.NodeKeyFromBigIntArray(siblings[level][8:12])
+		hashValueIn := utils.Value8FromUint64Array(siblings[level][0:8])
+		hashCapIn := utils.NodeKeyFromUint64Array(siblings[level][8:12])
 		newRoot, err = s.hashcalcAndSave(hashValueIn.ToUintArray(), hashCapIn)
 		if err != nil {
 			return nil, err
@@ -527,9 +528,7 @@ func (s *SMT) insert(k utils.NodeKey, v utils.NodeValue8, newValH [4]uint64, old
 		level -= 1
 		if level >= 0 {
 			for j := 0; j < 4; j++ {
-				nrj := big.Int{}
-				nrj.SetUint64(newRoot[j])
-				siblings[level][keys[level]*4+j] = &nrj
+				siblings[level][keys[level]*4+j] = newRoot[j]
 			}
 		}
 	}
@@ -687,62 +686,45 @@ func (s *RoSMT) Traverse(ctx context.Context, node *big.Int, action TraverseActi
 
 // For X Layer, traverse performs an iterative pre-order DFS traversal of the SMT
 func (s *RoSMT) traverse(ctx context.Context, node *big.Int, action TraverseAction, prefix []byte) error {
-	// Early return if the node is nil or zero
 	if node == nil || node.Cmp(big.NewInt(0)) == 0 {
 		return nil
 	}
 
-	// Initialize stack with pre-allocated capacity to reduce allocations
-	stack := make([]stackEntry, 0, 1024)
-	stack = append(stack, stackEntry{node: node, prefix: prefix})
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
 
-	// Main loop: process nodes until the stack is empty
-	for len(stack) > 0 {
-		// Pop the top element from the stack
-		topIdx := len(stack) - 1
-		current := stack[topIdx]
-		stack = stack[:topIdx]
+	ky := utils.ScalarToRoot(node)
 
-		// Check context cancellation
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
+	nodeValue, err := s.DbRo.Get(ky)
+
+	if err != nil {
+		return err
+	}
+
+	shouldContinue, err := action(prefix, ky, nodeValue)
+
+	if err != nil {
+		return err
+	}
+
+	if nodeValue.IsFinalNode() || !shouldContinue {
+		return nil
+	}
+
+	for i := 0; i < 2; i++ {
+		if len(nodeValue) < i*4+4 {
+			return errors.New("nodeValue has insufficient length")
 		}
-
-		// Convert node to key and retrieve node value from database
-		ky := utils.ScalarToRoot(current.node)
-		nodeValue, err := s.DbRo.Get(ky)
+		child := utils.NodeKeyFromUint64Array(nodeValue[i*4 : i*4+4])
+		childPrefix := make([]byte, len(prefix)+1)
+		copy(childPrefix, prefix)
+		childPrefix[len(prefix)] = byte(i)
+		err := s.traverse(ctx, child.ToBigInt(), action, childPrefix)
 		if err != nil {
 			return err
-		}
-
-		// Execute the action on the current node
-		shouldContinue, err := action(current.prefix, ky, nodeValue)
-		if err != nil {
-			return err
-		}
-
-		// Stop traversing children if the node is final or action indicates no continuation
-		if nodeValue.IsFinalNode() || !shouldContinue {
-			continue
-		}
-
-		// Push children onto the stack in reverse order (right to left) to ensure left is processed first
-		for i := 1; i >= 0; i-- {
-			if len(nodeValue) < i*4+4 {
-				return errors.New("nodeValue has insufficient length")
-			}
-
-			child := utils.NodeKeyFromBigIntArray(nodeValue[i*4 : i*4+4])
-			childBigInt := child.ToBigInt()
-			if childBigInt != nil && childBigInt.Cmp(big.NewInt(0)) != 0 {
-				childPrefix := make([]byte, len(current.prefix)+1)
-				copy(childPrefix, current.prefix)
-				childPrefix[len(current.prefix)] = byte(i)
-
-				stack = append(stack, stackEntry{node: childBigInt, prefix: childPrefix})
-			}
 		}
 	}
 
@@ -816,7 +798,7 @@ func (s *SMT) insertHashNode(path []int, hash [4]uint64, root utils.NodeKey) (ut
 
 	childOldRoot := rootVal[childIndex*4 : childIndex*4+4]
 
-	childNewRoot, err := s.insertHashNode(path[1:], hash, utils.NodeKeyFromBigIntArray(childOldRoot))
+	childNewRoot, err := s.insertHashNode(path[1:], hash, utils.NodeKeyFromUint64Array(childOldRoot))
 
 	if err != nil {
 		return utils.NodeKey{}, err

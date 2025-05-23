@@ -132,30 +132,28 @@ func (m *EriCacheDb) SetDepth(depth uint8) error {
 }
 
 func (m *EriCacheDb) Get(key utils.NodeKey) (utils.NodeValue12, error) {
-	k := utils.ArrayToHex(key[:])
+	k := key.ToHex()
 
-	data, err := m.kvTxRoSMT.GetOne(TableSmt, utils.UnsafeStringToBytes(k))
+	data, err := m.kvTxRoSMT.GetOne(TableSmt, []byte(k))
 	if err != nil {
 		return utils.NodeValue12{}, err
 	}
 
-	if data == nil || len(data) == 0 {
+	if data == nil {
 		return utils.NodeValue12{}, nil
 	}
 
-	vConc := utils.ConvertHexToBigInt(utils.UnsafeBytesToString(data))
+	vConc := utils.ConvertHexToBigInt(string(data))
 	val := utils.ScalarToNodeValue(vConc)
 
 	return val, nil
 }
 
 func (m *EriCacheDb) Insert(key utils.NodeKey, value utils.NodeValue12) error {
-	k := utils.ArrayToHex(key[:])
+	k := key.ToHex()
+	v := value.ToHex()
 
-	vConc := utils.ArrayToScalarBig(value[:])
-	v := utils.ArrayToHex(vConc.Bits())
-
-	return m.cacheTx.Put(TableSmt, utils.UnsafeStringToBytes(k), utils.UnsafeStringToBytes(v))
+	return m.cacheTx.Put(TableSmt, []byte(k), []byte(v))
 }
 
 func (m *EriCacheDb) Delete(key string) error {
@@ -163,13 +161,12 @@ func (m *EriCacheDb) Delete(key string) error {
 }
 
 func (m *EriCacheDb) DeleteByNodeKey(key utils.NodeKey) error {
-	k := utils.ArrayToHex(key[:])
-	return m.cacheTx.Delete(TableSmt, utils.UnsafeStringToBytes(k))
+	k := key.ToHex()
+	return m.cacheTx.Delete(TableSmt, []byte(k))
 }
 
 func (m *EriCacheDb) GetAccountValue(key utils.NodeKey) (utils.NodeValue8, error) {
-	keyConc := utils.ArrayToScalar(key[:])
-	k := utils.ConvertBigIntToHex(keyConc)
+	k := key.ToHex()
 
 	data, err := m.kvTxRoSMT.GetOne(TableAccountValues, []byte(k))
 	if err != nil {
@@ -187,14 +184,8 @@ func (m *EriCacheDb) GetAccountValue(key utils.NodeKey) (utils.NodeValue8, error
 }
 
 func (m *EriCacheDb) InsertAccountValue(key utils.NodeKey, value utils.NodeValue8) error {
-	keyConc := utils.ArrayToScalar(key[:])
-	k := utils.ConvertBigIntToHex(keyConc)
-
-	vals := make([]*big.Int, 8)
-	copy(vals, value[:]) // Replace the loop with the copy function
-
-	vConc := utils.ArrayToScalarBig(vals)
-	v := utils.ConvertBigIntToHex(vConc)
+	k := key.ToHex()
+	v := value.ToHex()
 
 	return m.cacheTx.Put(TableAccountValues, []byte(k), []byte(v))
 }
@@ -309,7 +300,7 @@ func (m *EriCacheDb) GetDb() map[string][]string {
 
 		allFirst8PaddedWithZeros := true
 		for i := 0; i < 8; i++ {
-			if !strings.HasPrefix(fmt.Sprintf("%016s", val[i].Text(16)), "00000000") {
+			if !strings.HasPrefix(fmt.Sprintf("%016x", val[i]), "00000000") {
 				allFirst8PaddedWithZeros = false
 				break
 			}
@@ -322,7 +313,7 @@ func (m *EriCacheDb) GetDb() map[string][]string {
 		outputArr := make([]string, truncationLength)
 		for i := 0; i < truncationLength; i++ {
 			if i < len(val) {
-				outputArr[i] = fmt.Sprintf("%016s", val[i].Text(16))
+				outputArr[i] = fmt.Sprintf("%016x", val[i])
 			} else {
 				outputArr[i] = "0000000000000000"
 			}
@@ -337,4 +328,30 @@ func (m *EriCacheDb) GetDb() map[string][]string {
 	}
 
 	return transformedDb
+}
+
+func (m *EriCacheDb) CloseAccountCollectors() {
+}
+
+func (m *EriCacheDb) CloseSmtCollectors() {
+}
+
+func (m *EriCacheDb) LoadAccountCollectors() error {
+	return nil
+}
+
+func (m *EriCacheDb) LoadSmtCollectors() error {
+	return nil
+}
+
+func (m *EriCacheDb) CollectAccountValue(key utils.NodeKey, value utils.NodeValue8) {
+}
+
+func (m *EriCacheDb) CollectKeySource(key utils.NodeKey, value []byte) {
+}
+
+func (m *EriCacheDb) CollectHashKey(key utils.NodeKey, value utils.NodeKey) {
+}
+
+func (m *EriCacheDb) CollectSmt(key utils.NodeKey, value utils.NodeValue12) {
 }
