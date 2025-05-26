@@ -38,6 +38,11 @@ var (
 	ErrEndBeforeStart = errors.New("end block must be higher than start block")
 )
 
+type WitnessGenerator interface {
+	GetWitnessByBadBatch(tx kv.Tx, txsmt kv.Tx, ctx context.Context, batchNum uint64, debug, witnessFull bool) (witness []byte, err error)
+	GetWitnessByBlockRange(tx kv.Tx, txsmt kv.Tx, ctx context.Context, startBlock, endBlock uint64, debug, witnessFull bool, cache map[string]map[string][]byte) ([]byte, error)
+}
+
 type Generator struct {
 	tx                 kv.Tx
 	dirs               datadir.Dirs
@@ -61,7 +66,13 @@ func NewGenerator(
 	engine consensus.EngineReader,
 	forcedContracs []libcommon.Address,
 	witnessUnwindLimit uint64,
-) *Generator {
+) WitnessGenerator {
+	if zkConfig.XLayer.DisableWitnessGeneration {
+		log.Info("witness generation is disabled, using mock witness generator")
+		return &MockWitnessGenerator{}
+	}
+
+	log.Info("witness generation is enabled, using real witness generator")
 	return &Generator{
 		dirs:               dirs,
 		historyV3:          historyV3,

@@ -38,6 +38,7 @@ import (
 	"github.com/ledgerwatch/erigon-lib/common/mem"
 	"github.com/ledgerwatch/erigon-lib/diagnostics"
 	"github.com/ledgerwatch/erigon/zk/nacos"
+	"github.com/ledgerwatch/erigon/zk/witness"
 
 	"github.com/0xPolygonHermez/zkevm-data-streamer/datastreamer"
 	"github.com/ledgerwatch/erigon/zk/sequencer"
@@ -1189,7 +1190,17 @@ func New(ctx context.Context, stack *node.Node, config *ethconfig.Config, logger
 
 		if isSequencer {
 			// if we are sequencing transactions, we do the sequencing loop...
-			// NOTE: Witness generation has been removed from sequencer
+			witnessGenerator := witness.NewGenerator(
+				config.Dirs,
+				config.HistoryV3,
+				backend.agg,
+				backend.blockReader,
+				backend.chainConfig,
+				backend.config.Zk,
+				backend.engine,
+				backend.config.WitnessContractInclusion,
+				backend.config.WitnessUnwindLimit,
+			)
 
 			var legacyExecutors []*legacy_executor_verifier.Executor = make([]*legacy_executor_verifier.Executor, 0, len(cfg.ExecutorUrls))
 			if len(cfg.ExecutorUrls) > 0 && cfg.ExecutorUrls[0] != "" {
@@ -1212,7 +1223,7 @@ func New(ctx context.Context, stack *node.Node, config *ethconfig.Config, logger
 				legacyExecutors,
 				backend.chainDB,
 				backend.smtDB,
-				nil, // witnessGenerator disabled for sequencer
+				witnessGenerator,
 				dataStreamServer,
 			)
 

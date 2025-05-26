@@ -448,13 +448,22 @@ func DefaultZkStages(
 			Description: "Generate witness caches for each block",
 			Disabled:    false,
 			Forward: func(firstCycle bool, badBlockUnwind bool, s *stages.StageState, u stages.Unwinder, txc wrap.TxContainer, logger log.Logger) error {
+				if stageWitnessCfg.zkCfg.XLayer.DisableWitnessGeneration {
+					return nil
+				}
 				// For X Layer, split db and ac
 				return SpawnStageWitness(s, u, ctx, txc.Tx, txc.TxSmt, stageWitnessCfg)
 			},
 			Unwind: func(firstCycle bool, u *stages.UnwindState, s *stages.StageState, txc wrap.TxContainer, logger log.Logger) error {
+				if stageWitnessCfg.zkCfg.XLayer.DisableWitnessGeneration {
+					return nil
+				}
 				return UnwindWitnessStage(u, txc.Tx, stageWitnessCfg, ctx)
 			},
 			Prune: func(firstCycle bool, p *stages.PruneState, tx kv.RwTx, logger log.Logger) error {
+				if stageWitnessCfg.zkCfg.XLayer.DisableWitnessGeneration {
+					return nil
+				}
 				return PruneWitnessStage(p, tx, stageWitnessCfg, ctx)
 			},
 		},
