@@ -25,9 +25,16 @@ func handleLimbo(batchContext *BatchContext, batchState *BatchState, verifierBun
 	}
 
 	// For X Layer, split db and ac
-	witness, err := legacyVerifier.WitnessGenerator.GetWitnessByBlockRange(batchContext.sdb.tx, batchContext.sdb.txsmt, batchContext.ctx, blockNumber, blockNumber, false, batchContext.cfg.zk.WitnessFull, cache)
-	if err != nil {
-		return err
+	var witness []byte
+	var err error
+	if legacyVerifier.WitnessGenerator != nil {
+		witness, err = legacyVerifier.WitnessGenerator.GetWitnessByBlockRange(batchContext.sdb.tx, batchContext.sdb.txsmt, batchContext.ctx, blockNumber, blockNumber, false, batchContext.cfg.zk.WitnessFull, cache)
+		if err != nil {
+			return err
+		}
+	} else {
+		// Witness generation disabled for sequencer
+		witness = []byte{}
 	}
 
 	limboBlock := txpool.NewLimboBlockDetails()

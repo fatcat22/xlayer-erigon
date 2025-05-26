@@ -140,7 +140,6 @@ import (
 	txpool2 "github.com/ledgerwatch/erigon/zk/txpool"
 	"github.com/ledgerwatch/erigon/zk/txpool/txpooluitl"
 	"github.com/ledgerwatch/erigon/zk/utils"
-	"github.com/ledgerwatch/erigon/zk/witness"
 	"github.com/ledgerwatch/erigon/zkevm/etherman"
 )
 
@@ -1190,17 +1189,7 @@ func New(ctx context.Context, stack *node.Node, config *ethconfig.Config, logger
 
 		if isSequencer {
 			// if we are sequencing transactions, we do the sequencing loop...
-			witnessGenerator := witness.NewGenerator(
-				config.Dirs,
-				config.HistoryV3,
-				backend.agg,
-				backend.blockReader,
-				backend.chainConfig,
-				backend.config.Zk,
-				backend.engine,
-				backend.config.WitnessContractInclusion,
-				backend.config.WitnessUnwindLimit,
-			)
+			// NOTE: Witness generation has been removed from sequencer
 
 			var legacyExecutors []*legacy_executor_verifier.Executor = make([]*legacy_executor_verifier.Executor, 0, len(cfg.ExecutorUrls))
 			if len(cfg.ExecutorUrls) > 0 && cfg.ExecutorUrls[0] != "" {
@@ -1217,12 +1206,13 @@ func New(ctx context.Context, stack *node.Node, config *ethconfig.Config, logger
 			}
 
 			// For X Layer, split db and ac
+			// Pass nil for witnessGenerator to disable witness generation in sequencer
 			backend.verifier = legacy_executor_verifier.NewLegacyExecutorVerifier(
 				*cfg.Zk,
 				legacyExecutors,
 				backend.chainDB,
 				backend.smtDB,
-				witnessGenerator,
+				nil, // witnessGenerator disabled for sequencer
 				dataStreamServer,
 			)
 

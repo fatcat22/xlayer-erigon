@@ -45,7 +45,6 @@ import (
 	zktx "github.com/ledgerwatch/erigon/zk/tx"
 	"github.com/ledgerwatch/erigon/zk/utils"
 	"github.com/ledgerwatch/erigon/zk/witness"
-	"github.com/ledgerwatch/erigon/zkevm/hex"
 	"github.com/ledgerwatch/erigon/zkevm/jsonrpc/client"
 )
 
@@ -1188,65 +1187,8 @@ func (api *ZkEvmAPIImpl) GetProverInput(ctx context.Context, batchNumber uint64,
 		return nil, errors.New("method only supported from a sequencer node")
 	}
 
-	checkedMode := WitnessModeNone
-	if mode != nil && *mode != WitnessModeFull && *mode != WitnessModeTrimmed {
-		return nil, errors.New("invalid mode, must be full or trimmed")
-	} else if mode != nil {
-		checkedMode = *mode
-	}
-
-	useDebug := false
-	if debug != nil {
-		useDebug = *debug
-	}
-
-	tx, err := api.db.BeginRo(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	hDb := hermez_db.NewHermezDbReader(tx)
-
-	blockNumbers, err := hDb.GetL2BlockNosByBatch(batchNumber)
-	if err != nil {
-		return nil, err
-	}
-
-	lastBlock, err := rawdb.ReadBlockByNumber(tx, blockNumbers[len(blockNumbers)-1])
-	if err != nil {
-		return nil, err
-	}
-
-	start := rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(blockNumbers[0]))
-	end := rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(blockNumbers[len(blockNumbers)-1]))
-
-	// For X Layer, split db and ac
-	rangeWitness, err := api.getBlockRangeWitness(ctx, api.db, api.dbsmt, start, end, useDebug, checkedMode)
-	if err != nil {
-		return nil, err
-	}
-
-	var oldAccInputHash common.Hash
-	if batchNumber > 0 {
-		oaih, err := api.getAccInputHash(ctx, hDb, batchNumber-1)
-		if err != nil {
-			return nil, err
-		}
-		oldAccInputHash = *oaih
-	} else {
-		oldAccInputHash = common.Hash{}
-	}
-
-	timestampLimit := lastBlock.Time()
-
-	return &legacy_executor_verifier.RpcPayload{
-		Witness:           hex.EncodeToHex(rangeWitness),
-		Coinbase:          api.config.AddressSequencer.String(),
-		OldAccInputHash:   oldAccInputHash.String(),
-		TimestampLimit:    timestampLimit,
-		ForcedBlockhashL1: "",
-	}, nil
+	// Witness generation has been disabled for sequencer
+	return nil, errors.New("GetProverInput method has been disabled - witness generation is not available in sequencer mode")
 }
 
 func (api *ZkEvmAPIImpl) GetLatestGlobalExitRoot(ctx context.Context) (common.Hash, error) {
