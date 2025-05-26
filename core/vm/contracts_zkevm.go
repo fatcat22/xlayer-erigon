@@ -21,6 +21,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/big"
+	"sync"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	bls12381 "github.com/consensys/gnark-crypto/ecc/bls12-381"
@@ -118,6 +119,7 @@ func (c *ecrecover_zkevm) RequiredGas(input []byte) uint64 {
 }
 
 func (c *ecrecover_zkevm) Run(input []byte) ([]byte, error) {
+	fmt.Println("into ")
 	if !c.enabled {
 		return []byte{}, ErrUnsupportedPrecompile
 	}
@@ -1240,12 +1242,39 @@ func (c *p256Verify_zkevm) RequiredGas(input []byte) uint64 {
 func (c *p256Verify_zkevm) SetOutputLength(outLength int) {
 }
 
+// 对象池用于复用big.Int对象
+var (
+	bigIntPool = sync.Pool{
+		New: func() interface{} {
+			return new(big.Int)
+		},
+	}
+
+	// 预分配的成功结果，避免每次都调用LeftPadBytes
+	successResult = func() []byte {
+		result := make([]byte, 32)
+		result[31] = 1
+		return result
+	}()
+)
+
+// 从对象池获取big.Int
+func getBigInt() *big.Int {
+	return bigIntPool.Get().(*big.Int)
+}
+
+// 归还big.Int到对象池
+func putBigInt(b *big.Int) {
+	b.SetInt64(0) // 清零
+	bigIntPool.Put(b)
+}
+
 // Run executes the precompiled contract with given 160 bytes of param, returning the output and the used gas
 func (c *p256Verify_zkevm) Run(input []byte) ([]byte, error) {
 	if !c.enabled {
 		return nil, ErrUnsupportedPrecompile
 	}
-
+	fmt.Println("into p256Verify_zkevm")
 	// Required input length is 160 bytes
 	const p256VerifyInputLength = 160
 	// Check the input length
@@ -1255,9 +1284,26 @@ func (c *p256Verify_zkevm) Run(input []byte) ([]byte, error) {
 	}
 
 	// Extract the hash, r, s, x, y from the input
+	// 从对象池获取big.Int对象
+	r := getBigInt()
+	s := getBigInt()
+	x := getBigInt()
+	y := getBigInt()
+
+	// 确保在函数结束时归还对象
+	defer func() {
+		putBigInt(r)
+		putBigInt(s)
+		putBigInt(x)
+		putBigInt(y)
+	}()
+
+	// Extract the hash, r, s, x, y from the input
 	hash := input[0:32]
-	r, s := new(big.Int).SetBytes(input[32:64]), new(big.Int).SetBytes(input[64:96])
-	x, y := new(big.Int).SetBytes(input[96:128]), new(big.Int).SetBytes(input[128:160])
+	r.SetBytes(input[32:64])
+	s.SetBytes(input[64:96])
+	x.SetBytes(input[96:128])
+	y.SetBytes(input[128:160])
 
 	if c.cc != nil {
 		c.cc.preP256Verify(r, s, x, y)
@@ -1271,14 +1317,18 @@ func (c *p256Verify_zkevm) Run(input []byte) ([]byte, error) {
 		}
 	}
 
+	var result []byte
+	defer func() {
+		if PrecompiledCache != nil {
+			PrecompiledCache.Add(string(input), result)
+		}
+	}()
+
 	// Verify the secp256r1 signature
 	if secp256r1.Verify(hash, r, s, x, y) {
 		// Signature is valid
 		// For X Layer, pre run
-		result := common.LeftPadBytes(big1.Bytes(), 32)
-		if PrecompiledCache != nil {
-			PrecompiledCache.Add(string(input), result)
-		}
+		result = common.LeftPadBytes(big1.Bytes(), 32)
 		return result, nil
 	} else {
 		// Signature is invalid

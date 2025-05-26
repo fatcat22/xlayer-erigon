@@ -43,6 +43,7 @@ func (evm *EVM) precompile_zkevm(addr libcommon.Address, retSize int) (Precompil
 	p, ok := precompiles[addr]
 
 	if evm.zkConfig != nil && evm.zkConfig.CounterCollector != nil && ok {
+		panic(666)
 		p.SetCounterCollector(evm.zkConfig.CounterCollector)
 		p.SetOutputLength(retSize)
 	}
