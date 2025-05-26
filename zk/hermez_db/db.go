@@ -1102,6 +1102,8 @@ func (db *HermezDbReader) GetForkIdBlock(forkId uint64) (uint64, bool, error) {
 		}
 	}
 
+	forkIdToBlock[forkId] = blockNum
+
 	return blockNum, found, err
 }
 
