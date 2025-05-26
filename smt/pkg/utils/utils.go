@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"unsafe"
 
 	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/common/length"
@@ -579,9 +580,7 @@ func ConcatArrays4ByPointers(a, b *[4]uint64) *[8]uint64 {
 
 func ConcatArrays8AndCapacityByPointers(in *[8]uint64, capacity *[4]uint64) *NodeValue12 {
 	v := NodeValue12{}
-	for i, val := range in {
-		v[i] = val
-	}
+	copy(v[:8], in[:])
 	for i, val := range capacity {
 		v[i+8] = val
 	}
@@ -775,7 +774,7 @@ func HashContractBytecode(bc string) string {
 	return ConvertBigIntToHex(HashContractBytecodeBigInt(bc))
 }
 
-func HashContractBytecodeBigInt(bc string) *big.Int {
+func HashContractBytecodeBigIntV1(bc string) *big.Int {
 	bytecode := bc
 
 	if strings.HasPrefix(bc, "0x") {
@@ -839,6 +838,75 @@ func HashContractBytecodeBigInt(bc string) *big.Int {
 		copy(capacity[:], elementsToHash[:4])
 
 		tmpHash = Hash(in, capacity)
+	}
+
+	return ArrayToScalar(tmpHash[:])
+}
+
+func charToByte(c byte) byte {
+	if c >= '0' && c <= '9' {
+		return c - '0'
+	}
+	if c >= 'a' && c <= 'f' {
+		return c - 'a' + 10
+	}
+	if c >= 'A' && c <= 'F' {
+		return c - 'A' + 10
+	}
+	// should not reach here
+	return 0
+}
+
+func HashContractBytecodeBigInt(bc string) *big.Int {
+	bytecode := strings.TrimPrefix(bc, "0x")
+
+	targetBytesLen := len(bytecode) / 2
+	if len(bytecode)%2 != 0 {
+		targetBytesLen += 1
+	}
+
+	targetBytesLen += 1
+
+	if targetBytesLen%56 != 0 {
+		targetBytesLen = targetBytesLen + (56 - targetBytesLen%56)
+	}
+
+	targetBytesLen = targetBytesLen / 7 * 8
+
+	targetBytes := make([]byte, targetBytesLen)
+
+	counter := 0
+	offset := 0
+	i := 0
+
+	if len(bytecode)%2 != 0 {
+		targetBytes[offset] = charToByte(bytecode[0])
+		offset += 1
+		counter += 1
+		i += 1
+	}
+
+	for ; i < len(bytecode); i += 2 {
+		targetBytes[offset] = charToByte(bytecode[i])<<4 | charToByte(bytecode[i+1])
+		offset += 1
+		counter += 1
+		if counter == BYTECODE_BYTES_ELEMENT {
+			counter = 0
+			offset += 1
+			// targetBytes[offset] = 0
+		}
+	}
+
+	targetBytes[offset] = 0x01
+	targetBytes[len(targetBytes)-2] |= 0x80
+
+	tmpData := &[8]uint64{}
+	tmpHash := (*[4]uint64)(unsafe.Pointer(tmpData))
+	var result = (*[4]uint64)(unsafe.Pointer(unsafe.SliceData(tmpData[4:])))
+	for i := 0; i < len(targetBytes); i += 64 {
+		in := (*[8]uint64)(unsafe.Pointer(unsafe.SliceData(targetBytes[i:])))
+		hashFunc(in, tmpHash, result)
+		tmpHash, result = result, tmpHash
 	}
 
 	return ArrayToScalar(tmpHash[:])
