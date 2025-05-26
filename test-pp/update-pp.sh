@@ -39,17 +39,19 @@ cat upgrade/upgradePessimistic/upgrade_parameters.json.example |
        --arg sk 0x815405dddb0e2a99b12af775fd2929e526704e1d1aea6a0b4e74dc33e2f7fcd2 \
        --arg tld 60 '.rollupManagerAddress = $rum | .timelockDelay = $tld | .deployerPvtKey = $sk' > upgrade/upgradePessimistic/upgrade_parameters.json
 
-npx hardhat run ./upgrade/upgradePessimistic/upgradePessimistic.ts --network localhost
-
-
-schedule_data=""
+hardhat_output=$(npx hardhat run ./upgrade/upgradePessimistic/upgradePessimistic.ts --network localhost)
+schedule_data=$(echo "$hardhat_output" | jq -r '.scheduleData')
+execute_data=$(echo "$hardhat_output" | jq -r '.executeData')
+echo "hardhat_output: $hardhat_output"
+echo "schedule_data: $schedule_data"
+echo "execute_data: $execute_data"
 
 cast send --rpc-url "$L1_RPC_URL" --private-key "$DEPLOYER_PRIVATE_KEY" "$TIME_LOCK_ADDRESS" "$schedule_data"
 sleep 90
-
-execute_data=""
 
 cast send --rpc-url "$L1_RPC_URL" --private-key "$DEPLOYER_PRIVATE_KEY" "$TIME_LOCK_ADDRESS" "$execute_data"
 
 sleep 5
 cast call --rpc-url "$L1_RPC_URL" $ROLLUP_MGR_ADDRESS 'ROLLUP_MANAGER_VERSION()(string)'
+
+make run-new
