@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-set -x
+# set -x
 
 DEPLOYER_ADDRESS="0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534"
 DEPLOYER_PRIVATE_KEY="0x815405dddb0e2a99b12af775fd2929e526704e1d1aea6a0b4e74dc33e2f7fcd2"
@@ -26,32 +26,23 @@ fi
 
 cd "./agglayer-contracts"
 
-git stash # there are some local modifications to set the localhost network
+git stash
 git checkout v9.0.0-rc.3-pp
 git stash apply
 rm -rf artifacts cache node_modules
 npm i
 
-# If your rollup manager address from the combined.json is different, replace it here.
-# The sk value is the admin private key
 cat upgrade/upgradePessimistic/upgrade_parameters.json.example |
     jq --arg rum $ROLLUP_MGR_ADDRESS \
-       --arg sk 0x815405dddb0e2a99b12af775fd2929e526704e1d1aea6a0b4e74dc33e2f7fcd2 \
-       --arg tld 60 '.rollupManagerAddress = $rum | .timelockDelay = $tld | .deployerPvtKey = $sk' > upgrade/upgradePessimistic/upgrade_parameters.json
+       --arg sk $DEPLOYER_PRIVATE_KEY \
+       --arg tld 600 '.rollupManagerAddress = $rum | .timelockDelay = $tld | .deployerPvtKey = $sk' > upgrade/upgradePessimistic/upgrade_parameters.json
 
 hardhat_output=$(npx hardhat run ./upgrade/upgradePessimistic/upgradePessimistic.ts --network localhost)
-schedule_data=$(echo "$hardhat_output" | jq -r '.scheduleData')
-execute_data=$(echo "$hardhat_output" | jq -r '.executeData')
 echo "hardhat_output: $hardhat_output"
+
+schedule_data=$(echo "$hardhat_output" | grep -oP "scheduleData: '\\K0x[0-9a-fA-F]+")
+execute_data=$(echo "$hardhat_output" | grep -oP "executeData: '\\K0x[0-9a-fA-F]+")
+
 echo "schedule_data: $schedule_data"
 echo "execute_data: $execute_data"
 
-cast send --rpc-url "$L1_RPC_URL" --private-key "$DEPLOYER_PRIVATE_KEY" "$TIME_LOCK_ADDRESS" "$schedule_data"
-sleep 90
-
-cast send --rpc-url "$L1_RPC_URL" --private-key "$DEPLOYER_PRIVATE_KEY" "$TIME_LOCK_ADDRESS" "$execute_data"
-
-sleep 5
-cast call --rpc-url "$L1_RPC_URL" $ROLLUP_MGR_ADDRESS 'ROLLUP_MANAGER_VERSION()(string)'
-
-make run-new
