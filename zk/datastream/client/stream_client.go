@@ -845,6 +845,10 @@ func (c *StreamClient) readHeaderEntry() (h *types.HeaderEntry, err error) {
 	}
 
 	headLength := binary.BigEndian.Uint32(binaryHeader[1:5])
+	if headLength != types.HeaderSize && headLength != types.HeaderSizePreEtrog {
+		return h, fmt.Errorf("read header bytes error, unexpected header size: %d", headLength)
+	}
+
 	if headLength == types.HeaderSize {
 		// Read the rest of fixed size fields
 		buffer, err := c.readBuffer(types.HeaderSize - types.HeaderSizePreEtrog)
