@@ -1070,6 +1070,9 @@ func (db *HermezDbReader) GetLowestBatchByFork(forkId uint64) (uint64, error) {
 }
 
 func (db *HermezDbReader) GetForkIdBlock(forkId uint64) (uint64, bool, error) {
+	if blockNum, ok := forkIdToBlock[forkId]; ok {
+		return blockNum, true, nil
+	}
 	// For X Layer, optimize the performance of GetForkIdBlock
 	blkNum, err := db.tx.GetOne(FORKID_BLOCK, Uint64ToBytes(forkId))
 	if err == nil && blkNum != nil {
@@ -1129,7 +1132,10 @@ func (db *HermezDb) DeleteForkIdBlock(fromBlockNo, toBlockNo uint64) error {
 	return db.deleteFromBucketWithUintKeysRange(FORKID_BLOCK, fromBlockNo, toBlockNo)
 }
 
+var forkIdToBlock = make(map[uint64]uint64)
+
 func (db *HermezDb) WriteForkIdBlockOnce(forkId, blockNum uint64) error {
+	fmt.Println("[HermezDb] WriteForkIdBlockOnce", forkId, blockNum)
 	tempBlockNum, found, err := db.GetForkIdBlock(forkId)
 	if err != nil {
 		log.Error(fmt.Sprintf("[HermezDb] Error getting forkIdBlock: %v", err))
@@ -1139,6 +1145,7 @@ func (db *HermezDb) WriteForkIdBlockOnce(forkId, blockNum uint64) error {
 		log.Debug(fmt.Sprintf("[HermezDb] Fork id block already exists: %d, block:%v, set db failed.", forkId, tempBlockNum))
 		return nil
 	}
+	forkIdToBlock[forkId] = blockNum
 	return db.tx.Put(FORKID_BLOCK, Uint64ToBytes(forkId), Uint64ToBytes(blockNum))
 }
 

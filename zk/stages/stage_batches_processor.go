@@ -462,6 +462,7 @@ func (p *BatchesProcessor) writeL2Block(l2Block *types.FullL2Block) error {
 		return fmt.Errorf("write block batch error: %w", err)
 	}
 
+	fmt.Println("writeL2Block...")
 	if err := p.hermezDb.WriteForkIdBlockOnce(l2Block.ForkId, l2Block.L2BlockNumber); err != nil {
 		return fmt.Errorf("write fork id block error: %w", err)
 	}

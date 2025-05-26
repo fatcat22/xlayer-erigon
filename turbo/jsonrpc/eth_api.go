@@ -171,7 +171,7 @@ func NewBaseApi(f *rpchelper.Filters, stateCache kvcache.Cache, blockReader serv
 
 func (api *BaseAPI) chainConfig(ctx context.Context, tx kv.Tx) (*chain.Config, error) {
 	cfg, _, err := api.chainConfigWithGenesis(ctx, tx)
-	return cfg, err
+
 	//[zkevm] get dynamic fork config
 	hermezDb := hermez_db.NewHermezDbReader(tx)
 	if err := utils.UpdateZkEVMBlockCfg(cfg, hermezDb, ""); err != nil {
