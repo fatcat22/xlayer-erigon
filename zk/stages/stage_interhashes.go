@@ -555,7 +555,7 @@ func insertContractBytecodeToKV(db smt.DB, keys []utils.NodeKey, ethAddr string,
 		keys = append(keys, keyContractCode)
 		db.InsertAccountValue(keyContractCode, *valueContractCode)
 
-		ks := utils.EncodeKeySource(utils.SC_CODE, utils.ConvertHexToAddress(ethAddr), common.Hash{})
+		ks := utils.EncodeKeySource(utils.SC_CODE, common.HexToAddress(ethAddr), common.Hash{})
 		db.InsertKeySource(keyContractCode, ks)
 	}
 
@@ -563,7 +563,7 @@ func insertContractBytecodeToKV(db smt.DB, keys []utils.NodeKey, ethAddr string,
 		keys = append(keys, keyContractLength)
 		db.InsertAccountValue(keyContractLength, *valueContractLength)
 
-		ks := utils.EncodeKeySource(utils.SC_LENGTH, utils.ConvertHexToAddress(ethAddr), common.Hash{})
+		ks := utils.EncodeKeySource(utils.SC_LENGTH, common.HexToAddress(ethAddr), common.Hash{})
 		db.InsertKeySource(keyContractLength, ks)
 	}
 
@@ -571,15 +571,15 @@ func insertContractBytecodeToKV(db smt.DB, keys []utils.NodeKey, ethAddr string,
 }
 
 func insertContractStorageToKV(db smt.DB, keys []utils.NodeKey, ethAddr string, storage map[string]string) ([]utils.NodeKey, error) {
-	a := utils.ConvertHexToBigInt(ethAddr)
-	add := utils.ScalarToArrayBig(a)
-
 	for k, v := range storage {
 		if v == "" {
 			continue
 		}
 
-		keyStoragePosition := utils.KeyContractStorage(add, k)
+		keyStoragePosition, err := utils.KeyContractStorage(ethAddr, k)
+		if err != nil {
+			return []utils.NodeKey{}, err
+		}
 
 		base := 10
 		if strings.HasPrefix(v, "0x") {
@@ -600,7 +600,7 @@ func insertContractStorageToKV(db smt.DB, keys []utils.NodeKey, ethAddr string, 
 
 			sp, _ := utils.StrValToBigInt(k)
 
-			ks := utils.EncodeKeySource(utils.SC_STORAGE, utils.ConvertHexToAddress(ethAddr), common.BigToHash(sp))
+			ks := utils.EncodeKeySource(utils.SC_STORAGE, common.HexToAddress(ethAddr), common.BigToHash(sp))
 			db.InsertKeySource(keyStoragePosition, ks)
 		}
 	}
@@ -628,14 +628,14 @@ func insertAccountStateToKV(db smt.DB, keys []utils.NodeKey, ethAddr string, bal
 		keys = append(keys, keyBalance)
 		db.InsertAccountValue(keyBalance, *valueBalance)
 
-		ks := utils.EncodeKeySource(utils.KEY_BALANCE, utils.ConvertHexToAddress(ethAddr), common.Hash{})
+		ks := utils.EncodeKeySource(utils.KEY_BALANCE, common.HexToAddress(ethAddr), common.Hash{})
 		db.InsertKeySource(keyBalance, ks)
 	}
 	if !valueNonce.IsZero() {
 		keys = append(keys, keyNonce)
 		db.InsertAccountValue(keyNonce, *valueNonce)
 
-		ks := utils.EncodeKeySource(utils.KEY_NONCE, utils.ConvertHexToAddress(ethAddr), common.Hash{})
+		ks := utils.EncodeKeySource(utils.KEY_NONCE, common.HexToAddress(ethAddr), common.Hash{})
 		db.InsertKeySource(keyNonce, ks)
 	}
 	return keys, nil

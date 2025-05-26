@@ -3,25 +3,40 @@ package utils
 import (
 	"encoding/binary"
 	"math/big"
-	"math/bits"
-	"unsafe"
-
-	"golang.org/x/exp/constraints"
 )
 
-func (nv *NodeValue12) IsNil() bool {
-	if nv != nil {
-		isNil := true
-		for i := 0; i < 12; i++ {
-			isNil = isNil && nv[i] == nil
-		}
+func scalarToRootSlow(s *big.Int) NodeKey {
+	var result [4]uint64
+	divisor := new(big.Int).Exp(big.NewInt(2), big.NewInt(64), nil)
 
-		return isNil
-	} else {
-		return true
+	sCopy := new(big.Int).Set(s)
+
+	for i := 0; i < 4; i++ {
+		mod := new(big.Int).Mod(sCopy, divisor)
+		result[i] = mod.Uint64()
+		sCopy.Div(sCopy, divisor)
 	}
+	return result
 }
 
+func ConvertUint64ToBytes(n uint64) []byte {
+	bytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(bytes, n)
+	// or use binary.LittleEndian.PutUint64(bytes, n)
+	return bytes
+}
+
+func ConvertBytesToUint64(bytes []byte) (uint64, error) {
+	if bytes == nil {
+		return 0, nil
+	}
+
+	n := binary.BigEndian.Uint64(bytes)
+	// or use binary.LittleEndian.Uint64(bytes)
+	return n, nil
+}
+
+/*
 const hextable = "0123456789abcdef"
 
 func ArrayToHex[T constraints.Unsigned](array []T) string {
@@ -98,20 +113,6 @@ func arrayToScalarBigSlow(array []*big.Int) *big.Int {
 	return scalar
 }
 
-func scalarToRootSlow(s *big.Int) NodeKey {
-	var result [4]uint64
-	divisor := new(big.Int).Exp(big.NewInt(2), big.NewInt(64), nil)
-
-	sCopy := new(big.Int).Set(s)
-
-	for i := 0; i < 4; i++ {
-		mod := new(big.Int).Mod(sCopy, divisor)
-		result[i] = mod.Uint64()
-		sCopy.Div(sCopy, divisor)
-	}
-	return result
-}
-
 // fast path for 64-bit systems
 func scalarToNodeValueFast(scalarIn *big.Int, out *[12]*big.Int) bool {
 	if bits.UintSize != 64 || scalarIn.Sign() < 0 {
@@ -142,24 +143,9 @@ func scalarToNodeValueSlow(scalarIn *big.Int) NodeValue12 {
 		out[i] = value
 		scalar.Rsh(scalar, 64)
 	}
-	return out
-}
-
-func ConvertUint64ToBytes(n uint64) []byte {
-	bytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(bytes, n)
-	// or use binary.LittleEndian.PutUint64(bytes, n)
-	return bytes
-}
-
-func ConvertBytesToUint64(bytes []byte) (uint64, error) {
-	if bytes == nil || len(bytes) == 0 {
-		return 0, nil
-	}
-
-	n := binary.BigEndian.Uint64(bytes)
-	// or use binary.LittleEndian.Uint64(bytes)
-	return n, nil
+	return NodeValue12{out[0].Uint64(), out[1].Uint64(), out[2].Uint64(), out[3].Uint64(),
+		out[4].Uint64(), out[5].Uint64(), out[6].Uint64(), out[7].Uint64(),
+		out[8].Uint64(), out[9].Uint64(), out[10].Uint64(), out[11].Uint64()}
 }
 
 func UnsafeBytesToString(b []byte) string {
@@ -169,3 +155,4 @@ func UnsafeBytesToString(b []byte) string {
 func UnsafeStringToBytes(s string) []byte {
 	return unsafe.Slice(unsafe.StringData(s), len(s))
 }
+*/

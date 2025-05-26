@@ -39,7 +39,7 @@ func (s *SMT) SetAccountBalance(ethAddr string, balance *big.Int) (*big.Int, err
 		return nil, err
 	}
 
-	ks := utils.EncodeKeySource(utils.KEY_BALANCE, utils.ConvertHexToAddress(ethAddr), common.Hash{})
+	ks := utils.EncodeKeySource(utils.KEY_BALANCE, common.HexToAddress(ethAddr), common.Hash{})
 	err = s.Db.InsertKeySource(keyBalance, ks)
 	if err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func (s *SMT) SetAccountNonce(ethAddr string, nonce *big.Int) (*big.Int, error) 
 		return nil, err
 	}
 
-	ks := utils.EncodeKeySource(utils.KEY_NONCE, utils.ConvertHexToAddress(ethAddr), common.Hash{})
+	ks := utils.EncodeKeySource(utils.KEY_NONCE, common.HexToAddress(ethAddr), common.Hash{})
 	err = s.Db.InsertKeySource(keyNonce, ks)
 	if err != nil {
 		return nil, err
@@ -91,7 +91,7 @@ func (s *SMT) SetContractBytecode(ethAddr string, bytecode string) error {
 		return err
 	}
 
-	ks := utils.EncodeKeySource(utils.SC_CODE, utils.ConvertHexToAddress(ethAddr), common.Hash{})
+	ks := utils.EncodeKeySource(utils.SC_CODE, common.HexToAddress(ethAddr), common.Hash{})
 
 	err = s.Db.InsertKeySource(keyContractCode, ks)
 
@@ -104,7 +104,7 @@ func (s *SMT) SetContractBytecode(ethAddr string, bytecode string) error {
 		return err
 	}
 
-	ks = utils.EncodeKeySource(utils.SC_LENGTH, utils.ConvertHexToAddress(ethAddr), common.Hash{})
+	ks = utils.EncodeKeySource(utils.SC_LENGTH, common.HexToAddress(ethAddr), common.Hash{})
 
 	return s.Db.InsertKeySource(keyContractLength, ks)
 }
@@ -324,12 +324,12 @@ func (s *SMT) SetStorage(ctx context.Context, logPrefix string, accChanges map[l
 			return nil, nil, fmt.Errorf("[%s] Context done", logPrefix)
 		default:
 		}
-		ethAddr := addr.String()
-		ethAddrBigInt := utils.ConvertHexToBigInt(ethAddr)
-		ethAddrBigIngArray := utils.ScalarToArrayBig(ethAddrBigInt)
 
 		for k, v := range storage {
-			keyStoragePosition := utils.KeyContractStorage(ethAddrBigIngArray, k)
+			keyStoragePosition, err := utils.KeyContractStorage(addr.String(), k)
+			if err != nil {
+				return nil, nil, err
+			}
 			valueBigInt := convertStringToBigInt(v)
 			keysBatchStorage = append(keysBatchStorage, &keyStoragePosition)
 			if valuesBatchStorage, isDelete, err = appendToValuesBatchStorageBigInt(valuesBatchStorage, valueBigInt); err != nil {

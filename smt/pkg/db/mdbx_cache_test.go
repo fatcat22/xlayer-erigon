@@ -25,8 +25,7 @@ func TestEriCacheDb(t *testing.T) {
 
 	// The key and value we're going to test
 	key := utils.NodeKey{1, 2, 3, 4}
-	value := utils.NodeValue12{big.NewInt(1), big.NewInt(2), big.NewInt(3), big.NewInt(4), big.NewInt(5), big.NewInt(6),
-		big.NewInt(7), big.NewInt(8), big.NewInt(9), big.NewInt(10), big.NewInt(11), big.NewInt(12)}
+	value := utils.NodeValue12{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
 	noValue := utils.NodeValue12{}
 
 	// Testing Insert method
@@ -55,8 +54,7 @@ func TestEriCacheDbBatch(t *testing.T) {
 
 	// The key and value we're going to test
 	key := utils.NodeKey{1, 2, 3, 4}
-	value := utils.NodeValue12{big.NewInt(1), big.NewInt(2), big.NewInt(3), big.NewInt(4), big.NewInt(5), big.NewInt(6),
-		big.NewInt(7), big.NewInt(8), big.NewInt(9), big.NewInt(10), big.NewInt(11), big.NewInt(12)}
+	value := utils.NodeValue12{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
 
 	quit := make(chan struct{})
 
@@ -81,8 +79,7 @@ func TestEriCacheDbBatch(t *testing.T) {
 
 	// Inserting a different key-value pair within a batch
 	altKey := utils.NodeKey{5, 6, 7, 8}
-	altValue := utils.NodeValue12{big.NewInt(13), big.NewInt(14), big.NewInt(15), big.NewInt(16), big.NewInt(17), big.NewInt(18),
-		big.NewInt(19), big.NewInt(20), big.NewInt(21), big.NewInt(22), big.NewInt(23), big.NewInt(24)}
+	altValue := utils.NodeValue12{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
 
 	err = db.Insert(altKey, altValue)
 	assert.NoError(t, err)
@@ -156,7 +153,7 @@ func TestEriCacheDb_Get(t *testing.T) {
 	db, dbro := setupTestEriCacheDb(t)
 
 	key := utils.NodeKey{1, 2, 3, 4}
-	expectedValue := utils.NodeValue12{big.NewInt(1), big.NewInt(2), big.NewInt(3), big.NewInt(4), big.NewInt(5), big.NewInt(6), big.NewInt(7), big.NewInt(8), big.NewInt(9), big.NewInt(10), big.NewInt(11), big.NewInt(12)}
+	expectedValue := utils.NodeValue12{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
 
 	// Test when data is not present
 	value, err := dbro.Get(key)
@@ -176,7 +173,7 @@ func TestEriCacheDb_GetAccountValue(t *testing.T) {
 	db, dbro := setupTestEriCacheDb(t)
 
 	key := utils.NodeKey{1, 2, 3, 4}
-	expectedValue := utils.NodeValue8{big.NewInt(1), big.NewInt(2), big.NewInt(3), big.NewInt(4), big.NewInt(5), big.NewInt(6), big.NewInt(7), big.NewInt(8)}
+	expectedValue := utils.NodeValue8{1, 2, 3, 4, 5, 6, 7, 8}
 
 	// Test when data is not present
 	value, err := dbro.GetAccountValue(key)
