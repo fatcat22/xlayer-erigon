@@ -13,7 +13,6 @@ import (
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/core/state"
 	"github.com/ledgerwatch/erigon/core/types"
-	"github.com/ledgerwatch/erigon/core/vm"
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/zk"
@@ -297,7 +296,6 @@ func sequencingBatchStep(
 	}
 
 	batchCounters := prepareBatchCounters(batchContext, batchState)
-	olderBatchCounters := vm.NewEmptyCounters()
 
 	if batchState.isL1Recovery() {
 		if cfg.zk.L1SyncStopBatch > 0 && batchState.batchNumber > cfg.zk.L1SyncStopBatch {
@@ -396,22 +394,6 @@ BatchLoop:
 			didLoadedAnyDataForRecovery := batchState.loadBlockL1RecoveryData(uint64(len(blockNumbersInBatchSoFar)))
 			if !didLoadedAnyDataForRecovery {
 				log.Info(fmt.Sprintf("[%s] Block %d is not part of batch %d. Stopping blocks loop", logPrefix, blockNumber, batchState.batchNumber))
-				break
-			}
-		}
-
-		if batchState.isResequence() {
-			if !batchState.resequenceBatchJob.HasMoreBlockToProcess() {
-				for {
-					if pending, _ := streamWriter.legacyVerifier.HasPendingVerifications(); pending {
-						streamWriter.CommitNewUpdates()
-						time.Sleep(1 * time.Second)
-					} else {
-						break
-					}
-				}
-
-				runLoopBlocks = false
 				break
 			}
 		}
@@ -873,6 +855,7 @@ BatchLoop:
 		metrics.SeqTxCount.Add(float64(len(batchState.blockState.builtBlockElements.transactions)))
 		metrics.GetLogStatistics().CumulativeValue(metrics.TxCounter, int64(len(batchState.blockState.builtBlockElements.transactions)))
 
+		// TODO: can we remove?
 		// add a check to the verifier and also check for responses
 		batchState.onBuiltBlock(blockNumber)
 
@@ -935,11 +918,6 @@ BatchLoop:
 		)
 		// do not use remote executor in l1recovery mode
 		// if we need remote executor in l1 recovery then we must allow commit/start DB transactions
-		useExecutorForVerification := !batchState.isL1Recovery() && batchState.hasExecutorForThisBatch
-		counters, err := batchCounters.CombineCollectors(l1TreeUpdateIndex != 0)
-		if err != nil {
-			return err
-		}
 
 		utils.LogTrace(
 			"",                                // txhash
@@ -951,13 +929,6 @@ BatchLoop:
 			block.Time(),                      // blockTime
 			-1,                                // transactionType
 		)
-
-		if cfg.zk.SequencerBlockSingleBlockVerify {
-			cfg.legacyVerifier.StartAsyncVerification(batchContext.s.LogPrefix(), batchState.forkId, batchState.batchNumber, block.Root(), vm.GetDifferUsedAsMap(counters, olderBatchCounters), []uint64{blockNumber}, useExecutorForVerification, batchContext.cfg.zk.XLayer.ExecutorMock, batchContext.cfg.zk.SequencerBatchVerificationTimeout, batchContext.cfg.zk.SequencerBatchVerificationRetries)
-			olderBatchCounters = counters
-		} else {
-			cfg.legacyVerifier.StartAsyncVerification(batchContext.s.LogPrefix(), batchState.forkId, batchState.batchNumber, block.Root(), counters.UsedAsMap(), batchState.builtBlocks, useExecutorForVerification, batchContext.cfg.zk.XLayer.ExecutorMock, batchContext.cfg.zk.SequencerBatchVerificationTimeout, batchContext.cfg.zk.SequencerBatchVerificationRetries)
-		}
 
 		// For X Layer, local replay and smt alignment's feature of stateroot mismatch detection
 		if cfg.zk.XLayer.SequencerReplay || shouldCheckForExecutionAndSMTAlignment == SMTAlignmentPendingResequence {
@@ -973,9 +944,6 @@ BatchLoop:
 			}
 		}
 
-		// check for new responses from the verifier
-		needsUnwind, err := updateStreamAndCheckRollback(batchContext, batchState, streamWriter, u, s)
-
 		// lets commit everything after updateStreamAndCheckRollback no matter of its result unless
 		// we're in L1 recovery where losing some blocks on restart doesn't matter
 
@@ -990,7 +958,7 @@ BatchLoop:
 		}
 
 		// check the return values of updateStreamAndCheckRollback
-		if err != nil || needsUnwind {
+		if err != nil {
 			return err
 		}
 		if _, err := rawdb.IncrementStateVersionByBlockNumberIfNeeded(batchContext.sdb.tx, block.NumberU64()); err != nil {

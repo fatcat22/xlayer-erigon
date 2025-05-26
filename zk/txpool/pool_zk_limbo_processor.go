@@ -2,7 +2,6 @@ package txpool
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"time"
 
@@ -10,9 +9,7 @@ import (
 	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon/core/vm"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
-	"github.com/ledgerwatch/erigon/zk/legacy_executor_verifier"
 	"github.com/ledgerwatch/log/v3"
-	"github.com/status-im/keycard-go/hexutils"
 )
 
 type LimboSubPoolProcessor struct {
@@ -20,17 +17,15 @@ type LimboSubPoolProcessor struct {
 	chainConfig *chain.Config
 	db          kv.RwDB
 	txPool      *TxPool
-	verifier    *legacy_executor_verifier.LegacyExecutorVerifier
 	quit        <-chan struct{}
 }
 
-func NewLimboSubPoolProcessor(ctx context.Context, zkCfg *ethconfig.Zk, chainConfig *chain.Config, db kv.RwDB, txPool *TxPool, verifier *legacy_executor_verifier.LegacyExecutorVerifier) *LimboSubPoolProcessor {
+func NewLimboSubPoolProcessor(ctx context.Context, zkCfg *ethconfig.Zk, chainConfig *chain.Config, db kv.RwDB, txPool *TxPool) *LimboSubPoolProcessor {
 	return &LimboSubPoolProcessor{
 		zkCfg:       zkCfg,
 		chainConfig: chainConfig,
 		db:          db,
 		txPool:      txPool,
-		verifier:    verifier,
 		quit:        ctx.Done(),
 	}
 }
@@ -64,7 +59,6 @@ func (_this *LimboSubPoolProcessor) run() {
 	}
 
 	totalTransactions := 0
-	processedTransactions := 0
 	for _, limboBlock := range limboBlocksDetails {
 		for _, limboTx := range limboBlock.Transactions {
 			if !limboTx.hasRoot() {
@@ -89,27 +83,6 @@ func (_this *LimboSubPoolProcessor) run() {
 
 	invalidTxs := []*string{}
 	invalidBlocksIndices := []int{}
-	lastAddedInvalidBlockIndex := -1
-
-	for i, limboBlock := range limboBlocksDetails {
-		for _, limboTx := range limboBlock.Transactions {
-			request := legacy_executor_verifier.NewVerifierRequest(limboBlock.ForkId, limboBlock.BatchNumber, []uint64{limboBlock.BlockNumber}, limboTx.Root, unlimitedCounters)
-			err := _this.verifier.VerifySync(tx, request, limboBlock.Witness, limboTx.StreamBytes, limboBlock.BlockTimestamp, limboBlock.L1InfoTreeMinTimestamps)
-			if err != nil {
-				idHash := hexutils.BytesToHex(limboTx.Hash[:])
-				invalidTxs = append(invalidTxs, &idHash)
-				if lastAddedInvalidBlockIndex != i {
-					invalidBlocksIndices = append(invalidBlocksIndices, i)
-					lastAddedInvalidBlockIndex = i
-				}
-				log.Info("[Limbo pool processor]", "invalid tx", limboTx.Hash, "err", err)
-				continue
-			}
-
-			processedTransactions++
-			log.Info("[Limbo pool processor]", "valid tx", limboTx.Hash, "progress", fmt.Sprintf("transactions: %d of %d, blocks: %d of %d", processedTransactions, totalTransactions, i+1, len(limboBlocksDetails)))
-		}
-	}
 
 	_this.txPool.MarkProcessedLimboDetails(size, invalidBlocksIndices, invalidTxs)
 }

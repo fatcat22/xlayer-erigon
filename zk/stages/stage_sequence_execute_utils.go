@@ -34,7 +34,6 @@ import (
 	"github.com/ledgerwatch/erigon/zk/datastream/server"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	"github.com/ledgerwatch/erigon/zk/l1infotree"
-	verifier "github.com/ledgerwatch/erigon/zk/legacy_executor_verifier"
 	zktx "github.com/ledgerwatch/erigon/zk/tx"
 	"github.com/ledgerwatch/erigon/zk/txpool"
 	zktypes "github.com/ledgerwatch/erigon/zk/types"
@@ -89,8 +88,7 @@ type SequenceBlockCfg struct {
 	txPool   *txpool.TxPool
 	txPoolDb kv.RwDB
 
-	legacyVerifier *verifier.LegacyExecutorVerifier
-	yieldSize      uint16
+	yieldSize uint16
 
 	infoTreeUpdater *l1infotree.Updater
 
@@ -123,7 +121,6 @@ func StageSequenceBlocksCfg(
 
 	txPool *txpool.TxPool,
 	txPoolDb kv.RwDB,
-	legacyVerifier *verifier.LegacyExecutorVerifier,
 	yieldSize uint16,
 	infoTreeUpdater *l1infotree.Updater,
 	doneHook DoneHook,
@@ -151,7 +148,6 @@ func StageSequenceBlocksCfg(
 		miningConfig:     miningConfig,
 		txPool:           txPool,
 		txPoolDb:         txPoolDb,
-		legacyVerifier:   legacyVerifier,
 		yieldSize:        yieldSize,
 		infoTreeUpdater:  infoTreeUpdater,
 		doneHook:         doneHook,
@@ -452,21 +448,6 @@ func updateSequencerProgress(tx kv.RwTx, newHeight uint64, newBatch uint64, unwi
 func tryHaltSequencer(batchContext *BatchContext, batchState *BatchState, streamWriter *SequencerBatchStreamWriter, u stagedsync.Unwinder, latestBlock uint64, s *stagedsync.StageState) (bool, bool, error) {
 	if batchContext.cfg.zk.SequencerHaltOnBatchNumber != 0 && batchContext.cfg.zk.SequencerHaltOnBatchNumber == batchState.batchNumber {
 		log.Info(fmt.Sprintf("[%s] Attempting to halt on batch %v, checking for pending verifications", batchContext.s.LogPrefix(), batchState.batchNumber))
-
-		// we first need to ensure there are no ongoing executor requests at this point before we halt as
-		// these blocks won't have been committed to the datastream
-		for {
-			if pending, count := batchContext.cfg.legacyVerifier.HasPendingVerifications(); pending {
-				log.Info(fmt.Sprintf("[%s] Waiting for pending verifications to complete before halting sequencer...", batchContext.s.LogPrefix()), "count", count)
-				needsUnwind, err := updateStreamAndCheckRollback(batchContext, batchState, streamWriter, u, s)
-				if needsUnwind || err != nil {
-					return needsUnwind, false, err
-				}
-			} else {
-				log.Info(fmt.Sprintf("[%s] No pending verifications, halting sequencer...", batchContext.s.LogPrefix()))
-				break
-			}
-		}
 
 		// we need to ensure the batch is also sealed in the datastream at this point
 		if err := finalizeLastBatchInDatastreamIfNotFinalized(batchContext, batchState.batchNumber-1, latestBlock); err != nil {

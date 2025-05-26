@@ -25,7 +25,6 @@ import (
 	dsMocks "github.com/ledgerwatch/erigon/zk/datastream/mocks"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	"github.com/ledgerwatch/erigon/zk/l1infotree"
-	verifier "github.com/ledgerwatch/erigon/zk/legacy_executor_verifier"
 	"github.com/ledgerwatch/erigon/zk/syncer"
 	"github.com/ledgerwatch/erigon/zk/syncer/mocks"
 	"github.com/ledgerwatch/erigon/zk/txpool"
@@ -41,7 +40,7 @@ func TestSpawnSequencingStage(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	db1, dbsmt, txPoolDb := memdb.NewTestDB(t), memdb.NewTestDB(t), memdb.NewTestDB(t)
+	db1, _, txPoolDb := memdb.NewTestDB(t), memdb.NewTestDB(t), memdb.NewTestDB(t)
 	tx := memdb.BeginRw(t, db1)
 	err := hermez_db.CreateHermezBuckets(tx)
 	require.NoError(t, err)
@@ -154,8 +153,6 @@ func TestSpawnSequencingStage(t *testing.T) {
 		InfoTreeUpdateInterval: 2 * time.Millisecond,
 	}
 
-	legacyVerifier := verifier.NewLegacyExecutorVerifier(*zkCfg, nil, db1, dbsmt, nil, nil)
-
 	cfg := SequenceBlockCfg{
 		dataStreamServer: dataStreamServerMock,
 		db:               db1,
@@ -165,7 +162,6 @@ func TestSpawnSequencingStage(t *testing.T) {
 		chainConfig:      &chain.Config{ChainID: chainID.ToBig()},
 		txPoolDb:         txPoolDb,
 		engine:           engineMock,
-		legacyVerifier:   legacyVerifier,
 		doneHook:         &MockDoneHook{},
 	}
 	historyCfg := stagedsync.StageHistoryCfg(db1, prune.DefaultMode, "")
