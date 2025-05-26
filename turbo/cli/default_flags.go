@@ -343,7 +343,6 @@ var DefaultFlags = []cli.Flag{
 	&utils.PreRunCacheTTL,
 	&utils.PreRunChanNum,
 	&utils.PreRunTaskNum,
-	&utils.ExecutorMock,
 	&utils.BlockInfoConcurrent,
 	&utils.EnableAsyncCommit,
 	&utils.BulkAddTxsFlag,
