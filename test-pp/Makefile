@@ -31,6 +31,14 @@ run-old: build-docker
 	$(DOCKER_COMPOSE) up -d xlayer-bridge-ui
 	$(INIT_BRIDGE_ACCOUNT)
 
+stop-old:
+	docker stop xlayer-agg-db-old; docker rm xlayer-agg-db-old
+	docker stop xlayer-da-db; docker rm xlayer-da-db
+	docker stop xlayer-prover-old; docker rm xlayer-prover-old
+	docker stop xlayer-seqs; docker rm xlayer-seqs
+	docker stop xlayer-agg; docker rm xlayer-agg
+	docker stop xlayer-da; docker rm xlayer-da
+
 run-new:
 	$(DOCKER_COMPOSE) up -d xlayer-agg-db
 	$(DOCKER_COMPOSE) up -d xlayer-agglayer-prover
