@@ -77,6 +77,10 @@ func ApplyFlagsForEthXLayerConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		}
 		cfg.XLayer.Apollo.NamespaceName = strings.Join(ns, ",")
 	}
+
+	if cfg.XLayer.DisableWitnessGeneration && !cfg.XLayer.ExecutorMock {
+		panic("You cannot disable witness generation when running with executors")
+	}
 }
 
 func ApplyFlagsForNodeXLayerConfig(ctx *cli.Context, cfg *nodecfg.Config) {
