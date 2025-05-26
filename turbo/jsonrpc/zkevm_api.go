@@ -37,7 +37,6 @@ import (
 	"github.com/ledgerwatch/erigon/turbo/rpchelper"
 	"github.com/ledgerwatch/erigon/zk/datastream/server"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
-	"github.com/ledgerwatch/erigon/zk/legacy_executor_verifier"
 	types "github.com/ledgerwatch/erigon/zk/rpcdaemon"
 	"github.com/ledgerwatch/erigon/zk/sequencer"
 	zkStages "github.com/ledgerwatch/erigon/zk/stages"
@@ -50,6 +49,15 @@ import (
 )
 
 var sha3UncleHash = common.HexToHash("0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347")
+
+// RpcPayload represents the payload for RPC responses (replaces legacy_executor_verifier.RpcPayload)
+type RpcPayload struct {
+	Witness           string `json:"witness"`
+	Coinbase          string `json:"coinbase"`
+	OldAccInputHash   string `json:"oldAccInputHash"`
+	TimestampLimit    uint64 `json:"timestampLimit"`
+	ForcedBlockhashL1 string `json:"forcedBlockhashL1"`
+}
 
 // ZkEvmAPI is a collection of functions that are exposed in the
 type ZkEvmAPI interface {
@@ -67,7 +75,7 @@ type ZkEvmAPI interface {
 	GetWitness(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash, mode *WitnessMode, debug *bool) (hexutility.Bytes, error)
 	GetBlockRangeWitness(ctx context.Context, startBlockNrOrHash rpc.BlockNumberOrHash, endBlockNrOrHash rpc.BlockNumberOrHash, mode *WitnessMode, debug *bool) (hexutility.Bytes, error)
 	GetBatchWitness(ctx context.Context, batchNumber uint64, mode *WitnessMode) (interface{}, error)
-	GetProverInput(ctx context.Context, batchNumber uint64, mode *WitnessMode, debug *bool) (*legacy_executor_verifier.RpcPayload, error)
+	GetProverInput(ctx context.Context, batchNumber uint64, mode *WitnessMode, debug *bool) (*RpcPayload, error)
 	GetLatestGlobalExitRoot(ctx context.Context) (common.Hash, error)
 	GetExitRootsByGER(ctx context.Context, globalExitRoot common.Hash) (*ZkExitRoots, error)
 	GetL2BlockInfoTree(ctx context.Context, blockNum rpc.BlockNumberOrHash) (json.RawMessage, error)
@@ -1183,7 +1191,7 @@ func (api *ZkEvmAPIImpl) GetBatchWitness(ctx context.Context, batchNumber uint64
 	return api.getBatchWitness(ctx, tx, txsmt, batchNumber, false, checkedMode)
 }
 
-func (api *ZkEvmAPIImpl) GetProverInput(ctx context.Context, batchNumber uint64, mode *WitnessMode, debug *bool) (*legacy_executor_verifier.RpcPayload, error) {
+func (api *ZkEvmAPIImpl) GetProverInput(ctx context.Context, batchNumber uint64, mode *WitnessMode, debug *bool) (*RpcPayload, error) {
 	if !sequencer.IsSequencer() {
 		return nil, errors.New("method only supported from a sequencer node")
 	}
@@ -1240,7 +1248,7 @@ func (api *ZkEvmAPIImpl) GetProverInput(ctx context.Context, batchNumber uint64,
 
 	timestampLimit := lastBlock.Time()
 
-	return &legacy_executor_verifier.RpcPayload{
+	return &RpcPayload{
 		Witness:           hex.EncodeToHex(rangeWitness),
 		Coinbase:          api.config.AddressSequencer.String(),
 		OldAccInputHash:   oldAccInputHash.String(),
