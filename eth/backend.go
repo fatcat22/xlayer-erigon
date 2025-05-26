@@ -1217,7 +1217,6 @@ func New(ctx context.Context, stack *node.Node, config *ethconfig.Config, logger
 			}
 
 			// For X Layer, split db and ac
-			// Pass nil for witnessGenerator to disable witness generation in sequencer
 			backend.verifier = legacy_executor_verifier.NewLegacyExecutorVerifier(
 				*cfg.Zk,
 				legacyExecutors,

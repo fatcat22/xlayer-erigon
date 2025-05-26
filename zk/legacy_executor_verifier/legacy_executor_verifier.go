@@ -278,7 +278,6 @@ func (v *LegacyExecutorVerifier) VerifyAsync(request *VerifierRequest) *Promise[
 		if v.cache != nil {
 			cache = v.cache.CascadeGetCurrentBatchSnapshotCache(block)
 		}
-
 		witness, err := v.WitnessGenerator.GetWitnessByBlockRange(tx, txsmt, innerCtx, blockNumbers[0], blockNumbers[len(blockNumbers)-1], false, v.cfg.WitnessFull, cache)
 		if err != nil {
 			return verifierBundle, err
