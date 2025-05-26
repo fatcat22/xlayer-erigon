@@ -360,6 +360,7 @@ func (c *StreamClient) GetHeader() (*types.HeaderEntry, error) {
 	}
 
 	c.header = h
+	log.Info("[Datastream client] getHeader", "header", c.header)
 
 	return h, nil
 }
@@ -522,6 +523,8 @@ func (c *StreamClient) afterStartCommand() (*types.ResultEntry, error) {
 // reads all entries from the server and sends them to a channel
 // sends the parsed FullL2Blocks with transactions to a channel
 func (c *StreamClient) readAllFullL2BlocksToChannel() (err error) {
+	log.Info("[Datastream client] reading full L2 blocks to channel", "header_totalEntries", c.header.TotalEntries)
+
 	readNewProto := true
 	entryNum := uint64(0)
 	parsedProto := interface{}(nil)
