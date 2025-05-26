@@ -753,6 +753,7 @@ func HashContractBytecode(bc string) string {
 }
 
 func HashContractBytecodeBigInt(bc string) *big.Int {
+	return HashContractBytecodeBigIntOptimized3(bc)
 	bytecode := bc
 
 	if strings.HasPrefix(bc, "0x") {
