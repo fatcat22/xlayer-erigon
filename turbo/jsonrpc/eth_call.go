@@ -46,7 +46,7 @@ func (api *APIImpl) Call(ctx context.Context, args ethapi2.CallArgs, blockNrOrHa
 	}
 	defer tx.Rollback()
 
-	chainConfig, err := api.chainConfig(ctx, tx, true)
+	chainConfig, err := api.chainConfig(ctx, tx)
 	if err != nil {
 		return nil, err
 	}
