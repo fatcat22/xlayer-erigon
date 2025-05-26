@@ -118,8 +118,47 @@ func (c *ecrecover_zkevm) RequiredGas(input []byte) uint64 {
 	return params.EcrecoverGas
 }
 
+var (
+	sigPool = sync.Pool{
+		New: func() interface{} {
+			return make([]byte, crypto.SignatureLength)
+		},
+	}
+
+	uint256Pool = sync.Pool{
+		New: func() interface{} { return new(uint256.Int) },
+	}
+
+	ecRecoverInputPool = sync.Pool{
+		New: func() interface{} { return make([]byte, crypto.SignatureLength) },
+	}
+)
+
+func getSig() []byte {
+	return sigPool.Get().([]byte)
+}
+
+func putSig(sig []byte) {
+	sigPool.Put(sig)
+}
+
+func getUint256() *uint256.Int {
+	return uint256Pool.Get().(*uint256.Int)
+}
+
+func putUint256(input *uint256.Int) {
+	uint256Pool.Put(input)
+}
+
+func getEcRecoverInput() []byte {
+	return ecRecoverInputPool.Get().([]byte)
+}
+
+func putEcRecoverInput(input []byte) {
+	ecRecoverInputPool.Put(input)
+}
+
 func (c *ecrecover_zkevm) Run(input []byte) ([]byte, error) {
-	fmt.Println("into ")
 	if !c.enabled {
 		return []byte{}, ErrUnsupportedPrecompile
 	}
@@ -132,13 +171,22 @@ func (c *ecrecover_zkevm) Run(input []byte) ([]byte, error) {
 	if fmt.Sprintf("%x", input) == "0000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000001bc6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee57fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a1" {
 		return libcommon.HexToHash("0x3f17f1962b36e491b30a40b2405849e597ba5fb5").Bytes(), nil
 	}
-	input = common.RightPadBytes(input, ecRecoverInputLength)
+
+	if len(input) < ecRecoverInputLength {
+		input2 := getEcRecoverInput()
+		copy(input2, input)
+		input = input2
+		defer putEcRecoverInput(input)
+	}
 	// "input" is (hash, v, r, s), each 32 bytes
 	// but for ecrecover we want (r, s, v)
 
-	r := new(uint256.Int).SetBytes(input[64:96])
-	s := new(uint256.Int).SetBytes(input[96:128])
+	r := getUint256().SetBytes(input[64:96])
+	s := getUint256().SetBytes(input[96:128])
 	v := input[63] - 27
+
+	defer putUint256(r)
+	defer putUint256(s)
 
 	if c.cc != nil {
 		c.cc.preEcRecover(new(uint256.Int).SetBytes([]byte{v}), r, s)
@@ -150,7 +198,8 @@ func (c *ecrecover_zkevm) Run(input []byte) ([]byte, error) {
 	}
 	// We must make sure not to modify the 'input', so placing the 'v' along with
 	// the signature needs to be done on a new allocation
-	sig := make([]byte, 65)
+	sig := getSig()
+	defer putSig(sig)
 	copy(sig, input[64:128])
 	sig[64] = v
 	// For X Layer, pre run
@@ -169,7 +218,8 @@ func (c *ecrecover_zkevm) Run(input []byte) ([]byte, error) {
 	}
 
 	// For X Layer, pre run
-	result := common.LeftPadBytes(crypto.Keccak256(pubKey[1:])[12:], 32)
+	result := crypto.Keccak256(pubKey[1:])
+	clear(result[:12])
 	if PrecompiledCache != nil {
 		PrecompiledCache.Add(string(input), result)
 	}
@@ -1274,7 +1324,6 @@ func (c *p256Verify_zkevm) Run(input []byte) ([]byte, error) {
 	if !c.enabled {
 		return nil, ErrUnsupportedPrecompile
 	}
-	fmt.Println("into p256Verify_zkevm")
 	// Required input length is 160 bytes
 	const p256VerifyInputLength = 160
 	// Check the input length
@@ -1328,7 +1377,7 @@ func (c *p256Verify_zkevm) Run(input []byte) ([]byte, error) {
 	if secp256r1.Verify(hash, r, s, x, y) {
 		// Signature is valid
 		// For X Layer, pre run
-		result = common.LeftPadBytes(big1.Bytes(), 32)
+		result = successResult
 		return result, nil
 	} else {
 		// Signature is invalid
