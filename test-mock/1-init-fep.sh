@@ -104,16 +104,16 @@ npm i
 npm run deploy:v2:localhost
 
 cd "$ROOT_DIR"
-ROLLUP_OUTPUT_PATH="./test-pp/agglayer-contracts/deployment/v2/create_rollup_output.json"
+ROLLUP_OUTPUT_PATH="./test-mock/agglayer-contracts/deployment/v2/create_rollup_output.json"
 
-rm -rf ./test-pp/contract/*
-cp -rf $ROLLUP_OUTPUT_PATH ./test-pp/contract/create_rollup_output.json
-cp -rf ./test-pp/agglayer-contracts/deployment/v2/create_rollup_parameters.json ./test-pp/contract/
-cp -rf ./test-pp/agglayer-contracts/deployment/v2/deploy_parameters.json ./test-pp/contract/
-cp -rf ./test-pp/agglayer-contracts/deployment/v2/deploy_output.json ./test-pp/contract/
-cp -rf ./test-pp/agglayer-contracts/deployment/v2/genesis.json ./test-pp/contract/
-ROLLUP_OUTPUT_PATH="./test-pp/contract/create_rollup_output.json"
-DEPLOY_OUTPUT_PATH="./test-pp/contract/deploy_output.json"
+rm -rf ./test-mock/contract/*
+cp -rf $ROLLUP_OUTPUT_PATH ./test-mock/contract/create_rollup_output.json
+cp -rf ./test-mock/agglayer-contracts/deployment/v2/create_rollup_parameters.json ./test-mock/contract/
+cp -rf ./test-mock/agglayer-contracts/deployment/v2/deploy_parameters.json ./test-mock/contract/
+cp -rf ./test-mock/agglayer-contracts/deployment/v2/deploy_output.json ./test-mock/contract/
+cp -rf ./test-mock/agglayer-contracts/deployment/v2/genesis.json ./test-mock/contract/
+ROLLUP_OUTPUT_PATH="./test-mock/contract/create_rollup_output.json"
+DEPLOY_OUTPUT_PATH="./test-mock/contract/deploy_output.json"
 
 echo "Transferring ERC20 token to Sequencer..."
 cast send --legacy --from $SEQ_ADDRESS --private-key $SEQ_PRIVATE_KEY $TOKEN_ADDRESS "transfer(address,uint256)" $SEQ_ADDRESS 1000
@@ -147,10 +147,10 @@ cast send --legacy --from $DEPLOYER_ADDRESS --private-key $DEPLOYER_PRIVATE_KEY 
 echo "Generating configuration files..."
 go install ./cmd/hack/allocs
 which allocs
-allocs ./test-pp/agglayer-contracts/deployment/v2/genesis.json
-mv allocs.json ./test-pp/config/dynamic-mynetwork-allocs.json
+allocs ./test-mock/agglayer-contracts/deployment/v2/genesis.json
+mv allocs.json ./test-mock/config/dynamic-mynetwork-allocs.json
 
-cat > ./test-pp/config/dynamic-mynetwork-conf.json << EOF
+cat > ./test-mock/config/dynamic-mynetwork-conf.json << EOF
 {
   "root": "$GENESIS_VALUE",
   "timestamp": $TIMESTAMP_VALUE,
@@ -161,7 +161,7 @@ EOF
 echo "dynamic-mynetwork-conf.json file updated"
 
 echo "Updating test.erigon.seq.config.yaml file..."
-CONFIG_FILE="./test-pp/config/test.erigon.seq.config.yaml"
+CONFIG_FILE="./test-mock/config/test.erigon.seq.config.yaml"
 sed_inplace "s|zkevm.address-zkevm: \"[^\"]*\"|zkevm.address-zkevm: \"$POE_ADDRESS\"|g" $CONFIG_FILE
 sed_inplace "s|zkevm.address-rollup: \"[^\"]*\"|zkevm.address-rollup: \"$ROLLUP_MANAGER_ADDRESS\"|g" $CONFIG_FILE
 sed_inplace "s|zkevm.address-ger-manager: \"[^\"]*\"|zkevm.address-ger-manager: \"$GLOBAL_EXIT_ROOT_ADDRESS\"|g" $CONFIG_FILE
@@ -170,9 +170,9 @@ sed_inplace "s|zkevm.l1-first-block: [0-9]*|zkevm.l1-first-block: $L1_FIRST_BLOC
 mkdir -p "$PWD_DIR/config"
 
 echo "Updating polygonBridgeAddr parameter in cdk-node-config.toml..."
-CONFIG_FILE="./test-pp/config/cdk-node-config.toml"
+CONFIG_FILE="./test-mock/config/cdk-node-config.toml"
 sed_inplace "s|polygonBridgeAddr = \"[^\"]*\"|polygonBridgeAddr = \"$BRIDGE_ADDRESS\"|" "$CONFIG_FILE"
-CONFIG_FILE="./test-pp/config/cdk-node-config.toml"
+CONFIG_FILE="./test-mock/config/cdk-node-config.toml"
 sed_inplace "s|rollupCreationBlockNumber = \"[^\"]*\"|rollupCreationBlockNumber = \"$L1_FIRST_BLOCK\"|" "$CONFIG_FILE"
 sed_inplace "s|rollupManagerCreationBlockNumber = \"[^\"]*\"|rollupManagerCreationBlockNumber = \"$L1_SECOND_BLOCK\"|" "$CONFIG_FILE"
 sed_inplace "s|genesisBlockNumber = \"[^\"]*\"|genesisBlockNumber = \"$L1_FIRST_BLOCK\"|" "$CONFIG_FILE"
@@ -183,14 +183,14 @@ sed_inplace "s|polygonZkEVMAddress = \"[^\"]*\"|polygonZkEVMAddress = \"$POE_ADD
 echo "Successfully updated contract address parameters in cdk-node-config.toml"
 
 echo "Updating contract address parameters in agglayer-config.toml..."
-AGGLAYER_CONFIG_FILE="./test-pp/config/agglayer-config.toml"
+AGGLAYER_CONFIG_FILE="./test-mock/config/agglayer-config.toml"
 sed_inplace "s|rollup-manager-contract = \"[^\"]*\"|rollup-manager-contract = \"$ROLLUP_MANAGER_ADDRESS\"|" "$AGGLAYER_CONFIG_FILE"
 sed_inplace "s|polygon-zkevm-global-exit-root-v2-contract = \"[^\"]*\"|polygon-zkevm-global-exit-root-v2-contract = \"$GLOBAL_EXIT_ROOT_ADDRESS\"|" "$AGGLAYER_CONFIG_FILE"
-GENESIS_CONFIG_FILE="./test-pp/config/test.genesis.config.json"
+GENESIS_CONFIG_FILE="./test-mock/config/test.genesis.config.json"
 sed_inplace "s|\"genesisBlockNumber\": [0-9]*|\"genesisBlockNumber\": $L1_FIRST_BLOCK|" "$GENESIS_CONFIG_FILE"
 sed_inplace "s|\"rollupCreationBlockNumber\": [0-9]*|\"rollupCreationBlockNumber\": $L1_SECOND_BLOCK|" "$GENESIS_CONFIG_FILE"
 sed_inplace "s|\"rollupManagerCreationBlockNumber\": [0-9]*|\"rollupManagerCreationBlockNumber\": $L1_FIRST_BLOCK|" "$GENESIS_CONFIG_FILE"
-AGGLAYER_CONFIG_FILE="./test-pp/config/agglayer-config.toml"
+AGGLAYER_CONFIG_FILE="./test-mock/config/agglayer-config.toml"
 sed_inplace "s|polygon-zkevm-global-exit-root-v2-contract = \"[^\"]*\"|polygon-zkevm-global-exit-root-v2-contract = \"$GLOBAL_EXIT_ROOT_ADDRESS\"|" "$AGGLAYER_CONFIG_FILE"
 
 echo "Initialization script completed!"

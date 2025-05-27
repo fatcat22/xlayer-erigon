@@ -6,13 +6,13 @@ STOP := $(DOCKER_COMPOSE) down --remove-orphans; sleep 3; rm -rf data
 INIT_BRIDGE_ACCOUNT := cast send -f 0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534  --private-key 0x815405dddb0e2a99b12af775fd2929e526704e1d1aea6a0b4e74dc33e2f7fcd2 --value 0.01ether 0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266 --legacy --rpc-url http://127.0.0.1:8123
 
 .PHONY: run
-run-old: build-docker
+run-prover: build-docker
 	#$(DOCKER_COMPOSE) up -d xlayer-mock-l1-network
-	$(DOCKER_COMPOSE) up -d xlayer-agg-db-old
+	$(DOCKER_COMPOSE) up -d xlayer-agg-db
 	$(DOCKER_COMPOSE) up -d xlayer-bridge-db
 	$(DOCKER_COMPOSE) up -d xlayer-pool-db
 	$(DOCKER_COMPOSE) up -d xlayer-da-db
-	$(DOCKER_COMPOSE) up -d xlayer-prover-old
+	$(DOCKER_COMPOSE) up -d xlayer-prover
 
 	sleep 3
 	$(DOCKER_COMPOSE) up -d xlayer-approve
@@ -31,20 +31,8 @@ run-old: build-docker
 	$(DOCKER_COMPOSE) up -d xlayer-bridge-ui
 	$(INIT_BRIDGE_ACCOUNT)
 
-stop-old:
-	docker stop xlayer-agg-db-old; docker rm xlayer-agg-db-old
-	docker stop xlayer-da-db; docker rm xlayer-da-db
-	docker stop xlayer-prover-old; docker rm xlayer-prover-old
-	docker stop xlayer-seqs; docker rm xlayer-seqs
-	docker stop xlayer-agg; docker rm xlayer-agg
-	docker stop xlayer-da; docker rm xlayer-da
-
-run-new:
-	$(DOCKER_COMPOSE) up -d xlayer-agg-db
-	$(DOCKER_COMPOSE) up -d xlayer-agglayer-prover
-	$(DOCKER_COMPOSE) up -d xlayer-agglayer
-	
-	$(DOCKER_COMPOSE) up -d xlayer-cdk-node
+run-mock:
+	$(DOCKER_COMPOSE) stop xlayer-prover
 	
 .PHONY: stop
 stop: ## Stops all services
