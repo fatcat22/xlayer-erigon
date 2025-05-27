@@ -49,7 +49,6 @@ func ApplyFlagsForEthXLayerConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		SequencerReplayL1SyncOnly:         ctx.Bool(utils.SequencerReplayL1SyncOnly.Name),
 		StandaloneSMTDatabase:             ctx.Bool(utils.StandaloneSMTDatabase.Name),
 		ExecutorMock:                      ctx.Bool(utils.ExecutorMock.Name),
-
 		BlockInfoConcurrent:               ctx.Bool(utils.BlockInfoConcurrent.Name),
 		EnableAsyncCommit:                 ctx.Bool(utils.EnableAsyncCommit.Name),
 		BulkAddTxs:                        ctx.Bool(utils.BulkAddTxsFlag.Name),

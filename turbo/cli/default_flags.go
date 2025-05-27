@@ -201,7 +201,7 @@ var DefaultFlags = []cli.Flag{
 	&utils.L1ContractAddressCheckFlag,
 	&utils.L1ContractAddressRetrieveFlag,
 	&utils.RpcRateLimitsFlag,
-	&utils.RpcGetBatchWitnessConcurrencyLimitFlag,
+
 	&utils.DatastreamVersionFlag,
 	&utils.RebuildTreeAfterFlag,
 	&utils.IncrementTreeAlways,

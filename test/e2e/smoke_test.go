@@ -1236,13 +1236,7 @@ func TestZKEVMRPC(t *testing.T) {
 		log.Infof("ZKEVMGetLatestDataStreamBlock result type: %T", dataStreamBlock)
 	})
 
-	// Test zkevm_getBatchWitness
-	t.Run("ZKEVMGetBatchWitness", func(t *testing.T) {
-		witness, err := operations.ZKEVMGetBatchWitness(1, "trimmed") // Batch #1
-		require.NoError(t, err)
-		require.NotNil(t, witness, "Batch witness should not be nil")
-		log.Infof("ZKEVMGetBatchWitness result type: %T", witness)
-	})
+
 
 	// Test zkevm_estimateCounters
 	t.Run("ZKEVMEstimateCounters", func(t *testing.T) {
