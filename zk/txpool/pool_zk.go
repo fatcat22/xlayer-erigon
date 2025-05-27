@@ -1,7 +1,6 @@
 package txpool
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
@@ -311,15 +310,11 @@ func (p *TxPool) MarkForDiscardFromPendingBest(txHash common.Hash) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	best := p.pending.best
-
-	for i := 0; i < len(best.ms); i++ {
-		mt := best.ms[i]
-		if bytes.Equal(mt.Tx.IDHash[:], txHash[:]) {
-			p.overflowZkCounters = append(p.overflowZkCounters, mt)
-			break
-		}
+	mt, ok := p.byHash[string(txHash[:])]
+	if !ok {
+		panic("MarkForDiscardFromPendingBest called on non-existing tx")
 	}
+	p.overflowZkCounters = append(p.overflowZkCounters, mt)
 }
 
 func (p *TxPool) RemoveMinedTransactions(ctx context.Context, tx kv.Tx, blockGasLimit uint64, ids []common.Hash) error {
