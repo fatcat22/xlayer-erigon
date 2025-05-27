@@ -27,7 +27,7 @@ run: build-docker
 	$(DOCKER_COMPOSE) up -d xlayer-agg
 	$(DOCKER_COMPOSE) up -d xlayer-da
 
-	sleep 10
+	sleep 30
 	$(DOCKER_COMPOSE) up -d xlayer-bridge-service
 	$(DOCKER_COMPOSE) up -d xlayer-bridge-ui
 	$(INIT_BRIDGE_ACCOUNT)

@@ -16,7 +16,7 @@ zkevm.address-rollup: "0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a"
 zkevm.address-ger-manager: "0xB8cedD4B9eF683f0887C44a6E4312dC7A6e2fcdB"
 
 zkevm.l1-rollup-id: 1
-zkevm.l1-first-block: 247
+zkevm.l1-first-block: 263
 zkevm.l1-block-range: 10
 zkevm.l1-query-delay: 6000
 zkevm.rpc-ratelimit: 0
@@ -24,10 +24,10 @@ zkevm.datastream-version: 2
 
 log.console.verbosity: info
 
-#zkevm.executor-urls: xlayer-executor:50071
-zkevm.executor-strict: false
+zkevm.executor-urls: xlayer-executor:50071
+zkevm.executor-strict: true
 zkevm.witness-full: false
-zkevm.executor-mock: true
+zkevm.executor-mock: false
 
 zkevm.sequencer-block-seal-time: "1s"
 zkevm.sequencer-max-block-seal-time: "3s"
