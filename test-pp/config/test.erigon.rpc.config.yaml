@@ -28,7 +28,6 @@ log.console.verbosity: info
 zkevm.executor-urls: ""
 zkevm.executor-strict: false
 zkevm.witness-full: false
-zkevm.disable-witness-generation: true
 
 zkevm.sequencer-block-seal-time: "6s"
 zkevm.sequencer-batch-seal-time: "12s"

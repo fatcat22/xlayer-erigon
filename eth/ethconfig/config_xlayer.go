@@ -31,8 +31,8 @@ type XLayerConfig struct {
 	// Executor
 	ExecutorMock        bool
 	BlockInfoConcurrent bool
+
 	EnableAsyncCommit bool
-	
 	// Bulk Add Txs
 	BulkAddTxs         bool
 	BulkAddTxsSize     int

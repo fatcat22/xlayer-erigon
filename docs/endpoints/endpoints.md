@@ -188,7 +188,6 @@ If the endpoint is not in the list below, it means this specific endpoint is not
 - zkevm_estimateCounters
 - zkevm_getBatchByNumber
 - zkevm_getBatchCountersByNumber
-
 - zkevm_getExitRootTable
 - zkevm_getExitRootsByGER
 - zkevm_getForkById
@@ -200,11 +199,9 @@ If the endpoint is not in the list below, it means this specific endpoint is not
 - zkevm_getL2BlockInfoTree
 - zkevm_getLatestDataStreamBlock
 - zkevm_getLatestGlobalExitRoot
-
 - zkevm_getRollupAddress
 - zkevm_getRollupManagerAddress
 - zkevm_getVersionHistory
-
 - zkevm_isBlockConsolidated
 - zkevm_isBlockVirtualized
 - zkevm_verifiedBatchNumber

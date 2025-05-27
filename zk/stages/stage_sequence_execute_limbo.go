@@ -24,11 +24,8 @@ func handleLimbo(batchContext *BatchContext, batchState *BatchState, verifierBun
 		return err
 	}
 
-	// Witness generation has been removed - set witness to empty bytes
-	var witness []byte = nil
-
 	limboBlock := txpool.NewLimboBlockDetails()
-	limboBlock.Witness = witness
+	limboBlock.Witness = nil
 	limboBlock.L1InfoTreeMinTimestamps = l1InfoTreeMinTimestamps
 	limboBlock.BlockNumber = blockNumber
 	limboBlock.BatchNumber = request.BatchNumber

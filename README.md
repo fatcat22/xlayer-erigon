@@ -111,8 +111,6 @@ In order to enable the zkevm_ namespace, please add 'zkevm' to the http.api flag
 ### Supported (remote)
 - `zkevm_getBatchByNumber`
 
-
-
 ### Not yet supported
 - `zkevm_getNativeBlockHashesInRange`
 

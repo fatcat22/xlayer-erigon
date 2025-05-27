@@ -673,8 +673,6 @@ func ZKEVMGetLatestDataStreamBlock() (interface{}, error) {
 	return result, nil
 }
 
-
-
 // ZKEVMEstimateCounters estimates the counters for a given transaction
 func ZKEVMEstimateCounters(from, to common.Address, gas, gasPrice, value, data string) (interface{}, error) {
 	txParams := map[string]interface{}{

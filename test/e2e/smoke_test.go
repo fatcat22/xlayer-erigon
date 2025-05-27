@@ -1236,8 +1236,6 @@ func TestZKEVMRPC(t *testing.T) {
 		log.Infof("ZKEVMGetLatestDataStreamBlock result type: %T", dataStreamBlock)
 	})
 
-
-
 	// Test zkevm_estimateCounters
 	t.Run("ZKEVMEstimateCounters", func(t *testing.T) {
 		t.Skip("Skipping test due to method handler crash")

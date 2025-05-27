@@ -59,6 +59,7 @@ type ZkEvmAPI interface {
 	GetBatchByNumber(ctx context.Context, batchNumber rpc.BlockNumber, fullTx *bool) (json.RawMessage, error)
 	GetFullBlockByNumber(ctx context.Context, number rpc.BlockNumber, fullTx bool) (types.Block, error)
 	GetFullBlockByHash(ctx context.Context, hash common.Hash, fullTx bool) (types.Block, error)
+	// GetBroadcastURI(ctx context.Context) (string, error)
 	GetLatestGlobalExitRoot(ctx context.Context) (common.Hash, error)
 	GetExitRootsByGER(ctx context.Context, globalExitRoot common.Hash) (*ZkExitRoots, error)
 	GetL2BlockInfoTree(ctx context.Context, blockNum rpc.BlockNumberOrHash) (json.RawMessage, error)
@@ -75,14 +76,7 @@ type ZkEvmAPI interface {
 	GetLatestDataStreamBlock(ctx context.Context) (hexutil.Uint64, error)
 }
 
-const (
-	getProof                  = "getProof"
-	call                      = "call"
-	newPendingTransactionSubs = "newPendingTransactionSubs"
-	newBlockSubs              = "newBlockSubs"
-	newHeadsSubs              = "newHeadsSubs"
-	logsSubs                  = "logsSubs"
-)
+const getBatchWitness = "getBatchWitness"
 
 // APIImpl is implementation of the ZkEvmAPI interface based on remote Db access
 type ZkEvmAPIImpl struct {
@@ -103,9 +97,10 @@ type ZkEvmAPIImpl struct {
 
 func (api *ZkEvmAPIImpl) initializeSemaphores(functionLimits map[string]int) {
 	api.semaphores = make(map[string]chan struct{})
-	for functionName, limit := range functionLimits {
-		if limit > 0 {
-			api.semaphores[functionName] = make(chan struct{}, limit)
+
+	for funcName, limit := range functionLimits {
+		if limit != 0 {
+			api.semaphores[funcName] = make(chan struct{}, limit)
 		}
 	}
 }
@@ -136,7 +131,6 @@ func NewZkEvmAPI(
 		cache: cache,
 	}
 
-	// Initialize semaphores with empty limits since witness generation was removed
 	a.initializeSemaphores(map[string]int{})
 
 	return a
@@ -943,6 +937,11 @@ func (api *ZkEvmAPIImpl) populateBlockDetail(
 	return convertBlockToRpcBlock(baseBlock, receipts, senders, effectiveGasPricePercentages, fullTx)
 }
 
+// GetBroadcastURI returns the URI of the broadcaster - the trusted sequencer
+// func (api *ZkEvmAPIImpl) GetBroadcastURI(ctx context.Context) (string, error) {
+// 	return api.ethApi.ZkRpcUrl, nil
+// }
+
 func (api *ZkEvmAPIImpl) GetLatestGlobalExitRoot(ctx context.Context) (common.Hash, error) {
 	tx, err := api.db.BeginRo(ctx)
 	if err != nil {
@@ -1033,8 +1032,6 @@ func (api *ZkEvmAPIImpl) GetExitRootTable(ctx context.Context) ([]l1InfoTreeData
 
 	return result, nil
 }
-
-
 
 func getLastBlockInBatchNumber(tx kv.Tx, batchNumber uint64) (uint64, error) {
 	reader := hermez_db.NewHermezDbReader(tx)

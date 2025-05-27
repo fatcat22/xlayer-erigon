@@ -1189,9 +1189,6 @@ func New(ctx context.Context, stack *node.Node, config *ethconfig.Config, logger
 
 		if isSequencer {
 			// if we are sequencing transactions, we do the sequencing loop...
-			// Witness generation has been removed - set to nil
-			var witnessGenerator legacy_executor_verifier.WitnessGenerator = nil
-
 			var legacyExecutors []*legacy_executor_verifier.Executor = make([]*legacy_executor_verifier.Executor, 0, len(cfg.ExecutorUrls))
 			if len(cfg.ExecutorUrls) > 0 && cfg.ExecutorUrls[0] != "" {
 				levCfg := legacy_executor_verifier.Config{
@@ -1212,7 +1209,6 @@ func New(ctx context.Context, stack *node.Node, config *ethconfig.Config, logger
 				legacyExecutors,
 				backend.chainDB,
 				backend.smtDB,
-				witnessGenerator,
 				dataStreamServer,
 			)
 
