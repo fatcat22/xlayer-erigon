@@ -15,14 +15,16 @@ run: build-docker
 	$(DOCKER_COMPOSE) up -d xlayer-da-db
 	$(DOCKER_COMPOSE) up -d xlayer-prover
 
-	sleep 3
+	sleep 5
 	$(DOCKER_COMPOSE) up -d xlayer-approve
 	$(DOCKER_COMPOSE) up -d xlayer-seq
 	$(DOCKER_COMPOSE) up -d xlayer-pool-manager
+	sleep 5
+	$(DOCKER_COMPOSE) up -d xlayer-ds
 
 	sleep 5
 	$(DOCKER_COMPOSE) up -d xlayer-rpc
-	sleep 3
+	sleep 5
 	$(DOCKER_COMPOSE) up -d xlayer-seqs
 	$(DOCKER_COMPOSE) up -d xlayer-agg
 	$(DOCKER_COMPOSE) up -d xlayer-da
