@@ -17,7 +17,6 @@ import (
 	ecommon "github.com/ledgerwatch/erigon/common"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/zkevm/hex"
-	"github.com/ledgerwatch/log/v3"
 )
 
 // free gas tx type
@@ -161,7 +160,6 @@ func (p *TxPool) bestRead(n uint16, tx kv.Tx, onTopOf uint64, readContext *ReadC
 
 	okPayTxPriorityCount := uint64(0)
 	maxOkPayTxPriorityCount := p.getOkPayTxPriorityCount()
-	log.Info("XXX here", "maxOkPayTxPriorityCount", maxOkPayTxPriorityCount)
 
 	for i := 0; readContext.count < int(n) && i < len(best.ms); i++ {
 		// if we wouldn't have enough gas for a standard transaction then quit out early
@@ -207,7 +205,6 @@ func (p *TxPool) bestRead(n uint16, tx kv.Tx, onTopOf uint64, readContext *ReadC
 		if isOkPayPriority {
 			if okPayTxPriorityCount >= maxOkPayTxPriorityCount {
 				// Stop priority search for OkPay txs
-				log.Info("XXX here1")
 				break
 			} else if !isOkPayTx {
 				// Skip adding if not OkPay sender
