@@ -114,7 +114,7 @@ var DeprecatedDefaultTxPoolConfig = DeprecatedTxPoolConfig{
 
 	// For X Layer, OkPay config
 	OkPaySenderAccountsList:    *common.NewOrderedListOfAddresses(1024),
-	OkPayBlockPriorityTxsLimit: 10,
+	OkPayBlockPriorityTxsLimit: 0,
 }
 
 var DefaultTxPool2Config = func(fullCfg *Config) txpoolcfg.Config {
