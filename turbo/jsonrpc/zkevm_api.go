@@ -76,8 +76,6 @@ type ZkEvmAPI interface {
 	GetLatestDataStreamBlock(ctx context.Context) (hexutil.Uint64, error)
 }
 
-const getBatchWitness = "getBatchWitness"
-
 // APIImpl is implementation of the ZkEvmAPI interface based on remote Db access
 type ZkEvmAPIImpl struct {
 	ethApi *APIImpl
