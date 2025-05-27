@@ -169,30 +169,10 @@ sed_inplace "s|zkevm.l1-first-block: [0-9]*|zkevm.l1-first-block: $L1_FIRST_BLOC
 
 mkdir -p "$PWD_DIR/config"
 
-echo "Updating polygonBridgeAddr parameter in cdk-node-config.toml..."
-CONFIG_FILE="./test-mock/config/cdk-node-config.toml"
-sed_inplace "s|polygonBridgeAddr = \"[^\"]*\"|polygonBridgeAddr = \"$BRIDGE_ADDRESS\"|" "$CONFIG_FILE"
-CONFIG_FILE="./test-mock/config/cdk-node-config.toml"
-sed_inplace "s|rollupCreationBlockNumber = \"[^\"]*\"|rollupCreationBlockNumber = \"$L1_FIRST_BLOCK\"|" "$CONFIG_FILE"
-sed_inplace "s|rollupManagerCreationBlockNumber = \"[^\"]*\"|rollupManagerCreationBlockNumber = \"$L1_SECOND_BLOCK\"|" "$CONFIG_FILE"
-sed_inplace "s|genesisBlockNumber = \"[^\"]*\"|genesisBlockNumber = \"$L1_FIRST_BLOCK\"|" "$CONFIG_FILE"
-sed_inplace "s|polygonRollupManagerAddress = \"[^\"]*\"|polygonRollupManagerAddress = \"$ROLLUP_MANAGER_ADDRESS\"|" "$CONFIG_FILE"
-sed_inplace "s|polygonZkEVMBridgeAddress = \"[^\"]*\"|polygonZkEVMBridgeAddress = \"$BRIDGE_ADDRESS\"|" "$CONFIG_FILE"
-sed_inplace "s|polygonZkEVMGlobalExitRootAddress = \"[^\"]*\"|polygonZkEVMGlobalExitRootAddress = \"$GLOBAL_EXIT_ROOT_ADDRESS\"|" "$CONFIG_FILE"
-sed_inplace "s|polygonZkEVMAddress = \"[^\"]*\"|polygonZkEVMAddress = \"$POE_ADDRESS\"|" "$CONFIG_FILE"
-echo "Successfully updated contract address parameters in cdk-node-config.toml"
-
-echo "Updating contract address parameters in agglayer-config.toml..."
-AGGLAYER_CONFIG_FILE="./test-mock/config/agglayer-config.toml"
-sed_inplace "s|rollup-manager-contract = \"[^\"]*\"|rollup-manager-contract = \"$ROLLUP_MANAGER_ADDRESS\"|" "$AGGLAYER_CONFIG_FILE"
-sed_inplace "s|polygon-zkevm-global-exit-root-v2-contract = \"[^\"]*\"|polygon-zkevm-global-exit-root-v2-contract = \"$GLOBAL_EXIT_ROOT_ADDRESS\"|" "$AGGLAYER_CONFIG_FILE"
 GENESIS_CONFIG_FILE="./test-mock/config/test.genesis.config.json"
 sed_inplace "s|\"genesisBlockNumber\": [0-9]*|\"genesisBlockNumber\": $L1_FIRST_BLOCK|" "$GENESIS_CONFIG_FILE"
 sed_inplace "s|\"rollupCreationBlockNumber\": [0-9]*|\"rollupCreationBlockNumber\": $L1_SECOND_BLOCK|" "$GENESIS_CONFIG_FILE"
 sed_inplace "s|\"rollupManagerCreationBlockNumber\": [0-9]*|\"rollupManagerCreationBlockNumber\": $L1_FIRST_BLOCK|" "$GENESIS_CONFIG_FILE"
-AGGLAYER_CONFIG_FILE="./test-mock/config/agglayer-config.toml"
-sed_inplace "s|polygon-zkevm-global-exit-root-v2-contract = \"[^\"]*\"|polygon-zkevm-global-exit-root-v2-contract = \"$GLOBAL_EXIT_ROOT_ADDRESS\"|" "$AGGLAYER_CONFIG_FILE"
-
 echo "Initialization script completed!"
 
 cd "$PWD_DIR"

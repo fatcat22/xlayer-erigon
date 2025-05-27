@@ -1,15 +1,15 @@
 {
-    "polygonRollupManagerAddress": "0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a",
-    "polygonZkEVMBridgeAddress": "0x3a277Fa4E78cc1266F32E26c467F99A8eAEfF7c3",
-    "polygonZkEVMGlobalExitRootAddress": "0xB8cedD4B9eF683f0887C44a6E4312dC7A6e2fcdB",
-    "polTokenAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-    "zkEVMDeployerContract": "0x18c279c3Ed0b54b9f9D815cD12bee2d2d68a4B42",
-    "deployerAddress": "0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534",
-    "timelockContractAddress": "0xEA8DCb15a6AC928C1Bf07bD677682d59d48d9eC8",
-    "deploymentRollupManagerBlockNumber": 200,
-    "upgradeToULxLyBlockNumber": 200,
-    "admin": "0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534",
-    "trustedAggregator": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
-    "proxyAdminAddress": "0x671e850598e64046836fd5e53D2a226446392A79",
-    "salt": "0x0000000000000000000000000000000000000000000000000000000000000000"
-   }
+ "polygonRollupManagerAddress": "0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a",
+ "polygonZkEVMBridgeAddress": "0x3a277Fa4E78cc1266F32E26c467F99A8eAEfF7c3",
+ "polygonZkEVMGlobalExitRootAddress": "0xB8cedD4B9eF683f0887C44a6E4312dC7A6e2fcdB",
+ "polTokenAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+ "zkEVMDeployerContract": "0x18c279c3Ed0b54b9f9D815cD12bee2d2d68a4B42",
+ "deployerAddress": "0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534",
+ "timelockContractAddress": "0xEA8DCb15a6AC928C1Bf07bD677682d59d48d9eC8",
+ "deploymentRollupManagerBlockNumber": 247,
+ "upgradeToULxLyBlockNumber": 247,
+ "admin": "0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534",
+ "trustedAggregator": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+ "proxyAdminAddress": "0x671e850598e64046836fd5e53D2a226446392A79",
+ "salt": "0x0000000000000000000000000000000000000000000000000000000000000000"
+}
