@@ -177,4 +177,4 @@ echo "Initialization script completed!"
 
 cd "$PWD_DIR"
 
-make run-old
+make run

@@ -271,3 +271,18 @@ services:
       - ./config/test.prover.config.json:/usr/src/app/config.json
     command: >
       zkProver -c /usr/src/app/config.json
+
+  
+  xlayer-executor:
+    container_name: xlayer-executor
+    image: hermeznetwork/zkevm-prover:v9.0.0-RC3-fork.13
+    platform: linux/amd64
+    environment:
+      - EXPERIMENTAL_DOCKER_DESKTOP_FORCE_QEMU=1
+    ports:
+      - 0.0.0.0:50061:50061 # MT
+      - 0.0.0.0:50071:50071 # Executor
+    volumes:
+      - ./config/test.stateless_executor.config.json:/usr/src/app/config.json
+    command: >
+      zkProver -c /usr/src/app/config.json
