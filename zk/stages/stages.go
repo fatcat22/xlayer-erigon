@@ -234,7 +234,6 @@ func DefaultZkStages(
 	exec stages.ExecuteBlockCfg,
 	hashState stages.HashStateCfg,
 	zkInterHashesCfg ZkInterHashesCfg,
-	stageWitnessCfg WitnessCfg,
 	history stages.HistoryCfg,
 	logIndex stages.LogIndexCfg,
 	callTraces stages.CallTracesCfg,
@@ -440,23 +439,6 @@ func DefaultZkStages(
 				return nil
 			},
 			Prune: func(firstCycle bool, p *stages.PruneState, tx kv.RwTx, logger log.Logger) error {
-				return nil
-			},
-		},
-		{
-			ID:          stages2.Witness,
-			Description: "Generate witness caches for each block",
-			Disabled:    false,
-			Forward: func(firstCycle bool, badBlockUnwind bool, s *stages.StageState, u stages.Unwinder, txc wrap.TxContainer, logger log.Logger) error {
-				// Witness generation has been removed
-				return nil
-			},
-			Unwind: func(firstCycle bool, u *stages.UnwindState, s *stages.StageState, txc wrap.TxContainer, logger log.Logger) error {
-				// Witness generation has been removed
-				return nil
-			},
-			Prune: func(firstCycle bool, p *stages.PruneState, tx kv.RwTx, logger log.Logger) error {
-				// Witness generation has been removed
 				return nil
 			},
 		},
