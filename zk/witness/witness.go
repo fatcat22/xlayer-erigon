@@ -67,23 +67,9 @@ func NewGenerator(
 	forcedContracs []libcommon.Address,
 	witnessUnwindLimit uint64,
 ) WitnessGenerator {
-	if zkConfig.XLayer.DisableWitnessGeneration {
-		log.Info("witness generation is disabled, using mock witness generator")
-		return &MockWitnessGenerator{}
-	}
-
-	log.Info("witness generation is enabled, using real witness generator")
-	return &Generator{
-		dirs:               dirs,
-		historyV3:          historyV3,
-		agg:                agg,
-		blockReader:        blockReader,
-		chainCfg:           chainCfg,
-		zkConfig:           zkConfig,
-		engine:             engine,
-		forcedContracts:    forcedContracs,
-		witnessUnwindLimit: witnessUnwindLimit,
-	}
+	// Witness generation has been removed, always return mock generator
+	log.Info("witness generation has been removed, using mock witness generator")
+	return &MockWitnessGenerator{}
 }
 
 func (g *Generator) GetWitnessByBadBatch(tx kv.Tx, txsmt kv.Tx, ctx context.Context, batchNum uint64, debug, witnessFull bool) (witness []byte, err error) {

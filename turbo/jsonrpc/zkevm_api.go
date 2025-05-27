@@ -45,7 +45,6 @@ import (
 	zktx "github.com/ledgerwatch/erigon/zk/tx"
 	"github.com/ledgerwatch/erigon/zk/utils"
 	"github.com/ledgerwatch/erigon/zk/witness"
-	"github.com/ledgerwatch/erigon/zkevm/hex"
 	"github.com/ledgerwatch/erigon/zkevm/jsonrpc/client"
 )
 
@@ -953,49 +952,15 @@ func (api *ZkEvmAPIImpl) populateBlockDetail(
 // }
 
 func (api *ZkEvmAPIImpl) GetWitness(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash, mode *WitnessMode, debug *bool) (hexutility.Bytes, error) {
-	if api.config.Zk.XLayer.DisableWitnessGeneration {
-		return nil, errors.New("GetWitness: witness generation is disabled")
-	}
-
-	checkedMode := WitnessModeNone
-	if mode != nil && *mode != WitnessModeFull && *mode != WitnessModeTrimmed {
-		return nil, errors.New("invalid mode, must be full or trimmed")
-	} else if mode != nil {
-		checkedMode = *mode
-	}
-
-	dbg := false
-	if debug != nil {
-		dbg = *debug
-	}
-	// For X Layer, split db and ac
-	return api.getBlockRangeWitness(ctx, api.db, api.dbsmt, blockNrOrHash, blockNrOrHash, dbg, checkedMode)
+	return nil, errors.New("GetWitness: witness generation has been removed")
 }
 
 func (api *ZkEvmAPIImpl) GetBlockRangeWitness(ctx context.Context, startBlockNrOrHash rpc.BlockNumberOrHash, endBlockNrOrHash rpc.BlockNumberOrHash, mode *WitnessMode, debug *bool) (hexutility.Bytes, error) {
-	if api.config.XLayer.DisableWitnessGeneration {
-		return nil, errors.New("GetBlockRangeWitness: witness generation is disabled")
-	}
-
-	checkedMode := WitnessModeNone
-	if mode != nil && *mode != WitnessModeFull && *mode != WitnessModeTrimmed {
-		return nil, errors.New("invalid mode, must be full or trimmed")
-	} else if mode != nil {
-		checkedMode = *mode
-	}
-
-	dbg := false
-	if debug != nil {
-		dbg = *debug
-	}
-	// For X Layer, split db and ac
-	return api.getBlockRangeWitness(ctx, api.db, api.dbsmt, startBlockNrOrHash, endBlockNrOrHash, dbg, checkedMode)
+	return nil, errors.New("GetBlockRangeWitness: witness generation has been removed")
 }
 
 func (api *ZkEvmAPIImpl) getBatchWitness(ctx context.Context, tx kv.Tx, txsmt kv.Tx, batchNum uint64, debug bool, mode WitnessMode) (hexutility.Bytes, error) {
-	if api.config.Zk.XLayer.DisableWitnessGeneration {
-		return nil, errors.New("witness generation is disabled")
-	}
+	return nil, errors.New("witness generation has been removed")
 
 	// limit in-flight requests by name
 	semaphore := api.semaphores[getBatchWitness]
@@ -1083,9 +1048,7 @@ func (api *ZkEvmAPIImpl) buildGenerator(ctx context.Context, tx kv.Tx, witnessMo
 
 // Get witness for a range of blocks [startBlockNrOrHash, endBlockNrOrHash] (inclusive)
 func (api *ZkEvmAPIImpl) getBlockRangeWitness(ctx context.Context, db kv.RoDB, dbsmt kv.RoDB, startBlockNrOrHash rpc.BlockNumberOrHash, endBlockNrOrHash rpc.BlockNumberOrHash, debug bool, witnessMode WitnessMode) (hexutility.Bytes, error) {
-	if api.config.Zk.XLayer.DisableWitnessGeneration {
-		return nil, errors.New("witness generation is disabled")
-	}
+	return nil, errors.New("witness generation has been removed")
 
 	tx, err := db.BeginRo(ctx)
 	if err != nil {
@@ -1144,132 +1107,11 @@ const (
 )
 
 func (api *ZkEvmAPIImpl) GetBatchWitness(ctx context.Context, batchNumber uint64, mode *WitnessMode) (interface{}, error) {
-	if api.config.Zk.XLayer.DisableWitnessGeneration {
-		return nil, errors.New("GetBatchWitness: witness generation is disabled")
-	}
-
-	tx, err := api.db.BeginRo(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	// For X Layer, split db and ac
-	var txsmt kv.Tx = nil
-	if api.dbsmt != nil {
-		txsmt, err = api.dbsmt.BeginRo(ctx)
-		if err != nil {
-			return nil, err
-		}
-		defer txsmt.Rollback()
-	}
-
-	hermezDb := hermez_db.NewHermezDbReader(tx)
-	badBatch, err := hermezDb.GetInvalidBatch(batchNumber)
-	if err != nil {
-		return nil, err
-	}
-
-	if badBatch && !sequencer.IsSequencer() {
-		// we won't have the details in our db if the batch is marked as invalid so we need to check this
-		// here
-		return api.sendGetBatchWitness(api.l2SequencerUrl, batchNumber, mode)
-	}
-
-	checkedMode := WitnessModeNone
-	if mode != nil && *mode != WitnessModeFull && *mode != WitnessModeTrimmed {
-		return nil, errors.New("invalid mode, must be full or trimmed")
-	} else if mode != nil {
-		checkedMode = *mode
-	}
-
-	rpcModeMatchesNodeMode :=
-		checkedMode == WitnessModeTrimmed && !api.config.WitnessFull
-	// we only want to check the cache if no special run mode has been supplied.
-	// or if requested mode matches the node mode
-	// otherwise regenerate it
-	if rpcModeMatchesNodeMode {
-		hermezDb := hermez_db.NewHermezDbReader(tx)
-		witnessBytes, err := hermezDb.GetWitnessCache(batchNumber)
-		if err != nil {
-			return nil, err
-		}
-
-		if len(witnessBytes) != 0 {
-			return fmt.Sprintf("0x%x", witnessBytes), nil
-		}
-	}
-
-	return api.getBatchWitness(ctx, tx, txsmt, batchNumber, false, checkedMode)
+	return nil, errors.New("GetBatchWitness: witness generation has been removed")
 }
 
 func (api *ZkEvmAPIImpl) GetProverInput(ctx context.Context, batchNumber uint64, mode *WitnessMode, debug *bool) (*legacy_executor_verifier.RpcPayload, error) {
-	if !sequencer.IsSequencer() {
-		return nil, errors.New("method only supported from a sequencer node")
-	}
-	if api.config.Zk.XLayer.DisableWitnessGeneration {
-		return nil, errors.New("GetProverInput: witness generation is disabled")
-	}
-
-	checkedMode := WitnessModeNone
-	if mode != nil && *mode != WitnessModeFull && *mode != WitnessModeTrimmed {
-		return nil, errors.New("invalid mode, must be full or trimmed")
-	} else if mode != nil {
-		checkedMode = *mode
-	}
-
-	useDebug := false
-	if debug != nil {
-		useDebug = *debug
-	}
-
-	tx, err := api.db.BeginRo(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	hDb := hermez_db.NewHermezDbReader(tx)
-
-	blockNumbers, err := hDb.GetL2BlockNosByBatch(batchNumber)
-	if err != nil {
-		return nil, err
-	}
-
-	lastBlock, err := rawdb.ReadBlockByNumber(tx, blockNumbers[len(blockNumbers)-1])
-	if err != nil {
-		return nil, err
-	}
-
-	start := rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(blockNumbers[0]))
-	end := rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(blockNumbers[len(blockNumbers)-1]))
-
-	// For X Layer, split db and ac
-	rangeWitness, err := api.getBlockRangeWitness(ctx, api.db, api.dbsmt, start, end, useDebug, checkedMode)
-	if err != nil {
-		return nil, err
-	}
-
-	var oldAccInputHash common.Hash
-	if batchNumber > 0 {
-		oaih, err := api.getAccInputHash(ctx, hDb, batchNumber-1)
-		if err != nil {
-			return nil, err
-		}
-		oldAccInputHash = *oaih
-	} else {
-		oldAccInputHash = common.Hash{}
-	}
-
-	timestampLimit := lastBlock.Time()
-
-	return &legacy_executor_verifier.RpcPayload{
-		Witness:           hex.EncodeToHex(rangeWitness),
-		Coinbase:          api.config.AddressSequencer.String(),
-		OldAccInputHash:   oldAccInputHash.String(),
-		TimestampLimit:    timestampLimit,
-		ForcedBlockhashL1: "",
-	}, nil
+	return nil, errors.New("GetProverInput: witness generation has been removed")
 }
 
 func (api *ZkEvmAPIImpl) GetLatestGlobalExitRoot(ctx context.Context) (common.Hash, error) {

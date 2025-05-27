@@ -282,12 +282,7 @@ var (
 		Usage: "Only for testing use. Generate the witness and return the verifierBundle without actually sending payload to executor.",
 		Value: false,
 	}
-	// Witness
-	DisableWitnessGeneration = cli.BoolFlag{
-		Name:  "zkevm.disable-witness-generation",
-		Usage: "disable the witness generation",
-		Value: false,
-	}
+
 	// block info concurrent calculation
 	BlockInfoConcurrent = cli.BoolFlag{
 		Name:  "zkevm.block-info-concurrent",
