@@ -101,11 +101,16 @@ func UpdateZkEVMBlockCfg(cfg ForkConfigWriter, hermezDb ForkReader, logPrefix st
 			lastSetBlockNum = blockNum
 			foundAny = true
 		} else if !foundAny {
-			log.Trace(fmt.Sprintf("[%s] No block number found for fork id %v and no previous block number set", logPrefix, forkId))
+			// X Layer - remove this logging due to performance issues
+			// log.Trace(fmt.Sprintf("[%s] No block number found for fork id %v and no previous block number set", logPrefix, forkId))
 			continue
-		} else {
-			log.Trace(fmt.Sprintf("[%s] No block number found for fork id %v, using last set block number: %v", logPrefix, forkId, lastSetBlockNum))
 		}
+		/*
+			// X Layer - remove this logging due to performance issues
+				else {
+					log.Trace(fmt.Sprintf("[%s] No block number found for fork id %v, using last set block number: %v", logPrefix, forkId, lastSetBlockNum))
+				}
+		*/
 
 		if err := cfg.SetForkIdBlock(forkId, lastSetBlockNum); err != nil {
 			log.Error(fmt.Sprintf("[%s] Error setting fork id %v to block %v", logPrefix, forkId, lastSetBlockNum))
