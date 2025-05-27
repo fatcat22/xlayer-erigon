@@ -58,7 +58,7 @@ cd deployment/v2
 echo "Creating create_rollup_parameters.json..."
 cat > create_rollup_parameters.json << EOF
 {
-    "realVerifier": false,
+    "realVerifier": true,
     "trustedSequencerURL": "http://xlayer-rpc:8545",
     "networkName": "zkevm",
     "description":"0.0.1",

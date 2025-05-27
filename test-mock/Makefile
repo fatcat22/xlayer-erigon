@@ -13,7 +13,7 @@ run: build-docker
 	$(DOCKER_COMPOSE) up -d xlayer-bridge-db
 	$(DOCKER_COMPOSE) up -d xlayer-pool-db
 	$(DOCKER_COMPOSE) up -d xlayer-da-db
-	$(DOCKER_COMPOSE) up -d xlayer-prover
+	$(DOCKER_COMPOSE) up -d xlayer-prover-true
 
 	sleep 5
 	$(DOCKER_COMPOSE) up -d xlayer-approve
@@ -35,7 +35,9 @@ run: build-docker
 	$(INIT_BRIDGE_ACCOUNT)
 
 run-mock:
-	$(DOCKER_COMPOSE) stop xlayer-prover
+	$(DOCKER_COMPOSE) stop xlayer-prover-true
+	sleep 10
+	$(DOCKER_COMPOSE) up -d xlayer-prover-mock
 	
 .PHONY: stop
 stop: ## Stops all services

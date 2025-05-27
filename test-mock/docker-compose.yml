@@ -261,18 +261,30 @@ services:
       - "-c"
       - "/usr/local/bin/cdk-node run --cfg /app/config.toml --custom-network-file /app/genesis.json  --components aggregator"
 
-  xlayer-prover:
-    container_name: xlayer-prover
+  xlayer-prover-mock:
+    container_name: xlayer-prover-mock
     image: hermeznetwork/zkevm-prover:v9.0.0-RC3-fork.13
     platform: linux/amd64
     environment:
       - EXPERIMENTAL_DOCKER_DESKTOP_FORCE_QEMU=1
     volumes:
-      - ./config/test.prover.config.json:/usr/src/app/config.json
+      - ./config/test.prover.config-mock.json:/usr/src/app/config.json
     command: >
       zkProver -c /usr/src/app/config.json
 
-  
+  # https://storage.googleapis.com/zkevm/zkproverc/v9.0.0-rc.3-fork.13.tgz
+  xlayer-prover-true:
+    container_name: xlayer-prover-true
+    image: hermeznetwork/zkevm-prover:v9.0.0-RC3-fork.13
+    platform: linux/amd64
+    environment:
+      - EXPERIMENTAL_DOCKER_DESKTOP_FORCE_QEMU=1
+    volumes:
+      - ./config/test.prover.config-true.json:/usr/src/app/config.json
+      - ./prover-data/v9.0.0-rc.3-fork.13/config:/app/config
+    command: >
+      zkProver -c /usr/src/app/config.json
+
   xlayer-executor:
     container_name: xlayer-executor
     image: hermeznetwork/zkevm-prover:v9.0.0-RC3-fork.13
