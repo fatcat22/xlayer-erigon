@@ -2,6 +2,7 @@ package stages
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/common/length"
@@ -22,6 +23,8 @@ import (
 	"time"
 
 	"os"
+
+	"encoding/hex"
 
 	"github.com/ledgerwatch/erigon-lib/kv/dbutils"
 	"github.com/ledgerwatch/erigon/core/rawdb"
@@ -397,10 +400,37 @@ func zkIncrementIntermediateHashes(ctx context.Context, logPrefix string, s *sta
 	}
 	defer sc.Close()
 
-	// progress printer
-	accChanges := make(map[common.Address]*accounts.Account)
-	codeChanges := make(map[common.Address]string)
-	storageChanges := make(map[common.Address]map[string]string)
+	// 优化：使用sync.Pool复用map，减少内存分配
+	accChanges := addressAccountMapPool.Get().(map[common.Address]*accounts.Account)
+	codeChanges := addressStringMapPool.Get().(map[common.Address]string)
+	storageChanges := addressStorageMapPool.Get().(map[common.Address]map[string]string)
+
+	// 函数结束时启动goroutine异步回收map
+	defer func() {
+		go func() {
+			// 清理并回收账户map
+			for k := range accChanges {
+				delete(accChanges, k)
+			}
+			addressAccountMapPool.Put(accChanges)
+
+			// 清理并回收代码map
+			for k := range codeChanges {
+				delete(codeChanges, k)
+			}
+			addressStringMapPool.Put(codeChanges)
+
+			// 清理并回收存储map（包括嵌套map）
+			for addr, storage := range storageChanges {
+				for sk := range storage {
+					delete(storage, sk)
+				}
+				stringMapPool.Put(storage)
+				delete(storageChanges, addr)
+			}
+			addressStorageMapPool.Put(storageChanges)
+		}()
+	}()
 
 	// case when we are incrementing from block 1
 	// we chould include the 0 block which is the genesis data
@@ -414,59 +444,21 @@ func zkIncrementIntermediateHashes(ctx context.Context, logPrefix string, s *sta
 	psr := state2.NewPlainState(db, from+1, systemcontracts.SystemContractCodeLookup["Hermez"])
 	defer psr.Close()
 
-	for i := from; i <= to; i++ {
-		dupSortKey := dbutils.EncodeBlockNumber(i)
-		psr.SetBlockNr(i + 1)
-
-		// collect changes to accounts and code
-		for _, v, err := ac.SeekExact(dupSortKey); err == nil && v != nil; _, v, err = ac.NextDup() {
-			addr := common.BytesToAddress(v[:length.Addr])
-
-			currAcc, err := psr.ReadAccountData(addr)
-			if err != nil {
-				return trie.EmptyRoot, err
-			}
-
-			// store the account
-			accChanges[addr] = currAcc
-
-			cc, err := psr.ReadAccountCode(addr, currAcc.Incarnation, currAcc.CodeHash)
-			if err != nil {
-				return trie.EmptyRoot, err
-			}
-
-			ach := hexutils.BytesToHex(cc)
-			if len(ach) > 0 {
-				hexcc := "0x" + ach
-				codeChanges[addr] = hexcc
-			}
+	// 优化：批量处理多个块，减少循环开销
+	batchSize := uint64(10) // 每次处理10个块
+	for batchStart := from; batchStart <= to; batchStart += batchSize {
+		batchEnd := batchStart + batchSize - 1
+		if batchEnd > to {
+			batchEnd = to
 		}
 
-		err = db.ForPrefix(kv.StorageChangeSet, dupSortKey, func(sk, sv []byte) error {
-			changesetKey := sk[length.BlockNum:]
-			address, incarnation := dbutils.PlainParseStoragePrefix(changesetKey)
+		// 批量收集账户变更
+		if err := collectAccountChangesBatch(ac, psr, accChanges, codeChanges, batchStart, batchEnd); err != nil {
+			return trie.EmptyRoot, err
+		}
 
-			sstorageKey := sv[:length.Hash]
-			stk := common.BytesToHash(sstorageKey)
-
-			value, err := psr.ReadAccountStorage(address, incarnation, &stk)
-			if err != nil {
-				return err
-			}
-
-			stkk := fmt.Sprintf("0x%032x", stk)
-			v := fmt.Sprintf("0x%032x", common.BytesToHash(value))
-
-			m := make(map[string]string)
-			m[stkk] = v
-
-			if storageChanges[address] == nil {
-				storageChanges[address] = make(map[string]string)
-			}
-			storageChanges[address][stkk] = v
-			return nil
-		})
-		if err != nil {
+		// 批量收集存储变更
+		if err := collectStorageChangesBatch(db, psr, storageChanges, batchStart, batchEnd); err != nil {
 			return trie.EmptyRoot, err
 		}
 	}
@@ -493,6 +485,108 @@ func zkIncrementIntermediateHashes(ctx context.Context, logPrefix string, s *sta
 	}
 
 	return hash, nil
+}
+
+// 优化：批量收集账户变更，减少重复的数据库查询
+func collectAccountChangesBatch(ac kv.CursorDupSort, psr *state2.PlainState, accChanges map[common.Address]*accounts.Account, codeChanges map[common.Address]string, from, to uint64) error {
+	// 使用sync.Pool复用地址集合
+	processedAddrs := addressBoolMapPool.Get().(map[common.Address]bool)
+	defer func() {
+		// 启动goroutine异步回收地址集合
+		go func() {
+			for addr := range processedAddrs {
+				delete(processedAddrs, addr)
+			}
+			addressBoolMapPool.Put(processedAddrs)
+		}()
+	}()
+
+	for i := from; i <= to; i++ {
+		dupSortKey := dbutils.EncodeBlockNumber(i)
+		psr.SetBlockNr(i + 1)
+
+		// collect changes to accounts and code
+		for _, v, err := ac.SeekExact(dupSortKey); err == nil && v != nil; _, v, err = ac.NextDup() {
+			addr := common.BytesToAddress(v[:length.Addr])
+
+			// 优化：避免重复处理同一个地址
+			if processedAddrs[addr] {
+				continue
+			}
+			processedAddrs[addr] = true
+
+			currAcc, err := psr.ReadAccountData(addr)
+			if err != nil {
+				return err
+			}
+
+			// store the account
+			accChanges[addr] = currAcc
+
+			// 优化：只有当账户有代码时才读取代码
+			if currAcc != nil && !currAcc.IsEmptyCodeHash() {
+				cc, err := psr.ReadAccountCode(addr, currAcc.Incarnation, currAcc.CodeHash)
+				if err != nil {
+					return err
+				}
+
+				if len(cc) > 0 {
+					// 优化：使用更高效的十六进制编码
+					hexcc := "0x" + hex.EncodeToString(cc)
+					codeChanges[addr] = hexcc
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// 优化：批量收集存储变更
+func collectStorageChangesBatch(db kv.RwTx, psr *state2.PlainState, storageChanges map[common.Address]map[string]string, from, to uint64) error {
+	for i := from; i <= to; i++ {
+		dupSortKey := dbutils.EncodeBlockNumber(i)
+		psr.SetBlockNr(i + 1)
+
+		err := db.ForPrefix(kv.StorageChangeSet, dupSortKey, func(sk, sv []byte) error {
+			changesetKey := sk[length.BlockNum:]
+			address, incarnation := dbutils.PlainParseStoragePrefix(changesetKey)
+
+			sstorageKey := sv[:length.Hash]
+			// 优化：使用指针转换避免内存拷贝（需要谨慎使用，确保不修改原始数据）
+			stk := *(*common.Hash)(sstorageKey)
+
+			value, err := psr.ReadAccountStorage(address, incarnation, &stk)
+			if err != nil {
+				return err
+			}
+
+			// 优化：直接使用指针转换，避免内存拷贝
+			var valueHash common.Hash
+			if len(value) >= 32 {
+				valueHash = *(*common.Hash)(value[:32])
+			} else {
+				// 如果value长度不足32字节，使用传统方式
+				valueHash = common.BytesToHash(value)
+			}
+
+			// 优化：直接使用hex.EncodeToString，避免额外的缓冲区
+			stkk := "0x" + hex.EncodeToString(stk[:])
+			v := "0x" + hex.EncodeToString(valueHash[:])
+
+			if storageChanges[address] == nil {
+				// 使用sync.Pool复用嵌套map
+				storageChanges[address] = stringMapPool.Get().(map[string]string)
+			}
+			storageChanges[address][stkk] = v
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func processAccount(db smt.DB, a *accounts.Account, as map[string]string, inc uint64, psr *state2.PlainStateReader, addr common.Address, keys []utils.NodeKey) ([]utils.NodeKey, error) {
@@ -528,17 +622,76 @@ func processAccount(db smt.DB, a *accounts.Account, as map[string]string, inc ui
 	return keys, nil
 }
 
+// 优化：缓存合约字节码哈希计算结果和对象池
+var (
+	bytecodeHashCache = make(map[string]*big.Int, 1000)
+	bytecodeHashMutex sync.RWMutex
+
+	// sync.Pool 复用map，减少内存分配
+	addressAccountMapPool = sync.Pool{
+		New: func() interface{} {
+			return make(map[common.Address]*accounts.Account, 100)
+		},
+	}
+	addressStringMapPool = sync.Pool{
+		New: func() interface{} {
+			return make(map[common.Address]string, 50)
+		},
+	}
+	addressStorageMapPool = sync.Pool{
+		New: func() interface{} {
+			return make(map[common.Address]map[string]string, 100)
+		},
+	}
+	addressBoolMapPool = sync.Pool{
+		New: func() interface{} {
+			return make(map[common.Address]bool, 100)
+		},
+	}
+	stringMapPool = sync.Pool{
+		New: func() interface{} {
+			return make(map[string]string, 20)
+		},
+	}
+)
+
 func insertContractBytecodeToKV(db smt.DB, keys []utils.NodeKey, ethAddr string, bytecode string) ([]utils.NodeKey, error) {
 	keyContractCode := utils.KeyContractCode(ethAddr)
 	keyContractLength := utils.KeyContractLength(ethAddr)
-	bi := utils.HashContractBytecodeBigInt(bytecode)
 
-	parsedBytecode := strings.TrimPrefix(bytecode, "0x")
-	if len(parsedBytecode)%2 != 0 {
-		parsedBytecode = "0" + parsedBytecode
+	// 优化：使用缓存避免重复计算字节码哈希
+	var bi *big.Int
+	bytecodeHashMutex.RLock()
+	if cached, exists := bytecodeHashCache[bytecode]; exists {
+		bi = cached
+		bytecodeHashMutex.RUnlock()
+	} else {
+		bytecodeHashMutex.RUnlock()
+		bi = utils.HashContractBytecodeBigInt(bytecode)
+
+		// 添加到缓存
+		bytecodeHashMutex.Lock()
+		if len(bytecodeHashCache) < 1000 { // 限制缓存大小
+			bytecodeHashCache[bytecode] = bi
+		}
+		bytecodeHashMutex.Unlock()
 	}
 
-	bytecodeLength := len(parsedBytecode) / 2
+	// 优化：减少字符串操作
+	var bytecodeLength int
+	if len(bytecode) >= 2 && bytecode[0] == '0' && (bytecode[1] == 'x' || bytecode[1] == 'X') {
+		parsedLen := len(bytecode) - 2
+		if parsedLen%2 != 0 {
+			parsedLen++
+		}
+		bytecodeLength = parsedLen / 2
+	} else {
+		parsedLen := len(bytecode)
+		if parsedLen%2 != 0 {
+			parsedLen++
+		}
+		bytecodeLength = parsedLen / 2
+	}
 
 	x := utils.ScalarToArrayBig(bi)
 	valueContractCode, err := utils.NodeValue8FromBigIntArray(x)
