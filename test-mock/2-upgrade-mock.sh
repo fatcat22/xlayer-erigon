@@ -89,3 +89,5 @@ cast call 0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a "rollupIDToRollupData(uint3
 npx hardhat run ./tools/updateRollup/updateRollup.ts --network localhost
 echo "After updateRollup.ts, rollupTypeID: 1"
 cast call 0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a "rollupIDToRollupData(uint32)(address,uint64,address,uint64,bytes32,uint64,uint64,uint64,uint64,uint64,uint64,uint8)" 1 
+
+make run-mock
