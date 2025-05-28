@@ -28,44 +28,45 @@ sed_inplace() {
 
 cd agglayer-contracts
 
-BYTECODE=$(jq -r '.bytecode' "$CONTRACT_JSON")
-true_contract_address=$(cast send --private-key $DEPLOYER_PRIVATE_KEY --create  "$BYTECODE" | awk '/contractAddress/ {print $2}')
-echo "true_contract_address: $true_contract_address"
+# BYTECODE=$(jq -r '.bytecode' "$CONTRACT_JSON")
+# true_contract_address=$(cast send --private-key $DEPLOYER_PRIVATE_KEY --create  "$BYTECODE" | awk '/contractAddress/ {print $2}')
+# echo "true_contract_address: $true_contract_address"
 
-cast call 0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a "rollupTypeCount()" 
-cast call 0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a "rollupTypeMap(uint32)(address,address,uint64,uint8,bool,bytes32)" 1 
+# cast call 0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a "rollupTypeCount()" 
+# cast call 0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a "rollupTypeMap(uint32)(address,address,uint64,uint8,bool,bytes32)" 1 
 
-echo "Creating ./tools/addRollupType/add_rollup_type.json..."
-cat > ./tools/addRollupType/add_rollup_type.json << EOF
-{
-    "consensusContract": "PolygonValidiumEtrog",
-    "polygonRollupManagerAddress": "0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a",
-    "polygonZkEVMBridgeAddress": "0x3a277Fa4E78cc1266F32E26c467F99A8eAEfF7c3",
-    "polygonZkEVMGlobalExitRootAddress": "0xB8cedD4B9eF683f0887C44a6E4312dC7A6e2fcdB",
-    "polTokenAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-    "verifierAddress": "$true_contract_address",
-    "description": "Fork13 Validium",
-    "forkID": 13,
-    "rollupCompatibilityID": 0,
-    "timelockDelay": 600,
-    "timelockSalt": "",
-    "deployerPvtKey": "",
-    "maxFeePerGas":"",
-    "maxPriorityFeePerGas":"",
-    "multiplierGas": "",
-    "genesisRoot": "0xc2c9f845f2afefd78555f7f37b6cb1c8bad8d565f81460bb809aee0d288b9d45"
-}
-EOF
+# echo "Creating ./tools/addRollupType/add_rollup_type.json..."
+# cat > ./tools/addRollupType/add_rollup_type.json << EOF
+# {
+#     "consensusContract": "PolygonValidiumEtrog",
+#     "polygonRollupManagerAddress": "0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a",
+#     "polygonZkEVMBridgeAddress": "0x3a277Fa4E78cc1266F32E26c467F99A8eAEfF7c3",
+#     "polygonZkEVMGlobalExitRootAddress": "0xB8cedD4B9eF683f0887C44a6E4312dC7A6e2fcdB",
+#     "polTokenAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+#     "verifierAddress": "$true_contract_address",
+#     "description": "Fork13 Validium",
+#     "forkID": 13,
+#     "rollupCompatibilityID": 0,
+#     "timelockDelay": 600,
+#     "timelockSalt": "",
+#     "deployerPvtKey": "",
+#     "maxFeePerGas":"",
+#     "maxPriorityFeePerGas":"",
+#     "multiplierGas": "",
+#     "genesisRoot": "0xc2c9f845f2afefd78555f7f37b6cb1c8bad8d565f81460bb809aee0d288b9d45"
+# }
+# EOF
 
 cp ../contract/genesis.json ./tools/addRollupType/genesis.json
 
-npx hardhat run ./tools/addRollupType/addRollupType.ts --network localhost
+# npx hardhat run ./tools/addRollupType/addRollupType.ts --network localhost
 
-hex=$(cast call 0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a "rollupTypeCount()")
-rollupTypeCount=$((16#${hex#0x}))
-echo "$rollupTypeCount"
-cast call 0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a "rollupTypeMap(uint32)(address,address,uint64,uint8,bool,bytes32)" $rollupTypeCount
+# hex=$(cast call 0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a "rollupTypeCount()")
+# rollupTypeCount=$((16#${hex#0x}))
+# echo "$rollupTypeCount"
+# cast call 0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a "rollupTypeMap(uint32)(address,address,uint64,uint8,bool,bytes32)" $rollupTypeCount
 
+rollupTypeCount=1
 echo "Creating ./tools/updateRollup/updateRollup.json..."
 cat > ./tools/updateRollup/updateRollup.json << EOF
 {
