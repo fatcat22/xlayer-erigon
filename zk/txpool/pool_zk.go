@@ -195,10 +195,7 @@ func (p *TxPool) best(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableG
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	if p.isDeniedYieldingTransactions() {
-		log.Trace("Denied yielding transactions, cannot proceed")
-		return false, 0, nil
-	}
+	// Limbo processing removed - no longer needed to check denied yielding
 
 	// First wait for the corresponding block to arrive
 	if p.lastSeenBlock.Load() < onTopOf {

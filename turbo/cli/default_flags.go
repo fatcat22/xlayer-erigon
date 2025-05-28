@@ -223,8 +223,6 @@ var DefaultFlags = []cli.Flag{
 	&utils.DatastreamNewBlockTimeout,
 	&utils.WitnessMemdbSize,
 	&utils.WitnessUnwindLimit,
-	&utils.ExecutorMaxConcurrentRequests,
-	&utils.Limbo,
 	&utils.AllowFreeTransactions,
 	&utils.AllowPreEIP155Transactions,
 	&utils.EffectiveGasPriceForEthTransfer,

@@ -43,7 +43,6 @@ import (
 	"github.com/ledgerwatch/erigon/eth/gasprice/gaspricecfg"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/psilva261/timsort/v2"
-	"github.com/status-im/keycard-go/hexutils"
 
 	"github.com/ledgerwatch/erigon-lib/chain"
 	"github.com/ledgerwatch/erigon-lib/common"
@@ -148,7 +147,6 @@ const (
 	OverflowZkCounters              DiscardReason = 24 // unsupported transaction type
 	SenderDisallowedSendTx          DiscardReason = 25 // sender is not allowed to send transactions by ACL policy
 	SenderDisallowedDeploy          DiscardReason = 26 // sender is not allowed to deploy contracts by ACL policy
-	DiscardByLimbo                  DiscardReason = 27
 	SmartContractDeploymentDisabled DiscardReason = 28 // to == null not allowed, config set to block smart contract deployment
 	GasLimitTooHigh                 DiscardReason = 29 // gas limit is too high
 	Expired                         DiscardReason = 30 // used when a transaction is purged from the pool
@@ -218,8 +216,6 @@ func (r DiscardReason) String() string {
 		return "You are not allowed to send transactions on the X Layer as we are under the phase 1, X layer will be open to the public soon"
 	case SenderDisallowedDeploy:
 		return "sender disallowed to deploy contract by ACL policy"
-	case DiscardByLimbo:
-		return "limbo error"
 	case SmartContractDeploymentDisabled:
 		return "smart contract deployment disabled"
 	case GasLimitTooHigh:
@@ -348,15 +344,9 @@ type TxPool struct {
 	// exposed publicly so anything wanting to get "best" transactions can ensure a flush isn't happening and
 	// vice versa
 	flushMtx *sync.Mutex
-
-	// limbo specific fields where bad batch transactions identified by the executor go
-	limbo *Limbo
 }
 
 func CreateTxPoolBuckets(tx kv.RwTx) error {
-	if err := tx.CreateBucket(TablePoolLimbo); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -404,7 +394,7 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 		ethCfg:                  ethCfg,
 		flushMtx:                &sync.Mutex{},
 		aclDB:                   aclDB,
-		limbo:                   newLimbo(),
+
 		// X Layer config
 		xlayerCfg: XLayerConfig{
 			EnableWhitelist:      ethCfg.DeprecatedTxPool.EnableWhitelist,
@@ -476,8 +466,6 @@ func (p *TxPool) OnNewBlock(ctx context.Context, stateChanges *remote.StateChang
 		p.queued.worst.pendingBaseFee = pendingBaseFee
 	}
 
-	p.addLimboToUnwindTxs(&unwindTxs)
-
 	p.blockGasLimit.Store(stateChanges.BlockGasLimit)
 	if err := p.senders.onNewBlock(stateChanges, unwindTxs, minedTxs); err != nil {
 		return err
@@ -510,11 +498,7 @@ func (p *TxPool) OnNewBlock(ctx context.Context, stateChanges *remote.StateChang
 
 	blockNum := p.lastSeenBlock.Load()
 
-	sendersWithChangedStateBeforeLimboTrim := prepareSendersWithChangedState(&unwindTxs)
-	unwindTxs, limboTxs, forDiscard := p.trimLimboSlots(&unwindTxs)
-
-	//log.Debug("[txpool] new block", "unwinded", len(unwindTxs.txs), "mined", len(minedTxs.txs), "baseFee", baseFee, "blockHeight", blockHeight)
-
+	// Limbo processing removed - simplified logic
 	announcements, err := p.addTxsOnNewBlock(
 		blockNum,
 		cacheView,
@@ -528,7 +512,6 @@ func (p *TxPool) OnNewBlock(ctx context.Context, stateChanges *remote.StateChang
 		p.queued,
 		p.all,
 		p.byHash,
-		sendersWithChangedStateBeforeLimboTrim,
 		p.addLocked,
 		p.discardLocked,
 	)
@@ -554,15 +537,7 @@ func (p *TxPool) OnNewBlock(ctx context.Context, stateChanges *remote.StateChang
 		}
 	}
 
-	for idx, slot := range forDiscard.Txs {
-		mt := newMetaTx(slot, forDiscard.IsLocal[idx], blockNum)
-		p.discardLocked(mt, DiscardByLimbo)
-		log.Info("[txpool] Discarding", "tx-hash", hexutils.BytesToHex(slot.IDHash[:]))
-	}
-	p.finalizeLimboOnNewBlock(limboTxs)
-	if p.isDeniedYieldingTransactions() {
-		p.allowYieldingTransactions()
-	}
+	// Limbo processing removed - no longer needed
 
 	//log.Info("[txpool] new block", "number", p.lastSeenBlock.Load(), "pendngBaseFee", pendingBaseFee, "in", time.Since(t))
 	return nil
@@ -1168,7 +1143,6 @@ func (p *TxPool) addTxsOnNewBlock(
 	queued *SubPool,
 	byNonce *BySenderAndNonce,
 	byHash map[string]*metaTx,
-	sendersWithChangedStateBeforeLimboTrim *LimboSendersWithChangedState,
 	add func(*metaTx, *types.Announcements) DiscardReason,
 	discard func(*metaTx, DiscardReason),
 ) (types.Announcements, error) {
@@ -1193,13 +1167,13 @@ func (p *TxPool) addTxsOnNewBlock(
 	announcements := types.Announcements{}
 	for i, txn := range newTxs.Txs {
 		if _, ok := byHash[string(txn.IDHash[:])]; ok {
-			sendersWithChangedStateBeforeLimboTrim.decrement(txn.SenderID)
+			// Limbo processing removed - skip duplicate transactions
 			continue
 		}
 		mt := newMetaTx(txn, newTxs.IsLocal[i], blockNum)
 		if reason := add(mt, &announcements); reason != NotSet {
 			discard(mt, reason)
-			sendersWithChangedStateBeforeLimboTrim.decrement(txn.SenderID)
+			// Limbo processing removed - continue without decrement
 			continue
 		}
 		sendersWithChangedState[mt.Tx.SenderID] = struct{}{}
@@ -1215,7 +1189,7 @@ func (p *TxPool) addTxsOnNewBlock(
 				addr := gointerfaces.ConvertH160toAddress(change.Address)
 				id, ok := senders.getID(addr)
 				if !ok {
-					sendersWithChangedStateBeforeLimboTrim.decrement(id)
+					// Limbo processing removed - skip unknown senders
 					continue
 				}
 				sendersWithChangedState[id] = struct{}{}
@@ -1223,11 +1197,7 @@ func (p *TxPool) addTxsOnNewBlock(
 		}
 	}
 
-	for senderId, counter := range sendersWithChangedStateBeforeLimboTrim.Storage {
-		if counter > 0 {
-			sendersWithChangedState[senderId] = struct{}{}
-		}
-	}
+	// Limbo processing removed - simplified logic
 
 	p.discardOverflowZkCountersFromPending(pending, discard, sendersWithChangedState)
 
@@ -1716,9 +1686,7 @@ func (p *TxPool) flushLocked(tx kv.RwTx) (err error) {
 	if err := PutLastSeenBlock(tx, p.lastSeenBlock.Load(), encID); err != nil {
 		return err
 	}
-	if err := p.flushLockedLimbo(tx); err != nil {
-		return err
-	}
+	// Limbo processing removed - no longer needed
 
 	// clean - in-memory data structure as later as possible - because if during this Tx will happen error,
 	// DB will stay consistent but some in-memory structures may be already cleaned, and retry will not work
@@ -1741,9 +1709,7 @@ func (p *TxPool) fromDB(ctx context.Context, tx kv.Tx, coreTx kv.Tx) error {
 		return err
 	}
 
-	if err = p.fromDBLimbo(ctx, tx, cacheView); err != nil {
-		return err
-	}
+	// Limbo processing removed - no longer needed
 
 	it, err := tx.Range(kv.RecentLocalTransaction, nil, nil)
 	if err != nil {

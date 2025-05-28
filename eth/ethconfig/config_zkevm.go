@@ -55,7 +55,6 @@ type Zk struct {
 	WitnessMemdbSize                       datasize.ByteSize
 	WitnessUnwindLimit                     uint64
 	ExecutorMaxConcurrentRequests          int
-	Limbo                                  bool
 	AllowFreeTransactions                  bool
 	AllowPreEIP155Transactions             bool
 	EffectiveGasPriceForEthTransfer        uint8

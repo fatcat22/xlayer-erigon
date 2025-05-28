@@ -90,11 +90,6 @@ type ReadContext struct {
 func (p *TxPool) bestForXLayer(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableGas, availableBlobGas uint64, toSkip mapset.Set[[32]byte]) (bool, int, error) {
 	removeWG.Wait()
 
-	if p.isDeniedYieldingTransactions() {
-		//log.Trace("Denied yielding transactions, cannot proceed")
-		return false, 0, nil
-	}
-
 	// First wait for the corresponding block to arrive
 	if p.lastSeenBlock.Load() < onTopOf {
 		//log.Trace("Block not yet arrived, too early to process", "lastSeenBlock", p.lastSeenBlock.Load(), "requiredBlock", onTopOf)

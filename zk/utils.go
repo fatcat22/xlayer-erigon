@@ -1,15 +1,13 @@
 package zk
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
-	"github.com/ledgerwatch/log/v3"
 	"sync"
-)
 
-var ErrLimboState = errors.New("Calculating limbo state")
+	"github.com/ledgerwatch/log/v3"
+)
 
 // prints progress every 10 seconds
 // returns a channel to send progress to, and a function to stop the printer routine

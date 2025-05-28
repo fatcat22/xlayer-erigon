@@ -678,11 +678,6 @@ var (
 		Usage: "Define the inactivity check interval timeout when interacting with a data stream server",
 		Value: 5 * time.Minute,
 	}
-	Limbo = cli.BoolFlag{
-		Name:  "zkevm.limbo",
-		Usage: "Enable limbo processing on batches that failed verification",
-		Value: false,
-	}
 	AllowFreeTransactions = cli.BoolFlag{
 		Name:  "zkevm.allow-free-transactions",
 		Usage: "Allow the sequencer to proceed transactions with 0 gas price",

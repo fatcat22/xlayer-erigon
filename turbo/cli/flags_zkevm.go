@@ -196,7 +196,6 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		WitnessMemdbSize:                       *witnessMemSize,
 		WitnessUnwindLimit:                     witnessUnwindLimit,
 		ExecutorMaxConcurrentRequests:          ctx.Int(utils.ExecutorMaxConcurrentRequests.Name),
-		Limbo:                                  ctx.Bool(utils.Limbo.Name),
 		AllowFreeTransactions:                  ctx.Bool(utils.AllowFreeTransactions.Name),
 		AllowPreEIP155Transactions:             ctx.Bool(utils.AllowPreEIP155Transactions.Name),
 		EffectiveGasPriceForEthTransfer:        uint8(math.Round(effectiveGasPriceForEthTransferVal * 255.0)),
