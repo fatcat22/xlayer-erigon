@@ -29,6 +29,11 @@ L1 OKB Token: 0x5FbDB2315678afecb367f032d93F642f64180aa3
 L2 WETH Token: 0x17a2a2e444a7f3446877d1b71eaa2b2ae7533baf
 L2 admin: 0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534
 
+# In case no funds to claim, use this command:
+cast send 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 \
+         --rpc-url http://localhost:8124 \
+         --private-key 0x815405dddb0e2a99b12af775fd2929e526704e1d1aea6a0b4e74dc33e2f7fcd2 \
+         --legacy --value 100ether
 ```
 
 # Get metrics
