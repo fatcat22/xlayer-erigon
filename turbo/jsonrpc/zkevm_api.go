@@ -42,7 +42,6 @@ import (
 	"github.com/ledgerwatch/erigon/zk/syncer"
 	zktx "github.com/ledgerwatch/erigon/zk/tx"
 	"github.com/ledgerwatch/erigon/zk/utils"
-	"github.com/ledgerwatch/erigon/zkevm/jsonrpc/client"
 )
 
 var sha3UncleHash = common.HexToHash("0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347")
@@ -1544,38 +1543,6 @@ func (api *ZkEvmAPIImpl) GetRollupManagerAddress(ctx context.Context) (res json.
 	}
 
 	return rollupManagerAddressJson, err
-}
-
-func (api *ZkEvmAPIImpl) getInjectedBatchAccInputHashFromSequencer(rpcUrl string) (*common.Hash, error) {
-	res, err := client.JSONRPCCall(rpcUrl, "zkevm_getBatchByNumber", 1)
-	if err != nil {
-		return nil, err
-	}
-
-	if res.Error != nil {
-		return nil, fmt.Errorf("RPC error response: %s", res.Error.Message)
-	}
-
-	var resultMap map[string]interface{}
-
-	err = json.Unmarshal(res.Result, &resultMap)
-	if err != nil {
-		return nil, err
-	}
-
-	hashValue, ok := resultMap["accInputHash"]
-	if !ok {
-		return nil, fmt.Errorf("accInputHash not found in response")
-	}
-
-	hash, ok := hashValue.(string)
-	if !ok {
-		return nil, fmt.Errorf("accInputHash is not a string")
-	}
-
-	decoded := common.HexToHash(hash)
-
-	return &decoded, nil
 }
 
 func (api *ZkEvmAPIImpl) GetLatestDataStreamBlock(ctx context.Context) (hexutil.Uint64, error) {
