@@ -39,7 +39,6 @@ L2ChainIds = [195]
 SyncInterval = "1s"
 SyncChunkSize = 100
 ForceL2SyncChunk = true # new
-LargeTxUsdLimit = 1234
 
 [BridgeController]
 Store = "postgres"
