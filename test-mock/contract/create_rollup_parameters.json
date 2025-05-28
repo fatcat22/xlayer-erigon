@@ -1,5 +1,5 @@
 {
-    "realVerifier": false,
+    "realVerifier": true,
     "trustedSequencerURL": "http://xlayer-rpc:8545",
     "networkName": "zkevm",
     "description":"0.0.1",

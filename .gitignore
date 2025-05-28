@@ -130,3 +130,4 @@ cmd/smt-db-split/smt-db-split
 test/app
 bridge-config-artifact
 kurtosis-cli.tar.gz
+test-mock/prover-data

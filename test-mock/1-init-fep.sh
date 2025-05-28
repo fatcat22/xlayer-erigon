@@ -177,4 +177,12 @@ echo "Initialization script completed!"
 
 cd "$PWD_DIR"
 
+if [ ! -d "./prover-data" ]; then
+  echo "downlad prover data..."
+  mkdir -p prover-data; cd prover-data;
+  wget https://storage.googleapis.com/zkevm/zkproverc/v9.0.0-rc.3-fork.13.tgz
+  tar -xzf v9.0.0-rc.3-fork.13.tgz
+fi
+
+cd "$PWD_DIR"
 make run
