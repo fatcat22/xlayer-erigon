@@ -38,6 +38,11 @@ run-mock:
 	$(DOCKER_COMPOSE) stop xlayer-prover-true
 	sleep 10
 	$(DOCKER_COMPOSE) up -d xlayer-prover-mock
+
+run-true:
+	$(DOCKER_COMPOSE) stop xlayer-prover-mock
+	sleep 10
+	$(DOCKER_COMPOSE) up -d xlayer-prover-true
 	
 .PHONY: stop
 stop: ## Stops all services

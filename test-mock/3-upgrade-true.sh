@@ -16,7 +16,7 @@ DA_ADDRESS="0x3bFa19E4588962D1834B2e4007F150f4447Aa9fe"
 PWD_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$PWD_DIR")"
 
-CONTRACT_JSON="artifacts/contracts/mocks/VerifierRollupHelperMock.sol/VerifierRollupHelperMock.json"
+CONTRACT_JSON="artifacts/contracts/verifiers/FflonkVerifier_13.sol/FflonkVerifier_13.json"
 
 sed_inplace() {
   if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -29,8 +29,8 @@ sed_inplace() {
 cd agglayer-contracts
 
 BYTECODE=$(jq -r '.bytecode' "$CONTRACT_JSON")
-mock_contract_address=$(cast send --private-key $DEPLOYER_PRIVATE_KEY --create  "$BYTECODE" | awk '/contractAddress/ {print $2}')
-echo "mock_contract_address: $mock_contract_address"
+true_contract_address=$(cast send --private-key $DEPLOYER_PRIVATE_KEY --create  "$BYTECODE" | awk '/contractAddress/ {print $2}')
+echo "true_contract_address: $true_contract_address"
 
 cast call 0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a "rollupTypeCount()" 
 cast call 0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a "rollupTypeMap(uint32)(address,address,uint64,uint8,bool,bytes32)" 1 
@@ -43,7 +43,7 @@ cat > ./tools/addRollupType/add_rollup_type.json << EOF
     "polygonZkEVMBridgeAddress": "0x3a277Fa4E78cc1266F32E26c467F99A8eAEfF7c3",
     "polygonZkEVMGlobalExitRootAddress": "0xB8cedD4B9eF683f0887C44a6E4312dC7A6e2fcdB",
     "polTokenAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-    "verifierAddress": "$mock_contract_address",
+    "verifierAddress": "$true_contract_address",
     "description": "Fork13 Validium",
     "forkID": 13,
     "rollupCompatibilityID": 0,
@@ -91,4 +91,4 @@ echo "After updateRollup.ts, rollupTypeID: 1"
 cast call 0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a "rollupIDToRollupData(uint32)(address,uint64,address,uint64,bytes32,uint64,uint64,uint64,uint64,uint64,uint64,uint8)" 1 
 
 cd $PWD_DIR
-make run-mock
+make run-true
