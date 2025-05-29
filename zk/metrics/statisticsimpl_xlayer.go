@@ -132,10 +132,11 @@ func (l *statisticsInstance) SummaryCheckpoint() string {
 	extract := l.statistics[Extract] - l.statisticsOld[Extract]
 	bestRead1 := l.statistics[BestRead1] - l.statisticsOld[BestRead1]
 	bestRead2 := l.statistics[BestRead2] - l.statisticsOld[BestRead2]
+	deleteTx := l.statistics[DeleteTx] - l.statisticsOld[DeleteTx]
 	mark := l.statistics[Mark] - l.statisticsOld[Mark]
 	l.mu.RUnlock()
 
-	txProcessDetails := fmt.Sprintf("{ getTx[%dms], yield[%dms], waitWg[%dms], sorting[%dms], extract[%dms], bestRead1[%dms], bestRead2[%dms], mark[%dms], getTxPause[%dms] }", blockGetTxTiming, yield, waitWg, sorting, extract, bestRead1, bestRead2, mark, blockGetTxPauseTiming)
+	txProcessDetails := fmt.Sprintf("{ getTx[%dms], yield[%dms], waitWg[%dms], sorting[%dms], extract[%dms], bestRead1[%dms], bestRead2[%dms], delete[%dms], mark[%dms], getTxPause[%dms] }", blockGetTxTiming, yield, waitWg, sorting, extract, bestRead1, bestRead2, deleteTx, mark, blockGetTxPauseTiming)
 
 	zkHashSMTTimings := fmt.Sprintf("{ zkHashSMTDeleteByNodeKey[%d-%.3fms], zkHashSMTDeleteHashKey[%d-%.3fms], "+
 		"zkHashSMTInsertKey[%d-%.3fms], zkHashSMTGetKey[%d-%.3fms] }",
@@ -242,9 +243,10 @@ func (l *statisticsInstance) Summary() string {
 	extract := l.statistics[Extract]
 	bestRead1 := l.statistics[BestRead1]
 	bestRead2 := l.statistics[BestRead2]
+	deleteTxTime := l.statistics[DeleteTx]
 	mark := l.statistics[Mark]
 
-	txProcessDetails := fmt.Sprintf("{ getTx[%dms], yield[%dms], waitWg[%dms], sorting[%dms], extract[%dms], bestRead1[%dms], bestRead2[%dms], mark[%dms], getTxPause[%dms] }", getTxTiming, yield, waitWg, sorting, extract, bestRead1, bestRead2, mark, getTxPauseTiming)
+	txProcessDetails := fmt.Sprintf("{ getTx[%dms], yield[%dms], waitWg[%dms], sorting[%dms], extract[%dms], bestRead1[%dms], bestRead2[%dms], delete[%dms], mark[%dms], getTxPause[%dms] }", getTxTiming, yield, waitWg, sorting, extract, bestRead1, bestRead2, deleteTxTime, mark, getTxPauseTiming)
 
 	zkHashSMTTimings := fmt.Sprintf("{ zkHashSMTDeleteByNodeKey[%d-%.3fms], zkHashSMTDeleteHashKey[%d-%.3fms], zkHashSMTInsertKey[%d-%.3fms], zkHashSMTGetKey[%d-%.3fms] }",
 		zkHashSMTDeleteByNodeKey, float64(zkHashSMTDeleteByNodeKeyTiming)/1000.0,

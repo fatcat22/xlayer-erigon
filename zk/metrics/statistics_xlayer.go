@@ -31,6 +31,7 @@ const (
 	Extract   LogTag = "Extract"
 	BestRead1 LogTag = "BestRead1"
 	BestRead2 LogTag = "BestRead2"
+	DeleteTx  LogTag = "DeleteTx"
 	Mark      LogTag = "Mark"
 
 	ZKHashAccountCount LogTag = "ZKHashAccountCount"

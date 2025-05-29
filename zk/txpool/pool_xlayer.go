@@ -143,6 +143,7 @@ func (p *TxPool) bestForXLayer(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, a
 	}
 	metrics.GetLogStatistics().CumulativeTiming(metrics.BestRead2, time.Since(bestRead2))
 
+	deleteTime := time.Now()
 	readContext.txs.Resize(uint(readContext.count))
 	if len(readContext.toRemove) > 0 {
 		removeWG.Add(1)
@@ -158,6 +159,7 @@ func (p *TxPool) bestForXLayer(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, a
 		}()
 		time.Sleep(1 * time.Nanosecond)
 	}
+	metrics.GetLogStatistics().CumulativeTiming(metrics.DeleteTx, time.Since(deleteTime))
 
 	return true, readContext.count, nil
 }
