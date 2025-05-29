@@ -126,6 +126,7 @@ func (l *statisticsInstance) SummaryCheckpoint() string {
 
 	setSmtCacheTiming := l.statistics[SetSmtCacheTiming] - l.statisticsOld[SetSmtCacheTiming]
 
+	view := l.statistics[View] - l.statisticsOld[View]
 	yieldPre := l.statistics[YieldPre] - l.statisticsOld[YieldPre]
 	yield := l.statistics[YieldBest] - l.statisticsOld[YieldBest]
 	waitWg := l.statistics[WaitWg] - l.statisticsOld[WaitWg]
@@ -139,11 +140,13 @@ func (l *statisticsInstance) SummaryCheckpoint() string {
 	l.mu.RUnlock()
 
 	txProcessDetails := fmt.Sprintf("{ getTx[%dms], "+
+		"view[%dms], "+
 		"yieldPre[%dms], "+
 		"yield[%dms], "+
 		"waitWg[%dms], "+
 		"lock[%dms], "+
-		"sorting[%dms], extract[%dms], bestRead1[%dms], bestRead2[%dms], delete[%dms], mark[%dms], getTxPause[%dms] }", blockGetTxTiming, yieldPre, yield, waitWg, poolLock, sorting, extract, bestRead1, bestRead2, deleteTx, mark, blockGetTxPauseTiming)
+		"sorting[%dms], extract[%dms], bestRead1[%dms], bestRead2[%dms], delete[%dms], mark[%dms], getTxPause[%dms] }",
+		blockGetTxTiming, view, yieldPre, yield, waitWg, poolLock, sorting, extract, bestRead1, bestRead2, deleteTx, mark, blockGetTxPauseTiming)
 
 	zkHashSMTTimings := fmt.Sprintf("{ zkHashSMTDeleteByNodeKey[%d-%.3fms], zkHashSMTDeleteHashKey[%d-%.3fms], "+
 		"zkHashSMTInsertKey[%d-%.3fms], zkHashSMTGetKey[%d-%.3fms] }",

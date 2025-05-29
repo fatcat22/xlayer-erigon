@@ -42,6 +42,7 @@ func getNextPoolTransactions(ctx context.Context, cfg SequenceBlockCfg, executio
 	// For X Layer, optimize getTransactions
 	slots := types2.TxsRlp{}
 
+	viewTime := time.Now()
 	if err := cfg.txPoolDb.View(ctx, func(poolTx kv.Tx) error {
 		yieldBestTime := time.Now()
 		if allConditionsOk, _, err = cfg.txPool.YieldBest(cfg.yieldSize, &slots, poolTx, executionAt, gasLimit, 0, alreadyYielded); err != nil {
@@ -52,6 +53,7 @@ func getNextPoolTransactions(ctx context.Context, cfg SequenceBlockCfg, executio
 	}); err != nil {
 		return nil, nil, allConditionsOk, err
 	}
+	metrics.GetLogStatistics().CumulativeTiming(metrics.View, time.Since(viewTime))
 
 	extractTime := time.Now()
 	// For X Layer, optimize getTransactions

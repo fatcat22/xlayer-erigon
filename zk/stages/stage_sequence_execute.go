@@ -493,7 +493,6 @@ BatchLoop:
 			default:
 			}
 
-			getTxTime := time.Now()
 			if batchState.isLimboRecovery() {
 				batchState.blockState.transactionsForInclusion, err = getLimboTransaction(ctx, cfg, batchState.limboRecoveryData.limboTxHash, executionAt)
 				if err != nil {
@@ -511,7 +510,7 @@ BatchLoop:
 					log.Info(fmt.Sprintf("[%s] State root before replay", logPrefix), "stateRoot", stateRootBeforeReplay)
 				}
 			} else if !batchState.isL1Recovery() {
-
+				getTxTime := time.Now()
 				var allConditionsOK bool
 				var newTransactions []types.Transaction
 				var newIds []common.Hash
