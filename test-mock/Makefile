@@ -36,11 +36,19 @@ run: build-docker
 
 run-mock:
 	$(DOCKER_COMPOSE) stop xlayer-prover-true
+	sleep 3
+	$(DOCKER_COMPOSE) up xlayer-seqs -d
+	sleep 3
+	$(DOCKER_COMPOSE) up xlayer-agg -d
 	sleep 10
 	$(DOCKER_COMPOSE) up -d xlayer-prover-mock
 
 run-true:
 	$(DOCKER_COMPOSE) stop xlayer-prover-mock
+	sleep 3
+	$(DOCKER_COMPOSE) up xlayer-seqs -d
+	sleep 3
+	$(DOCKER_COMPOSE) up xlayer-agg -d
 	sleep 10
 	$(DOCKER_COMPOSE) up -d xlayer-prover-true
 	

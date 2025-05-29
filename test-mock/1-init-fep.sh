@@ -39,12 +39,12 @@ cast send -f $RICH_ADDRESS --private-key $RICH_PRIVATE_KEY --value 3ether --lega
 
 if [ ! -d "./agglayer-contracts" ]; then
   echo "Cloning contract repository..."
-  git clone -b v8.1.0-rc.1-fork.13 https://github.com/agglayer/agglayer-contracts.git
+  git clone -b v8.1.0-rc.2-fork.13 https://github.com/agglayer/agglayer-contracts.git
 fi
 
 cd ./agglayer-contracts
 echo "Cleaning and resting contract repository..."
-rm -rf *; git reset --hard; git checkout v8.1.0-rc.1-fork.13
+rm -rf *; git reset --hard; git checkout v8.1.0-rc.2-fork.13
 
 echo "Creating .env file..."
 cat > .env << EOF

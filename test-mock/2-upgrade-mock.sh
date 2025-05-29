@@ -16,6 +16,10 @@ DA_ADDRESS="0x3bFa19E4588962D1834B2e4007F150f4447Aa9fe"
 PWD_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$PWD_DIR")"
 
+docker compose -f docker-compose.yml down xlayer-seqs
+sleep 30
+docker compose -f docker-compose.yml down xlayer-agg
+
 CONTRACT_JSON="artifacts/contracts/mocks/VerifierRollupHelperMock.sol/VerifierRollupHelperMock.json"
 
 sed_inplace() {
