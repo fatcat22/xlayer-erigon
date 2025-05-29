@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"runtime"
-	"sync"
-
 	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/kv"
+	"github.com/ledgerwatch/erigon/zk/metrics"
+	"runtime"
+	"sync"
+	"time"
 
 	"io"
 
@@ -37,6 +38,7 @@ func getNextPoolTransactions(ctx context.Context, cfg SequenceBlockCfg, executio
 	cfg.txPool.PreYield()
 	defer cfg.txPool.PostYield()
 
+	yieldBestTime := time.Now()
 	// For X Layer, optimize getTransactions
 	slots := types2.TxsRlp{}
 	if err := cfg.txPoolDb.View(ctx, func(poolTx kv.Tx) error {
@@ -47,12 +49,17 @@ func getNextPoolTransactions(ctx context.Context, cfg SequenceBlockCfg, executio
 	}); err != nil {
 		return nil, nil, allConditionsOk, err
 	}
+	metrics.GetLogStatistics().CumulativeTiming(metrics.YieldBest, time.Since(yieldBestTime))
 
+	extractTime := time.Now()
 	// For X Layer, optimize getTransactions
 	yieldedTxs, yieldedIds, toRemove, err := extractTransactionsFromSlot(&slots, executionAt, cfg)
+	metrics.GetLogStatistics().CumulativeTiming(metrics.Extract, time.Since(extractTime))
 	if err != nil {
 		return nil, nil, allConditionsOk, err
 	}
+
+	markTime := time.Now()
 	for _, txId := range toRemove {
 		cfg.txPool.MarkForDiscardFromPendingBest(txId)
 	}
@@ -71,6 +78,8 @@ func getNextPoolTransactions(ctx context.Context, cfg SequenceBlockCfg, executio
 			int8(tx.Type()),            // transactionType
 		)
 	}
+
+	metrics.GetLogStatistics().CumulativeTiming(metrics.Mark, time.Since(markTime))
 
 	return transactions, ids, allConditionsOk, err
 }

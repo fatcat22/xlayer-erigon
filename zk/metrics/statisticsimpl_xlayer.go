@@ -125,10 +125,15 @@ func (l *statisticsInstance) SummaryCheckpoint() string {
 	blockPut := l.statistics[Put] - l.statisticsOld[Put]
 
 	setSmtCacheTiming := l.statistics[SetSmtCacheTiming] - l.statisticsOld[SetSmtCacheTiming]
+
+	yield := l.statistics[YieldBest] - l.statisticsOld[YieldBest]
+	waitWg := l.statistics[WaitWg] - l.statisticsOld[WaitWg]
+	sorting := l.statistics[Sorting] - l.statisticsOld[Sorting]
+	extract := l.statistics[Extract] - l.statisticsOld[Extract]
+	mark := l.statistics[Mark] - l.statisticsOld[Mark]
 	l.mu.RUnlock()
 
-	txProcessDetails := fmt.Sprintf("{ getTx[%dms], getTxPause[%dms] }",
-		blockGetTxTiming, blockGetTxPauseTiming)
+	txProcessDetails := fmt.Sprintf("{ getTx[%dms], yield[%dms], waitWg[%dms], sorting[%dms], extract[%dms], mark[%dms], getTxPause[%dms] }", blockGetTxTiming, yield, waitWg, sorting, extract, mark, blockGetTxPauseTiming)
 
 	zkHashSMTTimings := fmt.Sprintf("{ zkHashSMTDeleteByNodeKey[%d-%.3fms], zkHashSMTDeleteHashKey[%d-%.3fms], "+
 		"zkHashSMTInsertKey[%d-%.3fms], zkHashSMTGetKey[%d-%.3fms] }",
@@ -229,7 +234,13 @@ func (l *statisticsInstance) Summary() string {
 	setSmtCacheTiming := l.statistics[SetSmtCacheTiming]
 	l.mu.RUnlock()
 
-	txProcessDetails := fmt.Sprintf("{ getTx[%dms], getTxPause[%dms] }", getTxTiming, getTxPauseTiming)
+	yield := l.statistics[YieldBest]
+	waitWg := l.statistics[WaitWg]
+	sorting := l.statistics[Sorting]
+	extract := l.statistics[Extract]
+	mark := l.statistics[Mark]
+
+	txProcessDetails := fmt.Sprintf("{ getTx[%dms], yield[%dms], waitWg[%dms], sorting[%dms], extract[%dms], mark[%dms], getTxPause[%dms] }", getTxTiming, yield, waitWg, sorting, extract, mark, getTxPauseTiming)
 
 	zkHashSMTTimings := fmt.Sprintf("{ zkHashSMTDeleteByNodeKey[%d-%.3fms], zkHashSMTDeleteHashKey[%d-%.3fms], zkHashSMTInsertKey[%d-%.3fms], zkHashSMTGetKey[%d-%.3fms] }",
 		zkHashSMTDeleteByNodeKey, float64(zkHashSMTDeleteByNodeKeyTiming)/1000.0,

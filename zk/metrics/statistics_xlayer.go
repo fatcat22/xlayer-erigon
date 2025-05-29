@@ -25,6 +25,12 @@ const (
 	ZkIncIntermediateHashesTiming LogTag = "ZkIncIntermediateHashesTiming"
 	FinaliseBlockWriteTiming      LogTag = "FinaliseBlockWriteTiming"
 
+	YieldBest LogTag = "YieldBest"
+	WaitWg    LogTag = "WaitWg"
+	Sorting   LogTag = "Sorting"
+	Extract   LogTag = "Extract"
+	Mark      LogTag = "Mark"
+
 	ZKHashAccountCount LogTag = "ZKHashAccountCount"
 	ZKHashStoreCount   LogTag = "ZKHashStoreCount"
 	ZKHashCodeCount    LogTag = "ZKHashCodeCount"

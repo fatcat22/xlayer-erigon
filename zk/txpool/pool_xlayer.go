@@ -2,6 +2,7 @@ package txpool
 
 import (
 	"container/heap"
+	"github.com/ledgerwatch/erigon/zk/metrics"
 	"math/big"
 	"strings"
 	"sync"
@@ -88,7 +89,9 @@ type ReadContext struct {
 }
 
 func (p *TxPool) bestForXLayer(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableGas, availableBlobGas uint64, toSkip mapset.Set[[32]byte]) (bool, int, error) {
+	waitTime := time.Now()
 	removeWG.Wait()
+	metrics.GetLogStatistics().CumulativeTiming(metrics.WaitWg, time.Since(waitTime))
 
 	if p.isDeniedYieldingTransactions() {
 		//log.Trace("Denied yielding transactions, cannot proceed")
@@ -114,7 +117,9 @@ func (p *TxPool) bestForXLayer(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, a
 	}
 	readContext.txs.Resize(uint(cmp.Min(int(n), len(best.ms))))
 
+	sortingTime := time.Now()
 	p.pending.EnforceBestInvariants()
+	metrics.GetLogStatistics().CumulativeTiming(metrics.Sorting, time.Since(sortingTime))
 
 	// Prioritize OkPay txs first
 	ok, err := p.bestRead(n, tx, onTopOf, &readContext, true)
