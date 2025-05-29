@@ -19,7 +19,7 @@ zkevm.l1-rollup-id: 1
 zkevm.l1-first-block: 353
 zkevm.l1-block-range: 10
 zkevm.l1-query-delay: 6000
-zkevm.rpc-ratelimit: 0
+zkevm.rpc-ratelimit: 100000
 zkevm.datastream-version: 2
 
 log.console.verbosity: info
@@ -37,7 +37,7 @@ zkevm.sequencer-batch-sleep-duration: "0s"
 
 zkevm.data-stream-host: "localhost"
 zkevm.data-stream-port: 6900
-zkevm.default-gas-price: 1000000000
+zkevm.default-gas-price: 1
 zkevm.max-gas-price: 0
 zkevm.gas-price-factor: 0.000001
 zkevm.allow-free-transactions: true
@@ -51,8 +51,8 @@ http.corsdomain: any
 http.timeouts.read: "10s"
 http.timeouts.write: "10s"
 http.timeouts.idle: "10s"
-rpc.batch.concurrency: 2
-rpc.batch.limit: 20
+rpc.batch.concurrency: 20
+rpc.batch.limit: 200
 ws: true
 
 zkevm.apollo-enabled: false
@@ -115,3 +115,6 @@ zkevm.enable-add-tx-notify: true
 
 zkevm.enable-trace-log: true
 zkevm.trace-log-path: /home/erigon/data/logs/trace.log
+
+miner.gaslimit: 200000000
+zkevm.disable-virtual-counters: true

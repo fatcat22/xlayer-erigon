@@ -25,8 +25,6 @@ import (
 )
 
 func getNextPoolTransactions(ctx context.Context, cfg SequenceBlockCfg, executionAt, forkId uint64, alreadyYielded mapset.Set[[32]byte]) ([]types.Transaction, []common.Hash, bool, error) {
-	var ids []common.Hash
-	var transactions []types.Transaction
 	var allConditionsOk bool
 	var err error
 
@@ -59,29 +57,28 @@ func getNextPoolTransactions(ctx context.Context, cfg SequenceBlockCfg, executio
 		return nil, nil, allConditionsOk, err
 	}
 
-	markTime := time.Now()
 	for _, txId := range toRemove {
 		cfg.txPool.MarkForDiscardFromPendingBest(txId)
 	}
-	transactions = append(transactions, yieldedTxs...)
-	ids = append(ids, yieldedIds...)
 
-	for _, tx := range transactions {
-		utils.LogTrace(
-			tx.Hash().String(),         // txhash
-			utils.ServiceNameSequencer, // serviceName
-			utils.StepSeqReceiveTx.ID,  // processId
-			utils.StepSeqReceiveTx.Key, // processWord
-			executionAt+1,              // blockHeight
-			"",                         // blockHash
-			0,                          // blockTime
-			int8(tx.Type()),            // transactionType
-		)
-	}
+	markTime := time.Now()
+
+	//for _, tx := range yieldedTxs {
+	//	utils.LogTrace(
+	//		tx.Hash().String(),         // txhash
+	//		utils.ServiceNameSequencer, // serviceName
+	//		utils.StepSeqReceiveTx.ID,  // processId
+	//		utils.StepSeqReceiveTx.Key, // processWord
+	//		executionAt+1,              // blockHeight
+	//		"",                         // blockHash
+	//		0,                          // blockTime
+	//		int8(tx.Type()),            // transactionType
+	//	)
+	//}
 
 	metrics.GetLogStatistics().CumulativeTiming(metrics.Mark, time.Since(markTime))
 
-	return transactions, ids, allConditionsOk, err
+	return yieldedTxs, yieldedIds, allConditionsOk, err
 }
 
 func getLimboTransaction(ctx context.Context, cfg SequenceBlockCfg, txHash *common.Hash, executionAt uint64) ([]types.Transaction, error) {
