@@ -43,8 +43,8 @@ cp ../contract/deploy_output.json ./deployment/v2/
 echo "Creating .env file..."
 cat > .env << EOF
 MNEMONIC="$DEPLOYER_MNEMONIC"
-INFURA_PROJECT_ID="6d3d0adfe7c74dcb87642b37f1477aec"
-ETHERSCAN_API_KEY="F948SAS2HRYQ8V8Y315RWMT1E21M3K3PTK"
+INFURA_PROJECT_ID="000"
+ETHERSCAN_API_KEY="000"
 EOF
 
 # Grant admin role to deployer address
