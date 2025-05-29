@@ -24,7 +24,7 @@ zkevm.datastream-version: 2
 
 log.console.verbosity: info
 
-zkevm.executor-urls: xlayer-executor:50071
+zkevm.executor-urls: "xlayer-executor:50071,xlayer-executor-2:50071,xlayer-executor-3:50071,xlayer-executor-4:50071,xlayer-executor-5:50071,xlayer-executor-6:50071"
 zkevm.executor-strict: true
 zkevm.witness-full: false
 zkevm.executor-mock: false
@@ -112,3 +112,4 @@ txpool.enabletimsort: true
 zkevm.bulk-add-txs: true
 zkevm.enable-add-tx-notify: true
 # zkevm.initial-batch.config: /usr/src/app/first-batch-config.json
+zkevm.disable-virtual-counters: false

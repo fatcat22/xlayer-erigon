@@ -9,6 +9,11 @@ INIT_BRIDGE_ACCOUNT := cast send -f 0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534  
 run: build-docker
 	#$(DOCKER_COMPOSE) up -d xlayer-mock-l1-network
 	$(DOCKER_COMPOSE) up -d xlayer-executor
+	$(DOCKER_COMPOSE) up -d xlayer-executor-2
+	$(DOCKER_COMPOSE) up -d xlayer-executor-3
+	$(DOCKER_COMPOSE) up -d xlayer-executor-4
+	$(DOCKER_COMPOSE) up -d xlayer-executor-5
+	$(DOCKER_COMPOSE) up -d xlayer-executor-6
 	$(DOCKER_COMPOSE) up -d xlayer-agg-db
 	$(DOCKER_COMPOSE) up -d xlayer-bridge-db
 	$(DOCKER_COMPOSE) up -d xlayer-pool-db
