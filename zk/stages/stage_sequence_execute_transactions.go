@@ -3,14 +3,9 @@ package stages
 import (
 	"context"
 	"errors"
-	"fmt"
-	"runtime"
-	"sync"
 
 	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/kv"
-
-	"io"
 
 	mapset "github.com/deckarep/golang-set/v2"
 	types2 "github.com/ledgerwatch/erigon-lib/types"

@@ -24,6 +24,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/VictoriaMetrics/metrics"
+	"github.com/holiman/uint256"
 	types2 "github.com/ledgerwatch/erigon/core/types"
 	"math"
 	"math/big"
@@ -33,12 +35,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/VictoriaMetrics/metrics"
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/go-stack/stack"
 	"github.com/google/btree"
 	"github.com/hashicorp/golang-lru/v2/simplelru"
-	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon-lib/txpool/txpoolcfg"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/gasprice/gaspricecfg"
@@ -1046,13 +1046,14 @@ func (p *TxPool) AddLocalTxs(ctx context.Context, newTransactions types.TxSlots,
 			validIndices = append(validIndices, i)
 		}
 	}
-
+	log.Info("add Txs >>>")
 	announcements, addReasons, err := p.addTxs(p.lastSeenBlock.Load(), cacheView, p.senders, newTxs,
 		p.pendingBaseFee.Load(), p.blockGasLimit.Load(), p.pending, p.baseFee, p.queued, p.all, p.byHash, p.addLocked, p.discardLocked, true)
 	if err == nil {
 		for i, reason := range addReasons {
 			if reason != NotSet {
 				// For X Layer, optimize tx pool
+				log.Info("not set >>>")
 				reasons[validIndices[i]] = reason
 			}
 		}
@@ -1063,6 +1064,7 @@ func (p *TxPool) AddLocalTxs(ctx context.Context, newTransactions types.TxSlots,
 	p.promoted.AppendOther(announcements)
 
 	// For X Layer, optimize tx pool
+	log.Info("before fillDiscardReasons >>>")
 	reasons = fillDiscardReasons(reasons, newTransactions, p.discardReasonsLRU)
 	for i, reason := range reasons {
 		if reason == Success {
@@ -1072,6 +1074,8 @@ func (p *TxPool) AddLocalTxs(ctx context.Context, newTransactions types.TxSlots,
 				log.Info(fmt.Sprintf("TX TRACING: AddLocalTxs promotes idHash=%x, senderId=%d", txn.IDHash, txn.SenderID))
 			}
 			p.promoted.Append(txn.Type, txn.Size, txn.IDHash[:])
+		} else {
+			log.Info(fmt.Sprintf("ERROR: %s\n", reason))
 		}
 	}
 	if p.promoted.Len() > 0 {
