@@ -40,7 +40,7 @@ run: build-docker
 	$(INIT_BRIDGE_ACCOUNT)
 
 run-mock:
-	$(DOCKER_COMPOSE) stop xlayer-prover-true
+	$(DOCKER_COMPOSE) stop --timeout=60 xlayer-prover-true
 	sleep 3
 	$(DOCKER_COMPOSE) up xlayer-seqs -d
 	sleep 3
