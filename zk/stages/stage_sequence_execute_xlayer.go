@@ -101,7 +101,7 @@ func resequenceFromSMTAlignment(
 	lastBatch, highestBatchInDs uint64,
 ) (err error) {
 	log.Info(fmt.Sprintf("[%s] ResequenceFromSMTAlignment, last batch %d is lower than highest batch in datastream %d, resequencing...", s.LogPrefix(), lastBatch, highestBatchInDs))
-	batches, err := cfg.dataStreamServer.ReadBatches(lastBatch+1, highestBatchInDs)
+	batches, err := cfg.dataStreamServer.ReadBatchesWithConcurrency(lastBatch+1, highestBatchInDs)
 	if err != nil {
 		return err
 	}
