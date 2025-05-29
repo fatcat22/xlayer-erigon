@@ -18,9 +18,9 @@ ROOT_DIR="$(dirname "$PWD_DIR")"
 
 CONTRACT_JSON="artifacts/contracts/verifiers/FflonkVerifier_13.sol/FflonkVerifier_13.json"
 
-docker compose -f docker-compose.yml down xlayer-seqs
+docker stop xlayer-seqs
 sleep 30
-docker compose -f docker-compose.yml down xlayer-agg
+docker stop xlayer-agg
 
 sed_inplace() {
   if [[ "$OSTYPE" == "darwin"* ]]; then
