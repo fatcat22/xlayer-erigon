@@ -346,7 +346,8 @@ func (c *Config) GetMaxBlobsPerBlock() uint64 {
 }
 
 func (c *Config) IsNormalcy(num uint64) bool {
-	return isForked(c.NormalcyBlock, num)
+	return true
+	// return isForked(c.NormalcyBlock, num)
 }
 
 func (c *Config) IsForkID4(num uint64) bool {
