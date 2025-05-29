@@ -28,6 +28,7 @@ func getNextPoolTransactions(ctx context.Context, cfg SequenceBlockCfg, executio
 	var allConditionsOk bool
 	var err error
 
+	prepareTime := time.Now()
 	gasLimit := utils.GetBlockGasLimitForFork(forkId)
 
 	ti := utils.StartTimer("txpool", "get-transactions")
@@ -36,18 +37,21 @@ func getNextPoolTransactions(ctx context.Context, cfg SequenceBlockCfg, executio
 	cfg.txPool.PreYield()
 	defer cfg.txPool.PostYield()
 
-	yieldBestTime := time.Now()
+	metrics.GetLogStatistics().CumulativeTiming(metrics.YieldPre, time.Since(prepareTime))
+
 	// For X Layer, optimize getTransactions
 	slots := types2.TxsRlp{}
+
 	if err := cfg.txPoolDb.View(ctx, func(poolTx kv.Tx) error {
+		yieldBestTime := time.Now()
 		if allConditionsOk, _, err = cfg.txPool.YieldBest(cfg.yieldSize, &slots, poolTx, executionAt, gasLimit, 0, alreadyYielded); err != nil {
 			return err
 		}
+		metrics.GetLogStatistics().CumulativeTiming(metrics.YieldBest, time.Since(yieldBestTime))
 		return nil
 	}); err != nil {
 		return nil, nil, allConditionsOk, err
 	}
-	metrics.GetLogStatistics().CumulativeTiming(metrics.YieldBest, time.Since(yieldBestTime))
 
 	extractTime := time.Now()
 	// For X Layer, optimize getTransactions
@@ -57,11 +61,11 @@ func getNextPoolTransactions(ctx context.Context, cfg SequenceBlockCfg, executio
 		return nil, nil, allConditionsOk, err
 	}
 
+	markTime := time.Now()
 	for _, txId := range toRemove {
 		cfg.txPool.MarkForDiscardFromPendingBest(txId)
 	}
 
-	markTime := time.Now()
 	for _, tx := range yieldedTxs {
 		utils.LogTrace(
 			tx.Hash().String(),         // txhash

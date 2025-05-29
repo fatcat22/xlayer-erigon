@@ -25,8 +25,10 @@ const (
 	ZkIncIntermediateHashesTiming LogTag = "ZkIncIntermediateHashesTiming"
 	FinaliseBlockWriteTiming      LogTag = "FinaliseBlockWriteTiming"
 
+	YieldPre  LogTag = "YieldPre"
 	YieldBest LogTag = "YieldBest"
 	WaitWg    LogTag = "WaitWg"
+	PoolLock  LogTag = "PoolLock"
 	Sorting   LogTag = "Sorting"
 	Extract   LogTag = "Extract"
 	BestRead1 LogTag = "BestRead1"

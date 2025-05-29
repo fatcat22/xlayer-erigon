@@ -104,8 +104,10 @@ func (p *TxPool) bestForXLayer(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, a
 		return false, 0, nil
 	}
 
+	lockTime := time.Now()
 	p.lock.RLock()
 	defer p.lock.RUnlock()
+	metrics.GetLogStatistics().CumulativeTiming(metrics.PoolLock, time.Since(lockTime))
 
 	best := p.pending.best
 	readContext := ReadContext{

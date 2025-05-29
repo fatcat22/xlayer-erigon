@@ -126,8 +126,10 @@ func (l *statisticsInstance) SummaryCheckpoint() string {
 
 	setSmtCacheTiming := l.statistics[SetSmtCacheTiming] - l.statisticsOld[SetSmtCacheTiming]
 
+	yieldPre := l.statistics[YieldPre] - l.statisticsOld[YieldPre]
 	yield := l.statistics[YieldBest] - l.statisticsOld[YieldBest]
 	waitWg := l.statistics[WaitWg] - l.statisticsOld[WaitWg]
+	poolLock := l.statistics[PoolLock] - l.statisticsOld[PoolLock]
 	sorting := l.statistics[Sorting] - l.statisticsOld[Sorting]
 	extract := l.statistics[Extract] - l.statisticsOld[Extract]
 	bestRead1 := l.statistics[BestRead1] - l.statisticsOld[BestRead1]
@@ -136,7 +138,12 @@ func (l *statisticsInstance) SummaryCheckpoint() string {
 	mark := l.statistics[Mark] - l.statisticsOld[Mark]
 	l.mu.RUnlock()
 
-	txProcessDetails := fmt.Sprintf("{ getTx[%dms], yield[%dms], waitWg[%dms], sorting[%dms], extract[%dms], bestRead1[%dms], bestRead2[%dms], delete[%dms], mark[%dms], getTxPause[%dms] }", blockGetTxTiming, yield, waitWg, sorting, extract, bestRead1, bestRead2, deleteTx, mark, blockGetTxPauseTiming)
+	txProcessDetails := fmt.Sprintf("{ getTx[%dms], "+
+		"yieldPre[%dms], "+
+		"yield[%dms], "+
+		"waitWg[%dms], "+
+		"lock[%dms], "+
+		"sorting[%dms], extract[%dms], bestRead1[%dms], bestRead2[%dms], delete[%dms], mark[%dms], getTxPause[%dms] }", blockGetTxTiming, yieldPre, yield, waitWg, poolLock, sorting, extract, bestRead1, bestRead2, deleteTx, mark, blockGetTxPauseTiming)
 
 	zkHashSMTTimings := fmt.Sprintf("{ zkHashSMTDeleteByNodeKey[%d-%.3fms], zkHashSMTDeleteHashKey[%d-%.3fms], "+
 		"zkHashSMTInsertKey[%d-%.3fms], zkHashSMTGetKey[%d-%.3fms] }",
@@ -239,6 +246,7 @@ func (l *statisticsInstance) Summary() string {
 
 	yield := l.statistics[YieldBest]
 	waitWg := l.statistics[WaitWg]
+	poolLock := l.statistics[PoolLock]
 	sorting := l.statistics[Sorting]
 	extract := l.statistics[Extract]
 	bestRead1 := l.statistics[BestRead1]
@@ -246,7 +254,7 @@ func (l *statisticsInstance) Summary() string {
 	deleteTxTime := l.statistics[DeleteTx]
 	mark := l.statistics[Mark]
 
-	txProcessDetails := fmt.Sprintf("{ getTx[%dms], yield[%dms], waitWg[%dms], sorting[%dms], extract[%dms], bestRead1[%dms], bestRead2[%dms], delete[%dms], mark[%dms], getTxPause[%dms] }", getTxTiming, yield, waitWg, sorting, extract, bestRead1, bestRead2, deleteTxTime, mark, getTxPauseTiming)
+	txProcessDetails := fmt.Sprintf("{ getTx[%dms], yield[%dms], waitWg[%dms], lock[%dms], sorting[%dms], extract[%dms], bestRead1[%dms], bestRead2[%dms], delete[%dms], mark[%dms], getTxPause[%dms] }", getTxTiming, yield, waitWg, poolLock, sorting, extract, bestRead1, bestRead2, deleteTxTime, mark, getTxPauseTiming)
 
 	zkHashSMTTimings := fmt.Sprintf("{ zkHashSMTDeleteByNodeKey[%d-%.3fms], zkHashSMTDeleteHashKey[%d-%.3fms], zkHashSMTInsertKey[%d-%.3fms], zkHashSMTGetKey[%d-%.3fms] }",
 		zkHashSMTDeleteByNodeKey, float64(zkHashSMTDeleteByNodeKeyTiming)/1000.0,
