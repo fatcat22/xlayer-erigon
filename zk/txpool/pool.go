@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"github.com/VictoriaMetrics/metrics"
 	"github.com/holiman/uint256"
-	"github.com/ledgerwatch/erigon-lib/metrics"
 	types2 "github.com/ledgerwatch/erigon/core/types"
 	"math"
 	"math/big"
