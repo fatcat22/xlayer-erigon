@@ -138,6 +138,7 @@ which allocs
 jq '.genesis |= map(if .accountName == "deployer" then .address = "'"$DEPLOYER_ADDRESS"'" else . end)' ./test-pp/contract2/genesis.json > temp.json && mv temp.json ./test-pp/contract2/genesis.json
 allocs ./test-pp/contract2/genesis.json
 mv allocs.json ./test-pp/config/dynamic-polygonzkevm-allocs.json
+chmod 644 ./test-pp/config/dynamic-polygonzkevm-allocs.json
 
 cat > ./test-pp/config/dynamic-polygonzkevm-conf.json << EOF
 {
