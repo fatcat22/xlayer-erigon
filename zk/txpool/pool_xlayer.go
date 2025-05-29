@@ -189,7 +189,7 @@ func (p *TxPool) bestRead(n uint16, tx kv.Tx, onTopOf uint64, readContext *ReadC
 			//log.Trace("Skipping transaction with too high gas", "txID", mt.Tx.IDHash, "gas", mt.Tx.Gas)
 			continue
 		}
-		rlpTx, sender, isLocal, err := p.getRlpLocked(tx, mt.Tx.IDHash[:])
+		rlpTx, decodedTx, sender, isLocal, err := p.getRlpLocked(tx, mt.Tx.IDHash[:])
 		if err != nil {
 			//log.Trace("Error getting RLP of transaction", "txID", mt.Tx.IDHash, "error", err)
 			return false, err
@@ -236,6 +236,7 @@ func (p *TxPool) bestRead(n uint16, tx kv.Tx, onTopOf uint64, readContext *ReadC
 
 		//log.Trace("Including transaction", "txID", mt.Tx.IDHash)
 		readContext.txs.Txs[readContext.count] = rlpTx
+		readContext.txs.DecodedTxs[readContext.count] = decodedTx
 		readContext.txs.TxIds[readContext.count] = mt.Tx.IDHash
 		copy(readContext.txs.Senders.At(readContext.count), sender.Bytes())
 		readContext.txs.IsLocal[readContext.count] = isLocal

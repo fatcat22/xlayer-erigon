@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ledgerwatch/log/v3"
 	"math/big"
 
 	"github.com/ledgerwatch/erigon-lib/common"

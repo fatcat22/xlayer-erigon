@@ -809,9 +809,11 @@ func (h Addresses) At(i int) []byte { return h[i*length.Addr : (i+1)*length.Addr
 func (h Addresses) Len() int        { return len(h) / length.Addr }
 
 type TxSlots struct {
-	Txs     []*TxSlot
-	Senders Addresses
-	IsLocal []bool
+	TxIds      []common.Hash
+	Txs        []*TxSlot
+	DecodedTxs []interface{}
+	Senders    Addresses
+	IsLocal    []bool
 }
 
 func (s *TxSlots) Valid() error {
@@ -831,6 +833,9 @@ func (s *TxSlots) Resize(targetSize uint) {
 	for uint(len(s.Txs)) < targetSize {
 		s.Txs = append(s.Txs, nil)
 	}
+	for uint(len(s.DecodedTxs)) < targetSize {
+		s.DecodedTxs = append(s.DecodedTxs, nil)
+	}
 	for uint(s.Senders.Len()) < targetSize {
 		s.Senders = append(s.Senders, addressesGrowth...)
 	}
@@ -843,6 +848,7 @@ func (s *TxSlots) Resize(targetSize uint) {
 	for i := oldLen; i < targetSize; i++ {
 		s.Txs[i] = nil
 	}
+	s.DecodedTxs = s.DecodedTxs[:targetSize]
 	s.Senders = s.Senders[:length.Addr*targetSize]
 	for i := oldLen; i < targetSize; i++ {
 		copy(s.Senders.At(int(i)), zeroAddr)
@@ -856,6 +862,7 @@ func (s *TxSlots) Append(slot *TxSlot, sender []byte, isLocal bool) {
 	n := len(s.Txs)
 	s.Resize(uint(len(s.Txs) + 1))
 	s.Txs[n] = slot
+	//s.DecodedTxs[n] = slot.DecodedTx
 	s.IsLocal[n] = isLocal
 	copy(s.Senders.At(n), sender)
 }
