@@ -121,6 +121,7 @@ func (p *TxPool) bestForXLayer(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, a
 	p.pending.EnforceBestInvariants()
 	metrics.GetLogStatistics().CumulativeTiming(metrics.Sorting, time.Since(sortingTime))
 
+	bestRead1 := time.Now()
 	// Prioritize OkPay txs first
 	ok, err := p.bestRead(n, tx, onTopOf, &readContext, true)
 	if err != nil {
@@ -129,7 +130,9 @@ func (p *TxPool) bestForXLayer(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, a
 	if !ok {
 		return false, readContext.count, nil
 	}
+	metrics.GetLogStatistics().CumulativeTiming(metrics.BestRead1, time.Since(bestRead1))
 
+	bestRead2 := time.Now()
 	// Add all other txs
 	ok, err = p.bestRead(n, tx, onTopOf, &readContext, false)
 	if err != nil {
@@ -138,6 +141,7 @@ func (p *TxPool) bestForXLayer(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, a
 	if !ok {
 		return false, readContext.count, nil
 	}
+	metrics.GetLogStatistics().CumulativeTiming(metrics.BestRead2, time.Since(bestRead2))
 
 	readContext.txs.Resize(uint(readContext.count))
 	if len(readContext.toRemove) > 0 {

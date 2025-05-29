@@ -29,6 +29,8 @@ const (
 	WaitWg    LogTag = "WaitWg"
 	Sorting   LogTag = "Sorting"
 	Extract   LogTag = "Extract"
+	BestRead1 LogTag = "BestRead1"
+	BestRead2 LogTag = "BestRead2"
 	Mark      LogTag = "Mark"
 
 	ZKHashAccountCount LogTag = "ZKHashAccountCount"

@@ -62,22 +62,19 @@ func getNextPoolTransactions(ctx context.Context, cfg SequenceBlockCfg, executio
 	}
 
 	markTime := time.Now()
-
-	//for _, tx := range yieldedTxs {
-	//	utils.LogTrace(
-	//		tx.Hash().String(),         // txhash
-	//		utils.ServiceNameSequencer, // serviceName
-	//		utils.StepSeqReceiveTx.ID,  // processId
-	//		utils.StepSeqReceiveTx.Key, // processWord
-	//		executionAt+1,              // blockHeight
-	//		"",                         // blockHash
-	//		0,                          // blockTime
-	//		int8(tx.Type()),            // transactionType
-	//	)
-	//}
-
+	for _, tx := range yieldedTxs {
+		utils.LogTrace(
+			tx.Hash().String(),         // txhash
+			utils.ServiceNameSequencer, // serviceName
+			utils.StepSeqReceiveTx.ID,  // processId
+			utils.StepSeqReceiveTx.Key, // processWord
+			executionAt+1,              // blockHeight
+			"",                         // blockHash
+			0,                          // blockTime
+			int8(tx.Type()),            // transactionType
+		)
+	}
 	metrics.GetLogStatistics().CumulativeTiming(metrics.Mark, time.Since(markTime))
-
 	return yieldedTxs, yieldedIds, allConditionsOk, err
 }
 

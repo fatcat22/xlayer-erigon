@@ -130,10 +130,12 @@ func (l *statisticsInstance) SummaryCheckpoint() string {
 	waitWg := l.statistics[WaitWg] - l.statisticsOld[WaitWg]
 	sorting := l.statistics[Sorting] - l.statisticsOld[Sorting]
 	extract := l.statistics[Extract] - l.statisticsOld[Extract]
+	bestRead1 := l.statistics[BestRead1] - l.statisticsOld[BestRead1]
+	bestRead2 := l.statistics[BestRead2] - l.statisticsOld[BestRead2]
 	mark := l.statistics[Mark] - l.statisticsOld[Mark]
 	l.mu.RUnlock()
 
-	txProcessDetails := fmt.Sprintf("{ getTx[%dms], yield[%dms], waitWg[%dms], sorting[%dms], extract[%dms], mark[%dms], getTxPause[%dms] }", blockGetTxTiming, yield, waitWg, sorting, extract, mark, blockGetTxPauseTiming)
+	txProcessDetails := fmt.Sprintf("{ getTx[%dms], yield[%dms], waitWg[%dms], sorting[%dms], extract[%dms], bestRead1[%dms], bestRead2[%dms], mark[%dms], getTxPause[%dms] }", blockGetTxTiming, yield, waitWg, sorting, extract, bestRead1, bestRead2, mark, blockGetTxPauseTiming)
 
 	zkHashSMTTimings := fmt.Sprintf("{ zkHashSMTDeleteByNodeKey[%d-%.3fms], zkHashSMTDeleteHashKey[%d-%.3fms], "+
 		"zkHashSMTInsertKey[%d-%.3fms], zkHashSMTGetKey[%d-%.3fms] }",
@@ -238,9 +240,11 @@ func (l *statisticsInstance) Summary() string {
 	waitWg := l.statistics[WaitWg]
 	sorting := l.statistics[Sorting]
 	extract := l.statistics[Extract]
+	bestRead1 := l.statistics[BestRead1]
+	bestRead2 := l.statistics[BestRead2]
 	mark := l.statistics[Mark]
 
-	txProcessDetails := fmt.Sprintf("{ getTx[%dms], yield[%dms], waitWg[%dms], sorting[%dms], extract[%dms], mark[%dms], getTxPause[%dms] }", getTxTiming, yield, waitWg, sorting, extract, mark, getTxPauseTiming)
+	txProcessDetails := fmt.Sprintf("{ getTx[%dms], yield[%dms], waitWg[%dms], sorting[%dms], extract[%dms], bestRead1[%dms], bestRead2[%dms], mark[%dms], getTxPause[%dms] }", getTxTiming, yield, waitWg, sorting, extract, bestRead1, bestRead2, mark, getTxPauseTiming)
 
 	zkHashSMTTimings := fmt.Sprintf("{ zkHashSMTDeleteByNodeKey[%d-%.3fms], zkHashSMTDeleteHashKey[%d-%.3fms], zkHashSMTInsertKey[%d-%.3fms], zkHashSMTGetKey[%d-%.3fms] }",
 		zkHashSMTDeleteByNodeKey, float64(zkHashSMTDeleteByNodeKeyTiming)/1000.0,
