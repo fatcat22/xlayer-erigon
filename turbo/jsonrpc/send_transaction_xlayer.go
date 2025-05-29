@@ -184,7 +184,6 @@ func (api *APIImpl) processBulk(bulk []txRequest) error {
 	var results []txResult
 	for _, req := range bulk {
 		hash, decodedTx, sender, err := api.validateTransaction(req.ctx, req.encodedTx, tx, cc, signer, chainId, header)
-		log.Info(fmt.Sprintf("validate transaction hash %v err %v", hash, err))
 		if err != nil {
 			log.Error("validateTransaction failed", "err", err)
 			if req.resultChan != nil {

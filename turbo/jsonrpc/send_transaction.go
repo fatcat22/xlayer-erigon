@@ -22,7 +22,6 @@ import (
 
 // SendRawTransaction implements eth_sendRawTransaction. Creates new message call transaction or a contract creation for previously-signed transactions.
 func (api *APIImpl) SendRawTransaction(ctx context.Context, encodedTx hexutility.Bytes) (common.Hash, error) {
-	//log.Info(fmt.Sprintf("SendRawTransaction %v \n", hexutil.Encode(encodedTx)))
 	if !sequencer.IsSequencer() {
 		txn, err := types.DecodeWrappedTransaction(encodedTx)
 		if err != nil {
@@ -51,7 +50,6 @@ func (api *APIImpl) SendRawTransaction(ctx context.Context, encodedTx hexutility
 
 // For X Layer, optimize tx pool
 func (api *APIImpl) sendRawTransactionSingle(ctx context.Context, encodedTx hexutility.Bytes) (common.Hash, error) {
-	log.Info("rawTx singleTx sendRawTransactionSingle")
 	t := utils.StartTimer("rpc", "sendrawtransaction")
 	defer t.LogTimer()
 
@@ -75,7 +73,6 @@ func (api *APIImpl) sendRawTransactionSingle(ctx context.Context, encodedTx hexu
 
 		return api.sendTxZk(api.l2RpcUrl, encodedTx, chainId.Uint64())
 	}
-	log.Info("rawTx singleTx sendRawTransactionSingle", "decode", encodedTx)
 	txn, err := types.DecodeWrappedTransaction(encodedTx)
 	if err != nil {
 		return common.Hash{}, err
