@@ -49,17 +49,13 @@ var sha3UncleHash = common.HexToHash("0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b
 
 // ZkEvmAPI is a collection of functions that are exposed in the
 type ZkEvmAPI interface {
-	ConsolidatedBlockNumber(ctx context.Context) (hexutil.Uint64, error)
-	IsBlockConsolidated(ctx context.Context, blockNumber rpc.BlockNumber) (bool, error)
 	IsBlockVirtualized(ctx context.Context, blockNumber rpc.BlockNumber) (bool, error)
 	BatchNumberByBlockNumber(ctx context.Context, blockNumber rpc.BlockNumber) (hexutil.Uint64, error)
 	BatchNumber(ctx context.Context) (hexutil.Uint64, error)
 	VirtualBatchNumber(ctx context.Context) (hexutil.Uint64, error)
-	VerifiedBatchNumber(ctx context.Context) (hexutil.Uint64, error)
 	GetBatchByNumber(ctx context.Context, batchNumber rpc.BlockNumber, fullTx *bool) (json.RawMessage, error)
 	GetFullBlockByNumber(ctx context.Context, number rpc.BlockNumber, fullTx bool) (types.Block, error)
 	GetFullBlockByHash(ctx context.Context, hash common.Hash, fullTx bool) (types.Block, error)
-	// GetBroadcastURI(ctx context.Context) (string, error)
 	GetLatestGlobalExitRoot(ctx context.Context) (common.Hash, error)
 	GetExitRootsByGER(ctx context.Context, globalExitRoot common.Hash) (*ZkExitRoots, error)
 	GetL2BlockInfoTree(ctx context.Context, blockNum rpc.BlockNumberOrHash) (json.RawMessage, error)
@@ -85,22 +81,11 @@ type ZkEvmAPIImpl struct {
 	config           *ethconfig.Config
 	l1Syncer         *syncer.L1Syncer
 	l2SequencerUrl   string
-	semaphores       map[string]chan struct{}
 	datastreamServer server.DataStreamServer
 
 	// For X Layer, split db and ac
 	dbsmt kv.RoDB
 	cache *smt2.SmtCache
-}
-
-func (api *ZkEvmAPIImpl) initializeSemaphores(functionLimits map[string]int) {
-	api.semaphores = make(map[string]chan struct{})
-
-	for funcName, limit := range functionLimits {
-		if limit != 0 {
-			api.semaphores[funcName] = make(chan struct{}, limit)
-		}
-	}
 }
 
 // NewEthAPI returns ZkEvmAPIImpl instance
@@ -129,55 +114,7 @@ func NewZkEvmAPI(
 		cache: cache,
 	}
 
-	a.initializeSemaphores(map[string]int{})
-
 	return a
-}
-
-// ConsolidatedBlockNumber returns the latest consolidated block number
-// Once a batch is verified, it is connected to the blockchain, and the block number of the most recent block in that batch
-// becomes the "consolidated block number.”
-func (api *ZkEvmAPIImpl) ConsolidatedBlockNumber(ctx context.Context) (hexutil.Uint64, error) {
-	tx, err := api.db.BeginRo(ctx)
-	if err != nil {
-		return hexutil.Uint64(0), err
-	}
-	defer tx.Rollback()
-
-	highestVerifiedBatchNo, err := stages.GetStageProgress(tx, stages.L1VerificationsBatchNo)
-	if err != nil {
-		return hexutil.Uint64(0), err
-	}
-
-	blockNum, err := getLastBlockInBatchNumber(tx, highestVerifiedBatchNo)
-	if err != nil {
-		return hexutil.Uint64(0), err
-	}
-
-	return hexutil.Uint64(blockNum), nil
-}
-
-// IsBlockConsolidated returns true if the block is consolidated
-func (api *ZkEvmAPIImpl) IsBlockConsolidated(ctx context.Context, blockNumber rpc.BlockNumber) (bool, error) {
-	tx, err := api.db.BeginRo(ctx)
-	if err != nil {
-		return false, err
-	}
-	defer tx.Rollback()
-
-	batchNum, err := getBatchNoByL2Block(tx, uint64(blockNumber.Int64()))
-	if errors.Is(err, hermez_db.ErrorNotStored) {
-		return false, nil
-	} else if err != nil {
-		return false, err
-	}
-
-	highestVerifiedBatchNo, err := stages.GetStageProgress(tx, stages.L1VerificationsBatchNo)
-	if err != nil {
-		return false, err
-	}
-
-	return batchNum <= highestVerifiedBatchNo, nil
 }
 
 // IsBlockVirtualized returns true if the block is virtualized (not confirmed on the L1 but exists in the L1 smart contract i.e. sequenced)
@@ -271,22 +208,6 @@ func (api *ZkEvmAPIImpl) VirtualBatchNumber(ctx context.Context) (hexutil.Uint64
 	// todo: what if this number is the same as the last verified batch number?  do we return 0?
 
 	return hexutil.Uint64(latestSequencedBatch.BatchNo), nil
-}
-
-// VerifiedBatchNumber returns the latest verified batch number
-// A batch is considered verified once its proof has been validated and accepted by the network.
-func (api *ZkEvmAPIImpl) VerifiedBatchNumber(ctx context.Context) (hexutil.Uint64, error) {
-	tx, err := api.db.BeginRo(ctx)
-	if err != nil {
-		return hexutil.Uint64(0), err
-	}
-	defer tx.Rollback()
-
-	highestVerifiedBatchNo, err := stages.GetStageProgress(tx, stages.L1VerificationsBatchNo)
-	if err != nil {
-		return hexutil.Uint64(0), err
-	}
-	return hexutil.Uint64(highestVerifiedBatchNo), nil
 }
 
 // GetBatchDataByNumbers returns the batch data for the given batch numbers
@@ -587,18 +508,6 @@ func (api *ZkEvmAPIImpl) GetBatchByNumber(ctx context.Context, rpcBatchNumber rp
 				batch.Closed = true
 			}
 		}
-	}
-
-	// verification - if we can't find one, maybe this batch was verified along with a higher batch number
-	ver, err := hermezDb.GetVerificationByBatchNoOrHighest(batchNo)
-	if err != nil {
-		return nil, err
-	}
-
-	if batchNo == 0 {
-		batch.VerifyBatchTxHash = &common.Hash{0}
-	} else if ver != nil {
-		batch.VerifyBatchTxHash = &ver.L1TxHash
 	}
 
 	itu, err := hermezDb.GetL1InfoTreeUpdateByGer(batchGer)
@@ -1274,7 +1183,6 @@ func populateBatchDetails(batch *types.Batch) (json.RawMessage, error) {
 	jBatch["rollupExitRoot"] = batch.RollupExitRoot
 	jBatch["localExitRoot"] = batch.LocalExitRoot
 	jBatch["sendSequencesTxHash"] = batch.SendSequencesTxHash
-	jBatch["verifyBatchTxHash"] = batch.VerifyBatchTxHash
 	jBatch["accInputHash"] = batch.AccInputHash
 
 	if batch.ForcedBatchNumber != nil {
