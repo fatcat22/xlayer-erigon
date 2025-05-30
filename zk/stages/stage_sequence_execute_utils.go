@@ -449,8 +449,6 @@ func tryHaltSequencer(batchContext *BatchContext, batchState *BatchState, stream
 	if batchContext.cfg.zk.SequencerHaltOnBatchNumber != 0 && batchContext.cfg.zk.SequencerHaltOnBatchNumber == batchState.batchNumber {
 		log.Info(fmt.Sprintf("[%s] Attempting to halt on batch %v, checking for pending verifications", batchContext.s.LogPrefix(), batchState.batchNumber))
 
-		// Legacy verifier pending verification check removed
-
 		// we need to ensure the batch is also sealed in the datastream at this point
 		if err := finalizeLastBatchInDatastreamIfNotFinalized(batchContext, batchState.batchNumber-1, latestBlock); err != nil {
 			return false, false, err
@@ -520,52 +518,4 @@ func checkForBadBatch(
 	}
 
 	return false, nil
-}
-
-// hard coded to match in with the smart contract
-// https://github.com/0xPolygonHermez/zkevm-contracts/blob/73758334f8568b74e9493fcc530b442bd73325dc/contracts/PolygonZkEVM.sol#L119C63-L119C69
-const LIMIT_120_KB = 120_000
-
-type BlockDataChecker struct {
-	limit   uint64 // limit amount of bytes
-	counter uint64 // counter amount of bytes
-}
-
-func NewBlockDataChecker(unlimitedData bool) *BlockDataChecker {
-	var limit uint64
-	if unlimitedData {
-		limit = math.MaxUint64
-	} else {
-		limit = LIMIT_120_KB
-	}
-
-	return &BlockDataChecker{
-		limit:   limit,
-		counter: 0,
-	}
-}
-
-// adds bytes amounting to the block data and checks if the limit is reached
-// if the limit is reached, the data is not added, so this can be reused again for next check
-func (bdc *BlockDataChecker) AddBlockStartData() bool {
-	blockStartBytesAmount := zktx.START_BLOCK_BATCH_L2_DATA_SIZE // tx.GenerateStartBlockBatchL2Data(deltaTimestamp, l1InfoTreeIndex) returns 65 long byte array
-	// add in the changeL2Block transaction
-	if bdc.counter+blockStartBytesAmount > bdc.limit {
-		return true
-	}
-
-	bdc.counter += blockStartBytesAmount
-
-	return false
-}
-
-func (bdc *BlockDataChecker) AddTransactionData(txL2Data []byte) bool {
-	encodedLen := uint64(len(txL2Data))
-	if bdc.counter+encodedLen > bdc.limit {
-		return true
-	}
-
-	bdc.counter += encodedLen
-
-	return false
 }

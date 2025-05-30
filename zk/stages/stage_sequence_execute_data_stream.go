@@ -34,40 +34,50 @@ func newSequencerBatchStreamWriter(batchContext *BatchContext, batchState *Batch
 	}
 }
 
-func (sbc *SequencerBatchStreamWriter) CommitNewUpdates() error {
-	// Direct datastream writing without verification
-	return nil
-}
+// batchNumber, blocks []uint64,
+func (sbc *SequencerBatchStreamWriter) WriteBlockDetailsToDatastream(forkId, batchNumber uint64, blockNumbers []uint64) error {
 
-func (sbc *SequencerBatchStreamWriter) WriteBlockToDatastream(blockNumber uint64, batchNumber uint64, forkId uint64) error {
-	// Write block directly to datastream without verification
-	previousBlock, err := rawdb.ReadBlockByNumber(sbc.sdb.tx, blockNumber-1)
+	highestClosedBatch, err := sbc.streamServer.GetHighestClosedBatch()
 	if err != nil {
 		return err
 	}
-
-	block, err := rawdb.ReadBlockByNumber(sbc.sdb.tx, blockNumber)
+	highestStartedBatch, err := sbc.streamServer.GetHighestBatchNumber()
 	if err != nil {
 		return err
 	}
-
-	// Get previous block's batch number
-	previousBlockBatchNumber := batchNumber
-	if blockNumber > 1 {
-		var found bool
-		previousBlockBatchNumber, found, err = sbc.sdb.hermezDb.HermezDbReader.CheckBatchNoByL2Block(previousBlock.NumberU64())
-		if !found || err != nil {
-			// If not found, assume same batch
-			previousBlockBatchNumber = batchNumber
+	isCurrentBatchHigherThanLastInDatastream := batchNumber > highestStartedBatch
+	isLastBatchInDatastremClosed := highestClosedBatch == highestStartedBatch
+	if isCurrentBatchHigherThanLastInDatastream && !isLastBatchInDatastremClosed {
+		firstBlockNumber := blockNumbers[0]
+		if err := finalizeLastBatchInDatastream(sbc.batchContext, highestStartedBatch, firstBlockNumber-1); err != nil {
+			return err
 		}
 	}
 
-	// Write block to datastream
+	lastBlockNumber := blockNumbers[len(blockNumbers)-1]
+	previousBlock, err := rawdb.ReadBlockByNumber(sbc.sdb.tx, lastBlockNumber-1)
+	if err != nil {
+		return err
+	}
+	block, err := rawdb.ReadBlockByNumber(sbc.sdb.tx, lastBlockNumber)
+	if err != nil {
+		return err
+	}
+	// all blocks in a request has identical batch number
+	// we need only to check the previous block's batch number for i == 0
+	previousBlockBatchNumber := batchNumber
+	if len(blockNumbers) == 1 {
+		var found bool
+		previousBlockBatchNumber, found, err = sbc.sdb.hermezDb.HermezDbReader.CheckBatchNoByL2Block(previousBlock.NumberU64())
+		if !found || err != nil {
+			return err
+		}
+	}
+
 	if err := sbc.streamServer.WriteBlockWithBatchStartToStream(sbc.logPrefix, sbc.sdb.tx, sbc.sdb.hermezDb, forkId, batchNumber, previousBlockBatchNumber, *previousBlock, *block); err != nil {
 		return err
 	}
 
-	// Update datastream progress
 	if err = stages.SaveStageProgress(sbc.sdb.tx, stages.DataStream, block.NumberU64()); err != nil {
 		return err
 	}

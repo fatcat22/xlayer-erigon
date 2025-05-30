@@ -196,7 +196,6 @@ func sequencingBatchStep(
 	runLoopBlocks := true
 	batchContext := newBatchContext(ctx, &cfg, &historyCfg, s, sdb)
 	batchState := newBatchState(forkId, batchNumberForStateInitialization, executionAt+1, cfg.zk.UseExecutors(), cfg.zk.L1SyncStartBlock > 0, cfg.txPool, resequenceBatchJob)
-	blockDataSizeChecker := NewBlockDataChecker(cfg.zk.ShouldCountersBeUnlimited(batchState.isL1Recovery()))
 	streamWriter := newSequencerBatchStreamWriter(batchContext, batchState)
 
 	// injected batch
@@ -411,11 +410,6 @@ BatchLoop:
 			return err
 		}
 
-		if batchDataOverflow := blockDataSizeChecker.AddBlockStartData(); batchDataOverflow {
-			log.Info(fmt.Sprintf("[%s] BatchL2Data limit reached. Stopping.", logPrefix), "blockNumber", blockNumber)
-			break
-		}
-
 		// timer: evm + smt
 		t := utils.StartTimer("stage_sequence_execute", "evm", "smt")
 
@@ -602,9 +596,7 @@ BatchLoop:
 
 				effectiveGas := batchState.blockState.getL1EffectiveGases(cfg, i)
 
-				// The copying of this structure is intentional
-				backupDataSizeChecker := *blockDataSizeChecker
-				receipt, execResult, anyOverflow, err := attemptAddTransaction(cfg, sdb, ibs, &blockContext, header, transaction, effectiveGas, batchState.isL1Recovery(), batchState.forkId, l1TreeUpdateIndex, &backupDataSizeChecker, ethBlockGasPool)
+				receipt, execResult, anyOverflow, err := attemptAddTransaction(cfg, sdb, ibs, &blockContext, header, transaction, effectiveGas, batchState.isL1Recovery(), batchState.forkId, l1TreeUpdateIndex, ethBlockGasPool)
 				if err != nil {
 					metrics.GetLogStatistics().CumulativeCounting(metrics.ProcessingInvalidTxCounter)
 					if batchState.isLimboRecovery() {
@@ -654,43 +646,7 @@ BatchLoop:
 
 				switch anyOverflow {
 				case overflowCounters:
-					metrics.GetLogStatistics().CumulativeCounting(metrics.ZKOverflowBlockCounter)
-					if batchState.isLimboRecovery() {
-						panic("limbo transaction has already been executed once so they must not overflow counters while re-executing")
-					}
-
-					if !batchState.isL1Recovery() {
-						// we need to now skip any further transactions from the same sender in this batch as we will encounter nonce problems
-						if sender, ok := transaction.GetSender(); ok {
-							sendersToSkip[sender] = struct{}{}
-						}
-
-						/*
-							here we check if the transaction on it's own would overdflow the batch counters
-							by creating a new counter collector and priming it for a single block with just this transaction
-							in it.  We already have the computed execution counters so we don't need to recompute them and
-							can just combine collectors as normal to see if it would overflow.
-
-							If it does overflow then we mark the hash as a bad one and move on.  Calls to the RPC will
-							check if this hash has appeared too many times and stop allowing it through if required.
-						*/
-
-						// Counter overflow handling removed - mark transaction as bad
-						cfg.txPool.MarkForDiscardFromPendingBest(txHash)
-						counter, err := handleBadTxHashCounter(sdb.hermezDb, txHash)
-						if err != nil {
-							return err
-						}
-						log.Info(fmt.Sprintf("[%s] transaction %s marked as bad due to overflow", logPrefix, txHash), "times_seen", counter)
-						badTxHashes = append(badTxHashes, txHash)
-
-						// continue on processing other transactions and skip this one
-						continue
-					}
-
-					if batchState.isResequence() && cfg.zk.SequencerResequenceStrict {
-						return fmt.Errorf("strict mode enabled, but resequenced batch %d overflowed counters on block %d", batchState.batchNumber, blockNumber)
-					}
+					panic("unreachable")
 				case overflowGas:
 					metrics.GetLogStatistics().CumulativeCounting(metrics.FailTxGasOverCounter)
 					if batchState.isAnyRecovery() {
@@ -704,7 +660,6 @@ BatchLoop:
 
 				if err == nil {
 					metrics.GetLogStatistics().CumulativeValue(metrics.BatchGas, int64(execResult.UsedGas))
-					blockDataSizeChecker = &backupDataSizeChecker
 					batchState.onAddedTransaction(transaction, receipt, execResult, effectiveGas)
 					minedTxHashes = append(minedTxHashes, txHash)
 				}
@@ -885,24 +840,6 @@ BatchLoop:
 			block.Time(),               // blockTime
 			-1,                         // transactionType
 		)
-		// Counter collection removed
-
-		utils.LogTrace(
-			"",                                // txhash
-			utils.ServiceNameSequencer,        // serviceName
-			utils.StepSeqVerifyBlockBegin.ID,  // processId
-			utils.StepSeqVerifyBlockBegin.Key, // processWord
-			blockNumber,                       // blockHeight
-			block.Hash().String(),             // blockHash
-			block.Time(),                      // blockTime
-			-1,                                // transactionType
-		)
-
-		// Write block directly to datastream without verification
-		if err := streamWriter.WriteBlockToDatastream(blockNumber, batchState.batchNumber, batchState.forkId); err != nil {
-			log.Error(fmt.Sprintf("[%s] Failed to write block %d to datastream", logPrefix, blockNumber), "error", err)
-			return err
-		}
 
 		// For X Layer, local replay and smt alignment's feature of stateroot mismatch detection
 		if cfg.zk.XLayer.SequencerReplay || shouldCheckForExecutionAndSMTAlignment == SMTAlignmentPendingResequence {
@@ -918,8 +855,9 @@ BatchLoop:
 			}
 		}
 
-		// check for new responses from the verifier
-		needsUnwind, err := updateStreamAndCheckRollback(batchContext, batchState, streamWriter, u, s)
+		if err := streamWriter.WriteBlockDetailsToDatastream(batchState.forkId, batchState.batchNumber, batchState.builtBlocks); err != nil {
+			return err
+		}
 
 		// lets commit everything after updateStreamAndCheckRollback no matter of its result unless
 		// we're in L1 recovery where losing some blocks on restart doesn't matter
@@ -934,10 +872,6 @@ BatchLoop:
 			metrics.GetLogStatistics().CumulativeTiming(metrics.BatchCommitDBTiming, time.Since(commitTime))
 		}
 
-		// check the return values of updateStreamAndCheckRollback
-		if err != nil || needsUnwind {
-			return err
-		}
 		if _, err := rawdb.IncrementStateVersionByBlockNumberIfNeeded(batchContext.sdb.tx, block.NumberU64()); err != nil {
 			return fmt.Errorf("writing plain state version: %w", err)
 		}
