@@ -96,7 +96,7 @@ else
     echo "Will not use split-db"
     printf "\n" >> "$CONFIG_FILE"
     echo "zkevm.standalone-smt-db: false" >> "$CONFIG_FILE"
-    echo "zkevm.enable-trace-log: true" >> "$CONFIG_FILE"
+    echo "zkevm.enable-trace-log: false" >> "$CONFIG_FILE"
 fi
 
 # Run Erigon to first stop
