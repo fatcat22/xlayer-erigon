@@ -98,55 +98,21 @@ var HermezDbTables = []string{
 }
 
 // X Layer optimization - use a cache for forkId -> blockNum mapping
-var forkIdBlockMaps = sync.Map{} // tx ViewId() -> ForkIdBlockMap
-
-type ForkIdBlockMap struct {
+var (
 	forkIdBlockMap          sync.Map    // the actual map of forkId to block number
 	forkIdBlockMapInit      bool        // indicates if the map has been initialized
 	forkIdBlockMapInitMutex *sync.Mutex // mutex to ensure that the map is initialized only once
-}
+)
 
-// The code supports tx ViewId() -> ForkIdBlockMap mapping, but currently uses only one map (for ViewId 0).
 func init() {
-	forkIdBlockMaps.Store(0, &ForkIdBlockMap{
-		forkIdBlockMap:          sync.Map{},
-		forkIdBlockMapInit:      false,
-		forkIdBlockMapInitMutex: &sync.Mutex{},
-	})
-}
-
-func getForkIdBlockMap(id uint64) *sync.Map {
-	forkIdBlockMapStruct, ok := forkIdBlockMaps.Load(0)
-	if !ok {
-		log.Warn(fmt.Sprintf("[HermezDbReader] forkIdBlockMap not found for tx id %d\n", id))
-		forkIdBlockMapStruct = &ForkIdBlockMap{
-			forkIdBlockMap:          sync.Map{},
-			forkIdBlockMapInit:      false,
-			forkIdBlockMapInitMutex: &sync.Mutex{},
-		}
-		forkIdBlockMaps.Store(0, forkIdBlockMapStruct)
-	}
-	return &forkIdBlockMapStruct.(*ForkIdBlockMap).forkIdBlockMap
-}
-
-func getForkIdBlockMapStruct(id uint64) *ForkIdBlockMap {
-	forkIdBlockMapStruct, ok := forkIdBlockMaps.Load(0)
-	if !ok {
-		log.Warn(fmt.Sprintf("[HermezDbReader] getForkIdBlockMapStruct not found for tx id %d\n", id))
-		forkIdBlockMapStruct = &ForkIdBlockMap{
-			forkIdBlockMap:          sync.Map{},
-			forkIdBlockMapInit:      false,
-			forkIdBlockMapInitMutex: &sync.Mutex{},
-		}
-		forkIdBlockMaps.Store(0, forkIdBlockMapStruct)
-	}
-	return forkIdBlockMapStruct.(*ForkIdBlockMap)
+	forkIdBlockMap = sync.Map{}
+	forkIdBlockMapInit = false
+	forkIdBlockMapInitMutex = &sync.Mutex{}
 }
 
 func ClearForkIdBlockMap() {
-	forkIdBlockMapStruct := getForkIdBlockMapStruct(0)
-	forkIdBlockMapStruct.forkIdBlockMap.Clear()
-	forkIdBlockMapStruct.forkIdBlockMapInit = false
+	forkIdBlockMap.Clear()
+	forkIdBlockMapInit = false
 }
 
 // End of X Layer optimization
@@ -1127,7 +1093,6 @@ func (db *HermezDbReader) GetLowestBatchByFork(forkId uint64) (uint64, error) {
 
 func (db *HermezDbReader) GetForkIdBlock(forkId uint64) (uint64, bool, error) {
 	// For X Layer, optimize the performance of GetForkIdBlock
-	forkIdBlockMap := getForkIdBlockMap(db.tx.ViewID())
 	if blkNum, ok := forkIdBlockMap.Load(forkId); ok {
 		return blkNum.(uint64), true, nil
 	}
@@ -1172,9 +1137,8 @@ func (db *HermezDbReader) GetForkIdBlock(forkId uint64) (uint64, bool, error) {
 func (db *HermezDbReader) GetAllForkBlocks() (map[uint64]uint64, error) {
 	// For X Layer, optimize the performance of GetAllForkBlocks using a cached map
 	// Update the cached map if it's not initialized yet (protected with Mutex)
-	forkIdBlockMapStruct := getForkIdBlockMapStruct(db.tx.ViewID())
-	forkIdBlockMapStruct.forkIdBlockMapInitMutex.Lock()
-	if !forkIdBlockMapStruct.forkIdBlockMapInit {
+	forkIdBlockMapInitMutex.Lock()
+	if !forkIdBlockMapInit {
 		log.Debug("[HermezDbReader] forkIdBlockMap not initialized, initializing now...")
 		c, err := db.tx.Cursor(FORKID_BLOCK)
 		if err != nil {
@@ -1192,11 +1156,11 @@ func (db *HermezDbReader) GetAllForkBlocks() (map[uint64]uint64, error) {
 			blockNum := BytesToUint64(v)
 
 			// X Layer optimization: Cache all fork blocks in memory for faster access
-			forkIdBlockMapStruct.forkIdBlockMap.Store(currentForkId, blockNum)
+			forkIdBlockMap.Store(currentForkId, blockNum)
 		}
-		forkIdBlockMapStruct.forkIdBlockMapInit = true
+		forkIdBlockMapInit = true
 	}
-	forkIdBlockMapStruct.forkIdBlockMapInitMutex.Unlock()
+	forkIdBlockMapInitMutex.Unlock()
 
 	// Now we can return the fork blocks from the cached map
 	forkBlocks := make(map[uint64]uint64)
@@ -1204,7 +1168,7 @@ func (db *HermezDbReader) GetAllForkBlocks() (map[uint64]uint64, error) {
 	lastSetBlockNumSet := false
 	for _, forkId := range chain.ForkIdsOrdered {
 		currentForkId := uint64(forkId)
-		if blkNum, ok := forkIdBlockMapStruct.forkIdBlockMap.Load(currentForkId); ok {
+		if blkNum, ok := forkIdBlockMap.Load(currentForkId); ok {
 			forkBlocks[currentForkId] = blkNum.(uint64)
 			lastSetBlockNumSet = true
 			lastSetBlockNum = blkNum.(uint64)
@@ -1219,7 +1183,6 @@ func (db *HermezDbReader) GetAllForkBlocks() (map[uint64]uint64, error) {
 
 func (db *HermezDb) DeleteForkIdBlock(fromBlockNo, toBlockNo uint64) error {
 	// X Layer optimization: delete the forkIdBlock cache entries
-	forkIdBlockMap := getForkIdBlockMap(db.tx.ViewID())
 	for blkNum := fromBlockNo; blkNum <= toBlockNo; blkNum++ {
 		forkIdBlockMap.Delete(blkNum)
 	}
@@ -1237,7 +1200,6 @@ func (db *HermezDb) WriteForkIdBlockOnce(forkId, blockNum uint64) error {
 		return nil
 	}
 	// X Layer optimization: cache the block number for the forkId in memory
-	forkIdBlockMap := getForkIdBlockMap(db.tx.ViewID())
 	forkIdBlockMap.Store(forkId, blockNum)
 	return db.tx.Put(FORKID_BLOCK, Uint64ToBytes(forkId), Uint64ToBytes(blockNum))
 }

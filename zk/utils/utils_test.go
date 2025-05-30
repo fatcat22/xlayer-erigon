@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// X Layer: updated tests to be more realistic (test via hermez_db/db.go)
 // Taken from hermez_db/db_test.go.
 func GetDbTx() (tx kv.RwTx, cleanup func()) {
 	dbi, err := mdbx.NewTemporaryMdbx(context.Background(), "")
