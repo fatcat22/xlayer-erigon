@@ -166,9 +166,9 @@ func TestBatchNumberByBlockNumber(t *testing.T) {
 			panic("batch out of range")
 		}
 	}
-	batchNumber, err := zkEvmImpl.BatchNumberByBlockNumber(ctx, rpc.BlockNumber(40))
+	_, err = zkEvmImpl.BatchNumberByBlockNumber(ctx, rpc.BlockNumber(40))
 	assert.Error(err)
-	batchNumber, err = zkEvmImpl.BatchNumberByBlockNumber(ctx, rpc.BlockNumber(50))
+	batchNumber, err := zkEvmImpl.BatchNumberByBlockNumber(ctx, rpc.BlockNumber(50))
 	assert.Error(err)
 	t.Log("batchNumber", batchNumber)
 }
