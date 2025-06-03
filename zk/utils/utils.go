@@ -77,7 +77,7 @@ func ShouldShortCircuitExecution(tx kv.RwTx, logPrefix string, l2ShortCircuitToV
 
 type ForkReader interface {
 	GetForkIdBlock(forkId uint64) (uint64, bool, error)
-	GetAllForkBlocks() (map[uint64]uint64, error)
+	GetAllForkIdBlock() (map[uint64]uint64, error)
 }
 
 type ForkConfigWriter interface {
@@ -90,7 +90,7 @@ type DbReader interface {
 
 func UpdateZkEVMBlockCfg(cfg ForkConfigWriter, hermezDb ForkReader, logPrefix string) error {
 	// X Layer optimization - get all fork blocks at once (using cache)
-	fid, err := hermezDb.GetAllForkBlocks()
+	fid, err := hermezDb.GetAllForkIdBlock()
 	if err != nil {
 		return err
 	}
