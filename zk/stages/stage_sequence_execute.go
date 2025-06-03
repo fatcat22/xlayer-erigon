@@ -550,9 +550,21 @@ BatchLoop:
 				var allConditionsOK bool
 				var newTransactions []types.Transaction
 				var newIds []common.Hash
-				newTransactions, newIds, allConditionsOK, err = getNextPoolTransactions(ctx, cfg, executionAt, blockNumber, batchState.forkId, batchState.yieldedTransactions)
+				newTransactions, newIds, allConditionsOK, err = getNextPoolTransactions(ctx, cfg, executionAt, batchState.forkId, batchState.yieldedTransactions)
 				if err != nil {
 					return err
+				}
+				for _, tx := range newTransactions {
+					utils.LogTrace(
+						tx.Hash().String(),         // txhash
+						utils.ServiceNameSequencer, // serviceName
+						utils.StepSeqReceiveTx.ID,  // processId
+						utils.StepSeqReceiveTx.Key, // processWord
+						blockNumber,                // blockHeight
+						"",                         // blockHash
+						0,                          // blockTime
+						int8(tx.Type()),            // transactionType
+					)
 				}
 
 				metrics.GetLogStatistics().CumulativeTiming(metrics.GetTxTiming, time.Since(getTxTime))

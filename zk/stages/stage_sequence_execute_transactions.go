@@ -23,7 +23,7 @@ import (
 	"github.com/ledgerwatch/log/v3"
 )
 
-func getNextPoolTransactions(ctx context.Context, cfg SequenceBlockCfg, executionAt, blockNumber, forkId uint64, alreadyYielded mapset.Set[[32]byte]) ([]types.Transaction, []common.Hash, bool, error) {
+func getNextPoolTransactions(ctx context.Context, cfg SequenceBlockCfg, executionAt, forkId uint64, alreadyYielded mapset.Set[[32]byte]) ([]types.Transaction, []common.Hash, bool, error) {
 	var ids []common.Hash
 	var transactions []types.Transaction
 	var allConditionsOk bool
@@ -58,19 +58,6 @@ func getNextPoolTransactions(ctx context.Context, cfg SequenceBlockCfg, executio
 	}
 	transactions = append(transactions, yieldedTxs...)
 	ids = append(ids, yieldedIds...)
-
-	for _, tx := range transactions {
-		utils.LogTrace(
-			tx.Hash().String(),         // txhash
-			utils.ServiceNameSequencer, // serviceName
-			utils.StepSeqReceiveTx.ID,  // processId
-			utils.StepSeqReceiveTx.Key, // processWord
-			blockNumber,                // blockHeight
-			"",                         // blockHash
-			0,                          // blockTime
-			int8(tx.Type()),            // transactionType
-		)
-	}
 
 	return transactions, ids, allConditionsOk, err
 }
