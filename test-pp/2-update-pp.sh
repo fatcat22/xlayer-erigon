@@ -19,15 +19,15 @@ sed_inplace() {
   fi
 }
 
-if [ ! -d "./agglayer-contracts" ]; then
+if [ ! -d "./xlayer-contracts" ]; then
   echo "No contract repository found. Please clone the repository first."
   exit 1
 fi
 
-cd "./agglayer-contracts"
+cd "./xlayer-contracts"
 
 git stash
-git checkout v9.0.0-rc.3-pp
+git checkout upstream/v9.0.0-rc.3-pp
 git stash apply
 rm -rf artifacts cache node_modules
 npm i

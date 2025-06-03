@@ -37,14 +37,14 @@ sleep 5
 echo "Sending funds to deployer..."
 cast send -f $RICH_ADDRESS --private-key $RICH_PRIVATE_KEY --value 3ether --legacy $DEPLOYER_ADDRESS
 
-if [ ! -d "./agglayer-contracts" ]; then
+if [ ! -d "./xlayer-contracts" ]; then
   echo "Cloning contract repository..."
-  git clone -b v8.1.0-rc.1-fork.13 https://github.com/agglayer/agglayer-contracts.git
+  git clone -b upstream/v8.1.0-rc.1-fork.13 https://github.com/okx/xlayer-contracts.git
 fi
 
-cd ./agglayer-contracts
+cd ./xlayer-contracts
 echo "Cleaning and resting contract repository..."
-rm -rf *; git reset --hard; git checkout v8.1.0-rc.1-fork.13
+rm -rf *; git reset --hard; git checkout upstream/v8.1.0-rc.1-fork.13
 
 echo "Creating .env file..."
 cat > .env << EOF
@@ -104,14 +104,14 @@ npm i
 npm run deploy:v2:localhost
 
 cd "$ROOT_DIR"
-ROLLUP_OUTPUT_PATH="./test-pp/agglayer-contracts/deployment/v2/create_rollup_output.json"
+ROLLUP_OUTPUT_PATH="./test-pp/xlayer-contracts/deployment/v2/create_rollup_output.json"
 
 rm -rf ./test-pp/contract/*
 cp -rf $ROLLUP_OUTPUT_PATH ./test-pp/contract/create_rollup_output.json
-cp -rf ./test-pp/agglayer-contracts/deployment/v2/create_rollup_parameters.json ./test-pp/contract/
-cp -rf ./test-pp/agglayer-contracts/deployment/v2/deploy_parameters.json ./test-pp/contract/
-cp -rf ./test-pp/agglayer-contracts/deployment/v2/deploy_output.json ./test-pp/contract/
-cp -rf ./test-pp/agglayer-contracts/deployment/v2/genesis.json ./test-pp/contract/
+cp -rf ./test-pp/xlayer-contracts/deployment/v2/create_rollup_parameters.json ./test-pp/contract/
+cp -rf ./test-pp/xlayer-contracts/deployment/v2/deploy_parameters.json ./test-pp/contract/
+cp -rf ./test-pp/xlayer-contracts/deployment/v2/deploy_output.json ./test-pp/contract/
+cp -rf ./test-pp/xlayer-contracts/deployment/v2/genesis.json ./test-pp/contract/
 ROLLUP_OUTPUT_PATH="./test-pp/contract/create_rollup_output.json"
 DEPLOY_OUTPUT_PATH="./test-pp/contract/deploy_output.json"
 
@@ -147,7 +147,7 @@ cast send --legacy --from $DEPLOYER_ADDRESS --private-key $DEPLOYER_PRIVATE_KEY 
 echo "Generating configuration files..."
 go install ./cmd/hack/allocs
 which allocs
-allocs ./test-pp/agglayer-contracts/deployment/v2/genesis.json
+allocs ./test-pp/xlayer-contracts/deployment/v2/genesis.json
 mv allocs.json ./test-pp/config/dynamic-mynetwork-allocs.json
 
 cat > ./test-pp/config/dynamic-mynetwork-conf.json << EOF
