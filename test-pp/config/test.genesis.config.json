@@ -6,10 +6,10 @@
 		"polTokenAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
 		"polygonZkEVMGlobalExitRootAddress": "0xB8cedD4B9eF683f0887C44a6E4312dC7A6e2fcdB"
 	},
-	"genesisBlockNumber": 200,
-	"rollupCreationBlockNumber": 207,
-	"rollupManagerCreationBlockNumber": 200,
-	"root": "0xc2c9f845f2afefd78555f7f37b6cb1c8bad8d565f81460bb809aee0d288b9d45",
+	"genesisBlockNumber": 257,
+	"rollupCreationBlockNumber": 263,
+	"rollupManagerCreationBlockNumber": 257,
+	"root": "0xb014eb12e554f165a523f44272e2f5952cb2e1fe8dac595b0e9db2dbe39e9f21",
  "genesis": [
   {
    "contractName": "PolygonZkEVMDeployer",

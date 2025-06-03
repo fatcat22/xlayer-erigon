@@ -81,7 +81,7 @@ cat > deploy_parameters.json << EOF
 {
     "test": true,
     "timelockAdminAddress": "0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534",
-    "minDelayTimelock": 600,
+    "minDelayTimelock": 60,
     "salt": "0x0000000000000000000000000000000000000000000000000000000000000000",
     "initialZkEVMDeployerOwner": "0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534",
     "admin": "0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534",

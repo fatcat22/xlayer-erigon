@@ -27,7 +27,7 @@ fi
 cd "./xlayer-contracts"
 
 git stash
-git checkout upstream/v9.0.0-rc.3-pp
+git checkout upstream/v9.0.0-rc.3-pp; git pull
 git stash apply
 rm -rf artifacts cache node_modules
 npm i
@@ -35,7 +35,7 @@ npm i
 cat upgrade/upgradePessimistic/upgrade_parameters.json.example |
     jq --arg rum $ROLLUP_MGR_ADDRESS \
        --arg sk $DEPLOYER_PRIVATE_KEY \
-       --arg tld 600 '.rollupManagerAddress = $rum | .timelockDelay = $tld | .deployerPvtKey = $sk' > upgrade/upgradePessimistic/upgrade_parameters.json
+       --arg tld 60 '.rollupManagerAddress = $rum | .timelockDelay = $tld | .deployerPvtKey = $sk' > upgrade/upgradePessimistic/upgrade_parameters.json
 
 hardhat_output=$(npx hardhat run ./upgrade/upgradePessimistic/upgradePessimistic.ts --network localhost)
 echo "hardhat_output: $hardhat_output"
