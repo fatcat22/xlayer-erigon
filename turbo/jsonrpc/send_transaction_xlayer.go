@@ -133,6 +133,9 @@ func (api *APIImpl) worker() {
 		}
 	}()
 
+	if api.BulkAddTxsWaitTime == 0 {
+		api.BulkAddTxsWaitTime = 5 * time.Millisecond // default wait time if not set
+	}
 	ticker := time.NewTicker(api.BulkAddTxsWaitTime)
 	defer ticker.Stop()
 
