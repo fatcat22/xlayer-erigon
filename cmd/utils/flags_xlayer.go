@@ -336,6 +336,11 @@ var (
 		Usage: "Enable full trace log",
 		Value: true,
 	}
+	VerificationCheckDelay = cli.IntFlag{
+		Name:  "zkevm.verification-check-delay",
+		Usage: "Time delay to wait after block generation before checking verification status on analysis group API",
+		Value: 0,
+	}
 )
 
 func setGPOXLayer(ctx *cli.Context, cfg *gaspricecfg.Config) {
@@ -523,4 +528,13 @@ func SetBulkAddTxs(ctx *cli.Context, cfg *ethconfig.Config) {
 	cfg.XLayer.BulkAddTxsSize = ctx.Int(BulkAddTxsSizeFlag.Name)
 	cfg.XLayer.BulkAddTxsWaitTime = ctx.Duration(BulkAddTxsWaitTimeFlag.Name)
 	cfg.XLayer.EnableAddTxNotify = ctx.Bool(EnableAddTxNotify.Name)
+}
+
+func SetVerificationCheckDelay(ctx *cli.Context, cfg *ethconfig.Config) {
+	verificationCheckDelayVal := ctx.String(VerificationCheckDelay.Name)
+	verificationCheckDelay, err := time.ParseDuration(verificationCheckDelayVal)
+	if err != nil {
+		panic(fmt.Sprintf("could not parse '%s': '%s'", VerificationCheckDelay.Name, verificationCheckDelayVal))
+	}
+	cfg.XLayer.VerificationCheckDelay = verificationCheckDelay
 }
