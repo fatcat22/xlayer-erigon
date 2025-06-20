@@ -188,3 +188,87 @@ func GetVerificationCheckItems(
 
 	return verificationItems, nil
 }
+
+// ProcessVerificationChecks processes verification check items and updates the verified block height
+// It finds the first block that passes verification from the analysis group API
+// and updates the VerifiedBlockHeight in the database
+func ProcessVerificationChecks(
+	ctx context.Context,
+	tx kv.RwTx,
+	verificationItems []VerificationCheckItem,
+	apiBaseURL string,
+	logger log.Logger,
+) error {
+	// 1. Get current time and find items that are ready for verification
+	currentTime := time.Now()
+	var readyItems []VerificationCheckItem
+
+	for _, item := range verificationItems {
+		if !item.CheckTime.After(currentTime) {
+			readyItems = append(readyItems, item)
+		}
+	}
+
+	if len(readyItems) == 0 {
+		logger.Debug("No verification items ready for checking", "currentTime", currentTime)
+		return nil
+	}
+
+	logger.Debug("Found items ready for verification",
+		"totalItems", len(verificationItems),
+		"readyItems", len(readyItems),
+		"currentTime", currentTime)
+
+	// 2. Traverse ready items from back to front (highest to lowest block height)
+	// Find the first block that passes verification
+	var verifiedBlockHeight uint64
+	foundVerifiedBlock := false
+
+	for i := len(readyItems) - 1; i >= 0; i-- {
+		item := readyItems[i]
+
+		logger.Debug("Checking block verification",
+			"blockHeight", item.BlockHeight,
+			"checkTime", item.CheckTime)
+
+		isVerified, err := isBlockVerifiedByAnalysisGroup(ctx, item.BlockHeight, apiBaseURL, logger)
+		if err != nil {
+			logger.Error("Failed to check block verification",
+				"blockHeight", item.BlockHeight,
+				"err", err)
+			// Continue checking other blocks even if one fails
+			continue
+		}
+
+		if isVerified {
+			verifiedBlockHeight = item.BlockHeight
+			foundVerifiedBlock = true
+			logger.Info("Found verified block",
+				"blockHeight", verifiedBlockHeight,
+				"checkTime", item.CheckTime)
+			break
+		}
+
+		logger.Debug("Block not verified yet",
+			"blockHeight", item.BlockHeight)
+	}
+
+	// 3. Update VerifiedBlockHeight in database if a verified block was found
+	if foundVerifiedBlock {
+		err := stages.SaveStageProgress(tx, stages.VerifiedBlockHeight, verifiedBlockHeight)
+		if err != nil {
+			logger.Error("Failed to save VerifiedBlockHeight",
+				"blockHeight", verifiedBlockHeight,
+				"err", err)
+			return fmt.Errorf("failed to save VerifiedBlockHeight: %w", err)
+		}
+
+		logger.Info("Updated VerifiedBlockHeight in database",
+			"blockHeight", verifiedBlockHeight)
+	} else {
+		logger.Debug("No verified blocks found among ready items",
+			"checkedItems", len(readyItems))
+	}
+
+	return nil
+}
