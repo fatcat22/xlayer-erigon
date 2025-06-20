@@ -189,47 +189,90 @@ func GetVerificationCheckItems(
 	return verificationItems, nil
 }
 
+// AppendVerificationCheckItem appends a new verification check item to the list
+// It ensures the new item's height is greater than the last item in the list
+// Returns the updated list with the new item appended
+func AppendVerificationCheckItem(
+	items []VerificationCheckItem,
+	blockHeight uint64,
+	verificationCheckDelay time.Duration,
+	logger log.Logger,
+) ([]VerificationCheckItem, error) {
+	// 1. Check if the new height is greater than the last item's height
+	if len(items) > 0 {
+		lastItem := items[len(items)-1]
+		if blockHeight <= lastItem.BlockHeight {
+			panic(fmt.Sprintf("new block height %d must be greater than last item height %d",
+				blockHeight, lastItem.BlockHeight))
+		}
+	}
+
+	// 2. Create new verification check item using current time
+	currentTime := time.Now()
+	checkTime := currentTime.Add(verificationCheckDelay)
+
+	newItem := VerificationCheckItem{
+		BlockHeight: blockHeight,
+		CheckTime:   checkTime,
+	}
+
+	// 3. Append the new item to the list
+	updatedItems := append(items, newItem)
+
+	logger.Debug("Appended new verification check item",
+		"blockHeight", blockHeight,
+		"currentTime", currentTime,
+		"checkTime", checkTime,
+		"totalItems", len(updatedItems))
+
+	return updatedItems, nil
+}
+
 // ProcessVerificationChecks processes verification check items and updates the verified block height
 // It finds the first block that passes verification from the analysis group API
 // and updates the VerifiedBlockHeight in the database
+// Returns the cleaned verification items list with items below the verified height removed
 func ProcessVerificationChecks(
 	ctx context.Context,
 	tx kv.RwTx,
 	verificationItems []VerificationCheckItem,
 	apiBaseURL string,
 	logger log.Logger,
-) error {
-	// 1. Get current time and find items that are ready for verification
+) ([]VerificationCheckItem, error) {
+	// 1. Get current time and find the highest index of items that are ready for verification
 	currentTime := time.Now()
-	var readyItems []VerificationCheckItem
+	maxReadyIndex := -1
 
-	for _, item := range verificationItems {
+	for i, item := range verificationItems {
 		if !item.CheckTime.After(currentTime) {
-			readyItems = append(readyItems, item)
+			if i > maxReadyIndex {
+				maxReadyIndex = i
+			}
 		}
 	}
 
-	if len(readyItems) == 0 {
+	if maxReadyIndex == -1 {
 		logger.Debug("No verification items ready for checking", "currentTime", currentTime)
-		return nil
+		return verificationItems, nil
 	}
 
 	logger.Debug("Found items ready for verification",
 		"totalItems", len(verificationItems),
-		"readyItems", len(readyItems),
+		"maxReadyIndex", maxReadyIndex,
 		"currentTime", currentTime)
 
 	// 2. Traverse ready items from back to front (highest to lowest block height)
 	// Find the first block that passes verification
 	var verifiedBlockHeight uint64
-	foundVerifiedBlock := false
+	verifiedIndex := -1
 
-	for i := len(readyItems) - 1; i >= 0; i-- {
-		item := readyItems[i]
+	for i := maxReadyIndex; i >= 0; i-- {
+		item := verificationItems[i]
 
 		logger.Debug("Checking block verification",
 			"blockHeight", item.BlockHeight,
-			"checkTime", item.CheckTime)
+			"checkTime", item.CheckTime,
+			"index", i)
 
 		isVerified, err := isBlockVerifiedByAnalysisGroup(ctx, item.BlockHeight, apiBaseURL, logger)
 		if err != nil {
@@ -242,33 +285,48 @@ func ProcessVerificationChecks(
 
 		if isVerified {
 			verifiedBlockHeight = item.BlockHeight
-			foundVerifiedBlock = true
+			verifiedIndex = i
 			logger.Info("Found verified block",
 				"blockHeight", verifiedBlockHeight,
-				"checkTime", item.CheckTime)
+				"checkTime", item.CheckTime,
+				"index", i)
 			break
 		}
 
 		logger.Debug("Block not verified yet",
-			"blockHeight", item.BlockHeight)
+			"blockHeight", item.BlockHeight,
+			"index", i)
 	}
 
 	// 3. Update VerifiedBlockHeight in database if a verified block was found
-	if foundVerifiedBlock {
+	if verifiedIndex != -1 {
 		err := stages.SaveStageProgress(tx, stages.VerifiedBlockHeight, verifiedBlockHeight)
 		if err != nil {
 			logger.Error("Failed to save VerifiedBlockHeight",
 				"blockHeight", verifiedBlockHeight,
 				"err", err)
-			return fmt.Errorf("failed to save VerifiedBlockHeight: %w", err)
+			return verificationItems, fmt.Errorf("failed to save VerifiedBlockHeight: %w", err)
 		}
 
 		logger.Info("Updated VerifiedBlockHeight in database",
 			"blockHeight", verifiedBlockHeight)
+
+		// 4. Remove all items with index <= verifiedIndex (including the verified item)
+		// Since verificationItems is sorted by height, this removes all items <= verifiedBlockHeight
+		removedCount := verifiedIndex + 1
+		cleanedItems := verificationItems[removedCount:]
+
+		logger.Info("Cleaned verification items",
+			"verifiedBlockHeight", verifiedBlockHeight,
+			"verifiedIndex", verifiedIndex,
+			"originalCount", len(verificationItems),
+			"removedCount", removedCount,
+			"remainingCount", len(cleanedItems))
+
+		return cleanedItems, nil
 	} else {
 		logger.Debug("No verified blocks found among ready items",
-			"checkedItems", len(readyItems))
+			"maxReadyIndex", maxReadyIndex)
+		return verificationItems, nil
 	}
-
-	return nil
 }
