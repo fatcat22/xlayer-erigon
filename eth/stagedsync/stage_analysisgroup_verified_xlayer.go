@@ -139,7 +139,7 @@ func GetVerificationCheckItems(
 	currentBlockHeight := currentHeader.Number.Uint64()
 
 	// 2. Get the VerifiedBlockHeight from database
-	verifiedBlockHeight, err := stages.GetStageProgress(tx, stages.VerifiedBlockHeight)
+	verifiedBlockHeight, err := stages.GetStageProgress(tx, stages.AnalysisGroupVerifiedBlockHeight)
 	if err != nil {
 		logger.Error("Failed to get VerifiedBlockHeight progress", "err", err)
 		return nil, err
@@ -300,7 +300,7 @@ func ProcessVerificationChecks(
 
 	// 3. Update VerifiedBlockHeight in database if a verified block was found
 	if verifiedIndex != -1 {
-		err := stages.SaveStageProgress(tx, stages.VerifiedBlockHeight, verifiedBlockHeight)
+		err := stages.SaveStageProgress(tx, stages.AnalysisGroupVerifiedBlockHeight, verifiedBlockHeight)
 		if err != nil {
 			logger.Error("Failed to save VerifiedBlockHeight",
 				"blockHeight", verifiedBlockHeight,

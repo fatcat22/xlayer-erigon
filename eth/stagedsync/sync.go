@@ -40,6 +40,8 @@ type Sync struct {
 	// For X Layer, split db and ac
 	flushWG sync.WaitGroup
 	cache   *smt.SmtCache
+	// For X Layer, verification check delay
+	verificationCheckItems []VerificationCheckItem
 }
 
 type Timing struct {
@@ -647,4 +649,14 @@ func (s *Sync) MockExecFunc(id stages.SyncStage, f ExecFunc) {
 			s.stages[i].Forward = f
 		}
 	}
+}
+
+// SetVerificationCheckItems sets the verification check items for the sync
+func (s *Sync) SetVerificationCheckItems(items []VerificationCheckItem) {
+	s.verificationCheckItems = items
+}
+
+// GetVerificationCheckItems returns the verification check items from the sync
+func (s *Sync) GetVerificationCheckItems() []VerificationCheckItem {
+	return s.verificationCheckItems
 }
