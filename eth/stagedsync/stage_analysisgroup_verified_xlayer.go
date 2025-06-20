@@ -1,8 +1,12 @@
 package stagedsync
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"time"
 
 	"github.com/ledgerwatch/erigon-lib/kv"
@@ -15,6 +19,106 @@ import (
 type VerificationCheckItem struct {
 	BlockHeight uint64    // Block height
 	CheckTime   time.Time // Time when verification status should be checked
+}
+
+// AnalysisGroupAPIResponse represents the response from analysis group API
+type AnalysisGroupAPIResponse struct {
+	Code string `json:"code"`
+	Msg  string `json:"msg"`
+	Data struct {
+		ValidResult string `json:"validResult"`
+	} `json:"data"`
+}
+
+// AnalysisGroupAPIRequest represents the request to analysis group API
+type AnalysisGroupAPIRequest struct {
+	Height uint64 `json:"height"`
+}
+
+// isBlockVerifiedByAnalysisGroup calls the analysis group API to check if a block is verified
+// Returns true if the block is verified by analysis group, false otherwise
+func isBlockVerifiedByAnalysisGroup(
+	ctx context.Context,
+	blockHeight uint64,
+	apiBaseURL string,
+	logger log.Logger,
+) (bool, error) {
+	// Create HTTP client with timeout
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	// Prepare request payload
+	request := AnalysisGroupAPIRequest{
+		Height: blockHeight,
+	}
+
+	requestBody, err := json.Marshal(request)
+	if err != nil {
+		logger.Error("Failed to marshal request body", "blockHeight", blockHeight, "err", err)
+		return false, fmt.Errorf("failed to marshal request body: %w", err)
+	}
+
+	// Create HTTP request
+	url := fmt.Sprintf("%s/api/v1/196/validHeight", apiBaseURL)
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(requestBody))
+	if err != nil {
+		logger.Error("Failed to create HTTP request", "blockHeight", blockHeight, "url", url, "err", err)
+		return false, fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+
+	// Set headers
+	req.Header.Set("Content-Type", "application/json")
+
+	// Make the request
+	logger.Debug("Calling analysis group API", "blockHeight", blockHeight, "url", url)
+	resp, err := client.Do(req)
+	if err != nil {
+		logger.Error("Failed to call analysis group API", "blockHeight", blockHeight, "err", err)
+		return false, fmt.Errorf("failed to call analysis group API: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Read response body
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		logger.Error("Failed to read response body", "blockHeight", blockHeight, "err", err)
+		return false, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	// Check HTTP status code
+	if resp.StatusCode != http.StatusOK {
+		logger.Error("Analysis group API returned non-OK status",
+			"blockHeight", blockHeight,
+			"statusCode", resp.StatusCode,
+			"response", string(respBody))
+		return false, fmt.Errorf("analysis group API returned status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	// Parse response
+	var apiResponse AnalysisGroupAPIResponse
+	if err := json.Unmarshal(respBody, &apiResponse); err != nil {
+		logger.Error("Failed to unmarshal API response", "blockHeight", blockHeight, "response", string(respBody), "err", err)
+		return false, fmt.Errorf("failed to unmarshal API response: %w", err)
+	}
+
+	// Check if API call was successful
+	if apiResponse.Code != "0" {
+		logger.Error("Analysis group API returned error code",
+			"blockHeight", blockHeight,
+			"code", apiResponse.Code,
+			"msg", apiResponse.Msg)
+		return false, fmt.Errorf("analysis group API error: code=%s, msg=%s", apiResponse.Code, apiResponse.Msg)
+	}
+
+	// Check verification result
+	isVerified := apiResponse.Data.ValidResult == "true"
+	logger.Debug("Analysis group API response",
+		"blockHeight", blockHeight,
+		"validResult", apiResponse.Data.ValidResult,
+		"isVerified", isVerified)
+
+	return isVerified, nil
 }
 
 // GetVerificationCheckItems retrieves a list of blocks that need verification
