@@ -341,6 +341,11 @@ var (
 		Usage: "Time delay to wait after block generation before checking verification status on analysis group API",
 		Value: 0,
 	}
+	AnalysisGroupAPIBaseURL = cli.StringFlag{
+		Name:  "zkevm.analysis-group-api-base-url",
+		Usage: "Base URL for analysis group API",
+		Value: "",
+	}
 )
 
 func setGPOXLayer(ctx *cli.Context, cfg *gaspricecfg.Config) {
@@ -537,4 +542,9 @@ func SetVerificationCheckDelay(ctx *cli.Context, cfg *ethconfig.Config) {
 		panic(fmt.Sprintf("could not parse '%s': '%s'", VerificationCheckDelay.Name, verificationCheckDelayVal))
 	}
 	cfg.XLayer.VerificationCheckDelay = verificationCheckDelay
+
+	// Set AnalysisGroupAPIBaseURL
+	if ctx.IsSet(AnalysisGroupAPIBaseURL.Name) {
+		cfg.XLayer.AnalysisGroupAPIBaseURL = ctx.String(AnalysisGroupAPIBaseURL.Name)
+	}
 }

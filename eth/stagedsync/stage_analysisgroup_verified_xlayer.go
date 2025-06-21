@@ -330,3 +330,24 @@ func ProcessVerificationChecks(
 		return verificationItems, nil
 	}
 }
+
+// SpawnAnalysisGroupVerificationCheckStage processes verification check items and updates the verified block height
+func SpawnAnalysisGroupVerificationCheckStage(
+	s *StageState,
+	analysisGroupAPIBaseURL string,
+	logger log.Logger,
+) error {
+	// Get verification check items from the sync state
+	items := s.GetVerificationCheckItems()
+
+	// Process verification checks and update the items
+	updatedItems, err := ProcessVerificationChecks(context.Background(), nil, items, analysisGroupAPIBaseURL, logger)
+	if err != nil {
+		return err
+	}
+
+	// Update the verification check items in the sync state
+	s.SetVerificationCheckItems(updatedItems)
+
+	return nil
+}

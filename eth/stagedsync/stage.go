@@ -77,6 +77,21 @@ func (s *StageState) IntermediateHashesAt(db kv.Getter) (uint64, error) {
 	return progress, err
 }
 
+// GetVerificationCheckItems returns the verification check items from the sync state
+func (s *StageState) GetVerificationCheckItems() []VerificationCheckItem {
+	if s.state == nil {
+		return nil
+	}
+	return s.state.GetVerificationCheckItems()
+}
+
+// SetVerificationCheckItems sets the verification check items in the sync state
+func (s *StageState) SetVerificationCheckItems(items []VerificationCheckItem) {
+	if s.state != nil {
+		s.state.SetVerificationCheckItems(items)
+	}
+}
+
 type UnwindReason struct {
 	// If we;re unwinding due to a fork - we want to unlink blocks but not mark
 	// them as bad - as they may get replayed then deselected
