@@ -348,6 +348,11 @@ var (
 		Usage: "nacos service name for analysis group API",
 		Value: "",
 	}
+	AnalysisGroupAPIPath = cli.StringFlag{
+		Name:  "zkevm.analysis-group-api-path",
+		Usage: "API path for analysis group verification (e.g., /api/v1/196/validHeight)",
+		Value: "/api/v1/196/validHeight",
+	}
 	SkipAnalysisGroupAPI = cli.BoolFlag{
 		Name:  "zkevm.skip-analysis-group-api",
 		Usage: "If true, skip calling analysis group API and directly set block number to AnalysisGroupVerifiedBlockHeight status",
@@ -551,6 +556,7 @@ func SetVerificationConfigs(ctx *cli.Context, cfg *ethconfig.Config) {
 	cfg.XLayer.VerificationCheckDelay = verificationCheckDelay
 
 	cfg.XLayer.SkipAnalysisGroupAPI = ctx.Bool(SkipAnalysisGroupAPI.Name)
+	cfg.XLayer.AnalysisGroupAPIPath = ctx.String(AnalysisGroupAPIPath.Name)
 
 	// Set AnalysisGroupServiceName
 	if ctx.IsSet(AnalysisGroupServiceName.Name) {

@@ -39,6 +39,7 @@ func isBlockVerifiedByAnalysisGroup(
 	ctx context.Context,
 	blockHeight uint64,
 	nacosClient *nacos.XlayerNacosClient,
+	apiPath string,
 	logger log.Logger,
 ) (bool, error) {
 	// Prepare request payload
@@ -58,9 +59,9 @@ func isBlockVerifiedByAnalysisGroup(
 	}
 
 	// Make the request
-	respBody, err := nacosClient.Post("/api/v1/196/validHeight", requestBody, reqHeaders)
+	respBody, err := nacosClient.Post(apiPath, requestBody, reqHeaders)
 	if err != nil {
-		logger.Error("Failed to call analysis group API", "blockHeight", blockHeight, "err", err)
+		logger.Error("Failed to call analysis group API", "blockHeight", blockHeight, "apiPath", apiPath, "err", err)
 		return false, fmt.Errorf("failed to call analysis group API: %w", err)
 	}
 
@@ -75,6 +76,7 @@ func isBlockVerifiedByAnalysisGroup(
 	if apiResponse.Code != "0" {
 		logger.Error("Analysis group API returned error code",
 			"blockHeight", blockHeight,
+			"apiPath", apiPath,
 			"code", apiResponse.Code,
 			"msg", apiResponse.Msg)
 		return false, fmt.Errorf("analysis group API error: code=%s, msg=%s", apiResponse.Code, apiResponse.Msg)
@@ -84,6 +86,7 @@ func isBlockVerifiedByAnalysisGroup(
 	isVerified := apiResponse.Data.ValidResult == "true"
 	logger.Debug("Analysis group API response",
 		"blockHeight", blockHeight,
+		"apiPath", apiPath,
 		"validResult", apiResponse.Data.ValidResult,
 		"isVerified", isVerified)
 
@@ -208,6 +211,7 @@ func ProcessVerificationChecks(
 	nacosClient *nacos.XlayerNacosClient,
 	logger log.Logger,
 	skipAnalysisGroupAPI bool,
+	apiPath string,
 ) ([]VerificationCheckItem, error) {
 	// 1. Get current time and find the highest index of items that are ready for verification
 	currentTime := time.Now()
@@ -255,7 +259,7 @@ func ProcessVerificationChecks(
 				"skipAnalysisGroupAPI", skipAnalysisGroupAPI)
 		} else {
 			// Call analysis group API to check verification
-			isVerified, err = isBlockVerifiedByAnalysisGroup(ctx, item.BlockHeight, nacosClient, logger)
+			isVerified, err = isBlockVerifiedByAnalysisGroup(ctx, item.BlockHeight, nacosClient, apiPath, logger)
 			if err != nil {
 				logger.Error("Failed to check block verification",
 					"blockHeight", item.BlockHeight,
@@ -320,13 +324,14 @@ func SpawnAnalysisGroupVerificationCheckStage(
 	s *StageState,
 	nacosClient *nacos.XlayerNacosClient,
 	skipAnalysisGroupAPI bool,
+	apiPath string,
 	logger log.Logger,
 ) error {
 	// Get verification check items from the sync state
 	items := s.GetVerificationCheckItems()
 
 	// Process verification checks and update the items
-	updatedItems, err := ProcessVerificationChecks(context.Background(), nil, items, nacosClient, logger, skipAnalysisGroupAPI)
+	updatedItems, err := ProcessVerificationChecks(context.Background(), nil, items, nacosClient, logger, skipAnalysisGroupAPI, apiPath)
 	if err != nil {
 		return err
 	}
