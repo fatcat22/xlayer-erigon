@@ -11,6 +11,7 @@ import (
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/gasprice/gaspricecfg"
+	"github.com/ledgerwatch/erigon/zk/nacos"
 )
 
 var (
@@ -341,9 +342,9 @@ var (
 		Usage: "Time delay to wait after block generation before checking verification status on analysis group API",
 		Value: 0,
 	}
-	AnalysisGroupAPIBaseURL = cli.StringFlag{
-		Name:  "zkevm.analysis-group-api-base-url",
-		Usage: "Base URL for analysis group API",
+	AnalysisGroupServiceName = cli.StringFlag{
+		Name:  "zkevm.analysis-group-service-name",
+		Usage: "nacos service name for analysis group API",
 		Value: "",
 	}
 )
@@ -543,8 +544,12 @@ func SetVerificationCheckDelay(ctx *cli.Context, cfg *ethconfig.Config) {
 	}
 	cfg.XLayer.VerificationCheckDelay = verificationCheckDelay
 
-	// Set AnalysisGroupAPIBaseURL
-	if ctx.IsSet(AnalysisGroupAPIBaseURL.Name) {
-		cfg.XLayer.AnalysisGroupAPIBaseURL = ctx.String(AnalysisGroupAPIBaseURL.Name)
+	// Set AnalysisGroupServiceName
+	if ctx.IsSet(AnalysisGroupServiceName.Name) {
+		serviceName := ctx.String(AnalysisGroupServiceName.Name)
+		cfg.XLayer.AnalysisGroupNacosClient, err = nacos.NewNacosClient("", serviceName)
+		if err != nil {
+			panic(fmt.Sprintf("failed to create nacos client for analysis group: %s", err))
+		}
 	}
 }

@@ -43,7 +43,7 @@ func SequencerZkStages(
 				if badBlockUnwind {
 					return nil
 				}
-				return stagedsync.SpawnAnalysisGroupVerificationCheckStage(s, exec.zk.XLayer.AnalysisGroupAPIBaseURL, logger)
+				return stagedsync.SpawnAnalysisGroupVerificationCheckStage(s, exec.zk.XLayer.AnalysisGroupNacosClient, logger)
 			},
 			Unwind: func(firstCycle bool, u *stages.UnwindState, s *stages.StageState, txc wrap.TxContainer, logger log.Logger) error {
 				// No unwind needed for verification check stage

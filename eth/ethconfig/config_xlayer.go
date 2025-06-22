@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/ledgerwatch/erigon-lib/common"
+	"github.com/ledgerwatch/erigon/zk/nacos"
 )
 
 // XLayerConfig is the X Layer config used on the eth backend
@@ -50,8 +51,8 @@ type XLayerConfig struct {
 
 	SequencerBatchCounterPercentage int
 
-	VerificationCheckDelay  time.Duration
-	AnalysisGroupAPIBaseURL string
+	VerificationCheckDelay   time.Duration
+	AnalysisGroupNacosClient *nacos.XlayerNacosClient
 }
 
 var DefaultXLayerConfig = XLayerConfig{}

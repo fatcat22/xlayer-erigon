@@ -1,17 +1,15 @@
 package stagedsync
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"time"
 
 	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
+	"github.com/ledgerwatch/erigon/zk/nacos"
 	"github.com/ledgerwatch/log/v3"
 )
 
@@ -40,14 +38,9 @@ type AnalysisGroupAPIRequest struct {
 func isBlockVerifiedByAnalysisGroup(
 	ctx context.Context,
 	blockHeight uint64,
-	apiBaseURL string,
+	nacosClient *nacos.XlayerNacosClient,
 	logger log.Logger,
 ) (bool, error) {
-	// Create HTTP client with timeout
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-	}
-
 	// Prepare request payload
 	request := AnalysisGroupAPIRequest{
 		Height: blockHeight,
@@ -59,40 +52,16 @@ func isBlockVerifiedByAnalysisGroup(
 		return false, fmt.Errorf("failed to marshal request body: %w", err)
 	}
 
-	// Create HTTP request
-	url := fmt.Sprintf("%s/api/v1/196/validHeight", apiBaseURL)
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(requestBody))
-	if err != nil {
-		logger.Error("Failed to create HTTP request", "blockHeight", blockHeight, "url", url, "err", err)
-		return false, fmt.Errorf("failed to create HTTP request: %w", err)
+	// Set headers
+	reqHeaders := map[string]string{
+		"Content-Type": "application/json",
 	}
 
-	// Set headers
-	req.Header.Set("Content-Type", "application/json")
-
 	// Make the request
-	logger.Debug("Calling analysis group API", "blockHeight", blockHeight, "url", url)
-	resp, err := client.Do(req)
+	respBody, err := nacosClient.Post("/api/v1/196/validHeight", requestBody, reqHeaders)
 	if err != nil {
 		logger.Error("Failed to call analysis group API", "blockHeight", blockHeight, "err", err)
 		return false, fmt.Errorf("failed to call analysis group API: %w", err)
-	}
-	defer resp.Body.Close()
-
-	// Read response body
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		logger.Error("Failed to read response body", "blockHeight", blockHeight, "err", err)
-		return false, fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	// Check HTTP status code
-	if resp.StatusCode != http.StatusOK {
-		logger.Error("Analysis group API returned non-OK status",
-			"blockHeight", blockHeight,
-			"statusCode", resp.StatusCode,
-			"response", string(respBody))
-		return false, fmt.Errorf("analysis group API returned status %d: %s", resp.StatusCode, string(respBody))
 	}
 
 	// Parse response
@@ -236,7 +205,7 @@ func ProcessVerificationChecks(
 	ctx context.Context,
 	tx kv.RwTx,
 	verificationItems []VerificationCheckItem,
-	apiBaseURL string,
+	nacosClient *nacos.XlayerNacosClient,
 	logger log.Logger,
 ) ([]VerificationCheckItem, error) {
 	// 1. Get current time and find the highest index of items that are ready for verification
@@ -274,7 +243,7 @@ func ProcessVerificationChecks(
 			"checkTime", item.CheckTime,
 			"index", i)
 
-		isVerified, err := isBlockVerifiedByAnalysisGroup(ctx, item.BlockHeight, apiBaseURL, logger)
+		isVerified, err := isBlockVerifiedByAnalysisGroup(ctx, item.BlockHeight, nacosClient, logger)
 		if err != nil {
 			logger.Error("Failed to check block verification",
 				"blockHeight", item.BlockHeight,
@@ -334,14 +303,14 @@ func ProcessVerificationChecks(
 // SpawnAnalysisGroupVerificationCheckStage processes verification check items and updates the verified block height
 func SpawnAnalysisGroupVerificationCheckStage(
 	s *StageState,
-	analysisGroupAPIBaseURL string,
+	nacosClient *nacos.XlayerNacosClient,
 	logger log.Logger,
 ) error {
 	// Get verification check items from the sync state
 	items := s.GetVerificationCheckItems()
 
 	// Process verification checks and update the items
-	updatedItems, err := ProcessVerificationChecks(context.Background(), nil, items, analysisGroupAPIBaseURL, logger)
+	updatedItems, err := ProcessVerificationChecks(context.Background(), nil, items, nacosClient, logger)
 	if err != nil {
 		return err
 	}

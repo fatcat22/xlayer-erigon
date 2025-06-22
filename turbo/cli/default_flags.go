@@ -352,7 +352,7 @@ var DefaultFlags = []cli.Flag{
 	&utils.OkPaySenderAccountsList,
 	&utils.OkPayBlockPriorityTxsLimit,
 	&utils.VerificationCheckDelay,
-	&utils.AnalysisGroupAPIBaseURL,
+	&utils.AnalysisGroupServiceName,
 
 	&utils.ACLPrintHistory,
 	&utils.InfoTreeUpdateInterval,
