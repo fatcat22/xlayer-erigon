@@ -207,6 +207,7 @@ func ProcessVerificationChecks(
 	verificationItems []VerificationCheckItem,
 	nacosClient *nacos.XlayerNacosClient,
 	logger log.Logger,
+	skipAnalysisGroupAPI bool,
 ) ([]VerificationCheckItem, error) {
 	// 1. Get current time and find the highest index of items that are ready for verification
 	currentTime := time.Now()
@@ -243,13 +244,25 @@ func ProcessVerificationChecks(
 			"checkTime", item.CheckTime,
 			"index", i)
 
-		isVerified, err := isBlockVerifiedByAnalysisGroup(ctx, item.BlockHeight, nacosClient, logger)
-		if err != nil {
-			logger.Error("Failed to check block verification",
+		var isVerified bool
+		var err error
+
+		if skipAnalysisGroupAPI {
+			// Skip API call and directly mark as verified
+			isVerified = true
+			logger.Info("Skipping analysis group API call, marking block as verified",
 				"blockHeight", item.BlockHeight,
-				"err", err)
-			// Continue checking other blocks even if one fails
-			continue
+				"skipAnalysisGroupAPI", skipAnalysisGroupAPI)
+		} else {
+			// Call analysis group API to check verification
+			isVerified, err = isBlockVerifiedByAnalysisGroup(ctx, item.BlockHeight, nacosClient, logger)
+			if err != nil {
+				logger.Error("Failed to check block verification",
+					"blockHeight", item.BlockHeight,
+					"err", err)
+				// Continue checking other blocks even if one fails
+				continue
+			}
 		}
 
 		if isVerified {
@@ -258,7 +271,8 @@ func ProcessVerificationChecks(
 			logger.Info("Found verified block",
 				"blockHeight", verifiedBlockHeight,
 				"checkTime", item.CheckTime,
-				"index", i)
+				"index", i,
+				"skipAnalysisGroupAPI", skipAnalysisGroupAPI)
 			break
 		}
 
@@ -278,7 +292,8 @@ func ProcessVerificationChecks(
 		}
 
 		logger.Info("Updated VerifiedBlockHeight in database",
-			"blockHeight", verifiedBlockHeight)
+			"blockHeight", verifiedBlockHeight,
+			"skipAnalysisGroupAPI", skipAnalysisGroupAPI)
 
 		// 4. Remove all items with index <= verifiedIndex (including the verified item)
 		// Since verificationItems is sorted by height, this removes all items <= verifiedBlockHeight
@@ -304,13 +319,14 @@ func ProcessVerificationChecks(
 func SpawnAnalysisGroupVerificationCheckStage(
 	s *StageState,
 	nacosClient *nacos.XlayerNacosClient,
+	skipAnalysisGroupAPI bool,
 	logger log.Logger,
 ) error {
 	// Get verification check items from the sync state
 	items := s.GetVerificationCheckItems()
 
 	// Process verification checks and update the items
-	updatedItems, err := ProcessVerificationChecks(context.Background(), nil, items, nacosClient, logger)
+	updatedItems, err := ProcessVerificationChecks(context.Background(), nil, items, nacosClient, logger, skipAnalysisGroupAPI)
 	if err != nil {
 		return err
 	}

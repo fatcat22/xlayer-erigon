@@ -2,18 +2,14 @@ package nacos
 
 import (
 	"testing"
-
-	"github.com/ledgerwatch/log/v3"
 )
 
 func TestNewNacosClient(t *testing.T) {
 	// Note: This test requires an actual nacos server to run
 	// Here we just test function signature and basic structure
 
-	logger := log.New()
-
 	// Test function signature
-	client, err := NewNacosClient("test-namespace", "test-service", logger)
+	client, err := NewNacosClient("test-namespace", "test-service")
 
 	// Since there's no actual nacos server, we expect an error
 	if err == nil {
@@ -31,7 +27,6 @@ func TestXlayerNacosClientStructure(t *testing.T) {
 	// Test struct fields
 	client := &XlayerNacosClient{
 		serviceName: "test-service",
-		logger:      log.New(),
 	}
 
 	if client.GetServiceName() != "test-service" {

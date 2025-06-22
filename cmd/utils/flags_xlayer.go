@@ -12,6 +12,7 @@ import (
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/gasprice/gaspricecfg"
 	"github.com/ledgerwatch/erigon/zk/nacos"
+	"github.com/ledgerwatch/erigon/zkevm/log"
 )
 
 var (
@@ -337,15 +338,20 @@ var (
 		Usage: "Enable full trace log",
 		Value: true,
 	}
-	VerificationCheckDelay = cli.IntFlag{
+	VerificationCheckDelay = cli.StringFlag{
 		Name:  "zkevm.verification-check-delay",
 		Usage: "Time delay to wait after block generation before checking verification status on analysis group API",
-		Value: 0,
+		Value: "0s",
 	}
 	AnalysisGroupServiceName = cli.StringFlag{
 		Name:  "zkevm.analysis-group-service-name",
 		Usage: "nacos service name for analysis group API",
 		Value: "",
+	}
+	SkipAnalysisGroupAPI = cli.BoolFlag{
+		Name:  "zkevm.skip-analysis-group-api",
+		Usage: "If true, skip calling analysis group API and directly set block number to AnalysisGroupVerifiedBlockHeight status",
+		Value: false,
 	}
 )
 
@@ -536,7 +542,7 @@ func SetBulkAddTxs(ctx *cli.Context, cfg *ethconfig.Config) {
 	cfg.XLayer.EnableAddTxNotify = ctx.Bool(EnableAddTxNotify.Name)
 }
 
-func SetVerificationCheckDelay(ctx *cli.Context, cfg *ethconfig.Config) {
+func SetVerificationConfigs(ctx *cli.Context, cfg *ethconfig.Config) {
 	verificationCheckDelayVal := ctx.String(VerificationCheckDelay.Name)
 	verificationCheckDelay, err := time.ParseDuration(verificationCheckDelayVal)
 	if err != nil {
@@ -544,11 +550,17 @@ func SetVerificationCheckDelay(ctx *cli.Context, cfg *ethconfig.Config) {
 	}
 	cfg.XLayer.VerificationCheckDelay = verificationCheckDelay
 
+	cfg.XLayer.SkipAnalysisGroupAPI = ctx.Bool(SkipAnalysisGroupAPI.Name)
+
 	// Set AnalysisGroupServiceName
 	if ctx.IsSet(AnalysisGroupServiceName.Name) {
 		serviceName := ctx.String(AnalysisGroupServiceName.Name)
+
+		if cfg.XLayer.SkipAnalysisGroupAPI {
+			log.Warn("skip analysis group api but service name is set", "service name", serviceName)
+		}
 		cfg.XLayer.AnalysisGroupNacosClient, err = nacos.NewNacosClient("", serviceName)
-		if err != nil {
+		if err != nil && !cfg.XLayer.SkipAnalysisGroupAPI {
 			panic(fmt.Sprintf("failed to create nacos client for analysis group: %s", err))
 		}
 	}

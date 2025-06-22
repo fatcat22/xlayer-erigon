@@ -107,3 +107,6 @@ txpool.enabletimsort: true
 zkevm.bulk-add-txs: true
 zkevm.enable-add-tx-notify: true
 zkevm.initial-batch.config: /usr/src/app/first-batch-config.json
+
+zkevm.skip-analysis-group-api: true
+# zkevm.analysis-group-service-name: "analysis-group"
