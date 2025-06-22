@@ -1357,7 +1357,7 @@ func (s *Ethereum) Init(stack *node.Node, config *ethconfig.Config, chainConfig 
 		// Get verification check items from database
 		var verificationItems []stagedsync.VerificationCheckItem
 		err = chainKv.View(context.Background(), func(tx kv.Tx) error {
-			verificationItems, err = stagedsync.GetVerificationCheckItems(ctx, tx, config.Zk.XLayer.AnalysisGroupVerification.CheckDelay, s.logger)
+			verificationItems, err = stagedsync.InitVerificationCheckItems(ctx, tx, config.Zk.XLayer.AnalysisGroupVerification.CheckDelay, s.logger)
 			return err
 		})
 		if err != nil {

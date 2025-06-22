@@ -98,7 +98,7 @@ func isBlockVerifiedByAnalysisGroup(
 // It gets the latest block height and VerifiedBlockHeight from the database
 // Reads creation time for all heights from low to high, and adds VerificationCheckDelay
 // Returns a slice containing block height and check time structures
-func GetVerificationCheckItems(
+func InitVerificationCheckItems(
 	ctx context.Context,
 	tx kv.Tx,
 	verificationCheckDelay time.Duration,
@@ -130,10 +130,22 @@ func GetVerificationCheckItems(
 		return []VerificationCheckItem{}, nil
 	}
 
-	// 4. Read creation time for all heights from low to high, and add VerificationCheckDelay
+	return GetVerificationCheckItems(ctx, tx, verificationCheckDelay, verifiedBlockHeight+1, currentBlockHeight, logger)
+}
+
+func GetVerificationCheckItems(
+	ctx context.Context,
+	tx kv.Tx,
+	verificationCheckDelay time.Duration,
+	fromBlockHeight uint64,
+	toBlockHeight uint64, // inclusive
+	logger log.Logger,
+) ([]VerificationCheckItem, error) {
+
+	// Read creation time for all heights from low to high, and add VerificationCheckDelay
 	var verificationItems []VerificationCheckItem
 
-	for blockHeight := verifiedBlockHeight + 1; blockHeight <= currentBlockHeight; blockHeight++ {
+	for blockHeight := fromBlockHeight; blockHeight <= toBlockHeight; blockHeight++ {
 		// Read block header
 		header := rawdb.ReadHeaderByNumber(tx, blockHeight)
 		if header == nil {
@@ -155,8 +167,8 @@ func GetVerificationCheckItems(
 	}
 
 	logger.Debug("Generated verification check items",
-		"verifiedBlockHeight", verifiedBlockHeight,
-		"currentBlockHeight", currentBlockHeight,
+		"from", fromBlockHeight,
+		"to", toBlockHeight,
 		"itemsCount", len(verificationItems))
 
 	return verificationItems, nil
@@ -317,15 +329,34 @@ func ProcessVerificationChecks(
 
 // SpawnAnalysisGroupVerificationCheckStage processes verification check items and updates the verified block height
 func SpawnAnalysisGroupVerificationCheckStage(
+	ctx context.Context,
 	s *StageState,
+	db kv.RwDB,
 	verificationConfig ethconfig.AnalysisGroupVerificationConfig,
 	logger log.Logger,
 ) error {
 	// Get verification check items from the sync state
-	items := s.GetVerificationCheckItems()
+	err := db.View(ctx, func(tx kv.Tx) error {
+		currentBlockHeight := uint64(0)
+		currentHeader := rawdb.ReadCurrentHeader(tx)
+		if currentHeader != nil {
+			currentBlockHeight = currentHeader.Number.Uint64()
+		}
+		existItems := s.GetVerificationCheckItems()
+
+		items, err := GetVerificationCheckItems(ctx, tx, verificationConfig.CheckDelay, existItems[len(existItems)-1].BlockHeight+1, currentBlockHeight, logger)
+		if err != nil {
+			return err
+		}
+		s.SetVerificationCheckItems(append(existItems, items...))
+		return nil
+	})
+	if err != nil {
+		return err
+	}
 
 	// Process verification checks and update the items
-	updatedItems, err := ProcessVerificationChecks(context.Background(), nil, items, verificationConfig, logger)
+	updatedItems, err := ProcessVerificationChecks(ctx, nil, s.GetVerificationCheckItems(), verificationConfig, logger)
 	if err != nil {
 		return err
 	}
