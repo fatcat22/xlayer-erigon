@@ -553,20 +553,20 @@ func SetVerificationConfigs(ctx *cli.Context, cfg *ethconfig.Config) {
 	if err != nil {
 		panic(fmt.Sprintf("could not parse '%s': '%s'", VerificationCheckDelay.Name, verificationCheckDelayVal))
 	}
-	cfg.XLayer.VerificationCheckDelay = verificationCheckDelay
+	cfg.XLayer.AnalysisGroupVerification.CheckDelay = verificationCheckDelay
 
-	cfg.XLayer.SkipAnalysisGroupAPI = ctx.Bool(SkipAnalysisGroupAPI.Name)
-	cfg.XLayer.AnalysisGroupAPIPath = ctx.String(AnalysisGroupAPIPath.Name)
+	cfg.XLayer.AnalysisGroupVerification.SkipAPI = ctx.Bool(SkipAnalysisGroupAPI.Name)
+	cfg.XLayer.AnalysisGroupVerification.APIPath = ctx.String(AnalysisGroupAPIPath.Name)
 
 	// Set AnalysisGroupServiceName
 	if ctx.IsSet(AnalysisGroupServiceName.Name) {
 		serviceName := ctx.String(AnalysisGroupServiceName.Name)
 
-		if cfg.XLayer.SkipAnalysisGroupAPI {
+		if cfg.XLayer.AnalysisGroupVerification.SkipAPI {
 			log.Warn("skip analysis group api but service name is set", "service name", serviceName)
 		}
-		cfg.XLayer.AnalysisGroupNacosClient, err = nacos.NewNacosClient("", serviceName)
-		if err != nil && !cfg.XLayer.SkipAnalysisGroupAPI {
+		cfg.XLayer.AnalysisGroupVerification.NacosClient, err = nacos.NewNacosClient("", serviceName)
+		if err != nil && !cfg.XLayer.AnalysisGroupVerification.SkipAPI {
 			panic(fmt.Sprintf("failed to create nacos client for analysis group: %s", err))
 		}
 	}

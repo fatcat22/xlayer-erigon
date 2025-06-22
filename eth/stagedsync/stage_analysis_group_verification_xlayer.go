@@ -8,6 +8,7 @@ import (
 
 	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon/core/rawdb"
+	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/zk/nacos"
 	"github.com/ledgerwatch/log/v3"
@@ -208,10 +209,8 @@ func ProcessVerificationChecks(
 	ctx context.Context,
 	tx kv.RwTx,
 	verificationItems []VerificationCheckItem,
-	nacosClient *nacos.XlayerNacosClient,
+	verificationConfig ethconfig.AnalysisGroupVerificationConfig,
 	logger log.Logger,
-	skipAnalysisGroupAPI bool,
-	apiPath string,
 ) ([]VerificationCheckItem, error) {
 	// 1. Get current time and find the highest index of items that are ready for verification
 	currentTime := time.Now()
@@ -251,15 +250,12 @@ func ProcessVerificationChecks(
 		var isVerified bool
 		var err error
 
-		if skipAnalysisGroupAPI {
+		if verificationConfig.SkipAPI {
 			// Skip API call and directly mark as verified
 			isVerified = true
-			logger.Info("Skipping analysis group API call, marking block as verified",
-				"blockHeight", item.BlockHeight,
-				"skipAnalysisGroupAPI", skipAnalysisGroupAPI)
 		} else {
 			// Call analysis group API to check verification
-			isVerified, err = isBlockVerifiedByAnalysisGroup(ctx, item.BlockHeight, nacosClient, apiPath, logger)
+			isVerified, err = isBlockVerifiedByAnalysisGroup(ctx, item.BlockHeight, verificationConfig.NacosClient, verificationConfig.APIPath, logger)
 			if err != nil {
 				logger.Error("Failed to check block verification",
 					"blockHeight", item.BlockHeight,
@@ -276,7 +272,7 @@ func ProcessVerificationChecks(
 				"blockHeight", verifiedBlockHeight,
 				"checkTime", item.CheckTime,
 				"index", i,
-				"skipAnalysisGroupAPI", skipAnalysisGroupAPI)
+				"skip", verificationConfig.SkipAPI)
 			break
 		}
 
@@ -297,7 +293,7 @@ func ProcessVerificationChecks(
 
 		logger.Info("Updated VerifiedBlockHeight in database",
 			"blockHeight", verifiedBlockHeight,
-			"skipAnalysisGroupAPI", skipAnalysisGroupAPI)
+			"skip", verificationConfig.SkipAPI)
 
 		// 4. Remove all items with index <= verifiedIndex (including the verified item)
 		// Since verificationItems is sorted by height, this removes all items <= verifiedBlockHeight
@@ -322,16 +318,14 @@ func ProcessVerificationChecks(
 // SpawnAnalysisGroupVerificationCheckStage processes verification check items and updates the verified block height
 func SpawnAnalysisGroupVerificationCheckStage(
 	s *StageState,
-	nacosClient *nacos.XlayerNacosClient,
-	skipAnalysisGroupAPI bool,
-	apiPath string,
+	verificationConfig ethconfig.AnalysisGroupVerificationConfig,
 	logger log.Logger,
 ) error {
 	// Get verification check items from the sync state
 	items := s.GetVerificationCheckItems()
 
 	// Process verification checks and update the items
-	updatedItems, err := ProcessVerificationChecks(context.Background(), nil, items, nacosClient, logger, skipAnalysisGroupAPI, apiPath)
+	updatedItems, err := ProcessVerificationChecks(context.Background(), nil, items, verificationConfig, logger)
 	if err != nil {
 		return err
 	}

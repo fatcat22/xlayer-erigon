@@ -7,6 +7,14 @@ import (
 	"github.com/ledgerwatch/erigon/zk/nacos"
 )
 
+// AnalysisGroupVerificationConfig contains configuration for analysis group verification
+type AnalysisGroupVerificationConfig struct {
+	CheckDelay  time.Duration            // Time delay to wait after block generation before checking verification status
+	NacosClient *nacos.XlayerNacosClient // Nacos client for analysis group service discovery
+	APIPath     string                   // API path for analysis group verification
+	SkipAPI     bool                     // If true, skip calling analysis group API and directly set block number to verified status
+}
+
 // XLayerConfig is the X Layer config used on the eth backend
 type XLayerConfig struct {
 	Apollo        ApolloClientConfig
@@ -51,10 +59,8 @@ type XLayerConfig struct {
 
 	SequencerBatchCounterPercentage int
 
-	VerificationCheckDelay   time.Duration
-	AnalysisGroupNacosClient *nacos.XlayerNacosClient
-	AnalysisGroupAPIPath     string
-	SkipAnalysisGroupAPI     bool
+	// Analysis Group Verification
+	AnalysisGroupVerification AnalysisGroupVerificationConfig
 }
 
 var DefaultXLayerConfig = XLayerConfig{}
