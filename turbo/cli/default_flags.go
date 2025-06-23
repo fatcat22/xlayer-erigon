@@ -353,6 +353,8 @@ var DefaultFlags = []cli.Flag{
 	&utils.OkPayBlockPriorityTxsLimit,
 	&utils.VerificationCheckDelay,
 	&utils.AnalysisGroupServiceName,
+	&utils.AnalysisGroupAPIPath,
+	&utils.SkipAnalysisGroupAPI,
 
 	&utils.ACLPrintHistory,
 	&utils.InfoTreeUpdateInterval,

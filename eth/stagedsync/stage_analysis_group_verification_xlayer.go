@@ -130,7 +130,7 @@ func InitVerificationCheckItems(
 		return []VerificationCheckItem{}, nil
 	}
 
-	return GetVerificationCheckItems(ctx, tx, verificationCheckDelay, verifiedBlockHeight+1, currentBlockHeight, logger)
+	return GetVerificationCheckItems(ctx, tx, verificationCheckDelay, verifiedBlockHeight+1, currentBlockHeight+1, logger)
 }
 
 func GetVerificationCheckItems(
@@ -138,14 +138,14 @@ func GetVerificationCheckItems(
 	tx kv.Tx,
 	verificationCheckDelay time.Duration,
 	fromBlockHeight uint64,
-	toBlockHeight uint64, // inclusive
+	toBlockHeight uint64, // exclusive
 	logger log.Logger,
 ) ([]VerificationCheckItem, error) {
 
 	// Read creation time for all heights from low to high, and add VerificationCheckDelay
 	var verificationItems []VerificationCheckItem
 
-	for blockHeight := fromBlockHeight; blockHeight <= toBlockHeight; blockHeight++ {
+	for blockHeight := fromBlockHeight; blockHeight < toBlockHeight; blockHeight++ {
 		// Read block header
 		header := rawdb.ReadHeaderByNumber(tx, blockHeight)
 		if header == nil {
@@ -168,7 +168,7 @@ func GetVerificationCheckItems(
 
 	logger.Debug("Generated verification check items",
 		"from", fromBlockHeight,
-		"to", toBlockHeight,
+		"to[exclusive]", toBlockHeight,
 		"itemsCount", len(verificationItems))
 
 	return verificationItems, nil
@@ -305,7 +305,7 @@ func ProcessVerificationChecks(
 
 		logger.Info("Updated VerifiedBlockHeight in database",
 			"blockHeight", verifiedBlockHeight,
-			"skip", verificationConfig.SkipAPI)
+			"skip analysis group api", verificationConfig.SkipAPI)
 
 		// 4. Remove all items with index <= verifiedIndex (including the verified item)
 		// Since verificationItems is sorted by height, this removes all items <= verifiedBlockHeight
@@ -337,14 +337,18 @@ func SpawnAnalysisGroupVerificationCheckStage(
 ) error {
 	// Get verification check items from the sync state
 	err := db.View(ctx, func(tx kv.Tx) error {
-		currentBlockHeight := uint64(0)
+		fromHeight := uint64(0)
+		toHeight := uint64(0)
 		currentHeader := rawdb.ReadCurrentHeader(tx)
 		if currentHeader != nil {
-			currentBlockHeight = currentHeader.Number.Uint64()
+			toHeight = currentHeader.Number.Uint64() + 1
 		}
 		existItems := s.GetVerificationCheckItems()
+		if len(existItems) > 0 {
+			fromHeight = existItems[len(existItems)-1].BlockHeight + 1
+		}
 
-		items, err := GetVerificationCheckItems(ctx, tx, verificationConfig.CheckDelay, existItems[len(existItems)-1].BlockHeight+1, currentBlockHeight, logger)
+		items, err := GetVerificationCheckItems(ctx, tx, verificationConfig.CheckDelay, fromHeight, toHeight, logger)
 		if err != nil {
 			return err
 		}
@@ -356,13 +360,17 @@ func SpawnAnalysisGroupVerificationCheckStage(
 	}
 
 	// Process verification checks and update the items
-	updatedItems, err := ProcessVerificationChecks(ctx, nil, s.GetVerificationCheckItems(), verificationConfig, logger)
+	var updatedItems []VerificationCheckItem
+	err = db.Update(ctx, func(tx kv.RwTx) error {
+		updatedItems, err = ProcessVerificationChecks(ctx, tx, s.GetVerificationCheckItems(), verificationConfig, logger)
+		return err
+	})
 	if err != nil {
+		logger.Error("Failed to process verification checks", "err", err)
 		return err
 	}
 
 	// Update the verification check items in the sync state
 	s.SetVerificationCheckItems(updatedItems)
-
 	return nil
 }

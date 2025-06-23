@@ -11,8 +11,6 @@ import (
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/gasprice/gaspricecfg"
-	"github.com/ledgerwatch/erigon/zk/nacos"
-	"github.com/ledgerwatch/erigon/zkevm/log"
 )
 
 var (
@@ -545,29 +543,4 @@ func SetBulkAddTxs(ctx *cli.Context, cfg *ethconfig.Config) {
 	cfg.XLayer.BulkAddTxsSize = ctx.Int(BulkAddTxsSizeFlag.Name)
 	cfg.XLayer.BulkAddTxsWaitTime = ctx.Duration(BulkAddTxsWaitTimeFlag.Name)
 	cfg.XLayer.EnableAddTxNotify = ctx.Bool(EnableAddTxNotify.Name)
-}
-
-func SetVerificationConfigs(ctx *cli.Context, cfg *ethconfig.Config) {
-	verificationCheckDelayVal := ctx.String(VerificationCheckDelay.Name)
-	verificationCheckDelay, err := time.ParseDuration(verificationCheckDelayVal)
-	if err != nil {
-		panic(fmt.Sprintf("could not parse '%s': '%s'", VerificationCheckDelay.Name, verificationCheckDelayVal))
-	}
-	cfg.XLayer.AnalysisGroupVerification.CheckDelay = verificationCheckDelay
-
-	cfg.XLayer.AnalysisGroupVerification.SkipAPI = ctx.Bool(SkipAnalysisGroupAPI.Name)
-	cfg.XLayer.AnalysisGroupVerification.APIPath = ctx.String(AnalysisGroupAPIPath.Name)
-
-	// Set AnalysisGroupServiceName
-	if ctx.IsSet(AnalysisGroupServiceName.Name) {
-		serviceName := ctx.String(AnalysisGroupServiceName.Name)
-
-		if cfg.XLayer.AnalysisGroupVerification.SkipAPI {
-			log.Warn("skip analysis group api but service name is set", "service name", serviceName)
-		}
-		cfg.XLayer.AnalysisGroupVerification.NacosClient, err = nacos.NewNacosClient("", serviceName)
-		if err != nil && !cfg.XLayer.AnalysisGroupVerification.SkipAPI {
-			panic(fmt.Sprintf("failed to create nacos client for analysis group: %s", err))
-		}
-	}
 }
