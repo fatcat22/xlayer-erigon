@@ -27,9 +27,6 @@ func SetSequencerRpcUrl(url string) {
 
 // GetSequencerRpcUrl returns the global sequencer RPC URL
 func GetSequencerRpcUrl() string {
-	if len(sequencerRpcUrl) == 0 {
-		panic("sequencerRpcUrl is not set")
-	}
 	return sequencerRpcUrl
 }
 
