@@ -9,7 +9,7 @@ import (
 
 // AnalysisGroupVerificationConfig contains configuration for analysis group verification
 type AnalysisGroupVerificationConfig struct {
-	CheckDelay  time.Duration            // Time delay to wait after block generation before checking verification status
+	BatchDelay  uint64                   // Number of batches to delay before verifying the last block of a batch
 	NacosClient *nacos.XlayerNacosClient // Nacos client for analysis group service discovery
 	APIPath     string                   // API path for analysis group verification
 	SkipAPI     bool                     // If true, skip calling analysis group API and directly set block number to verified status

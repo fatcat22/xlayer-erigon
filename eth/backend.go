@@ -1352,24 +1352,6 @@ func (s *Ethereum) Init(stack *node.Node, config *ethconfig.Config, chainConfig 
 
 	s.stagedSync = stagedsync.New(s.config.Sync, s.syncStages, s.syncUnwindOrder, s.syncPruneOrder, s.logger)
 
-	// For X Layer, if sequencer mode, initialize verification check items
-	if sequencer.IsSequencer() {
-		// Get verification check items from database
-		var verificationItems []stagedsync.VerificationCheckItem
-		err = chainKv.View(context.Background(), func(tx kv.Tx) error {
-			verificationItems, err = stagedsync.InitVerificationCheckItems(ctx, tx, config.Zk.XLayer.AnalysisGroupVerification.CheckDelay, s.logger)
-			return err
-		})
-		if err != nil {
-			s.logger.Error("Failed to get verification check items", "err", err)
-			return err
-		}
-		s.stagedSync.SetVerificationCheckItems(verificationItems)
-		s.logger.Info("Initialized verification check items", "count", len(verificationItems))
-	}
-
-	// Legacy verifier code removed
-
 	if chainConfig.Bor == nil {
 		s.sentriesClient.Hd.StartPoSDownloader(s.sentryCtx, s.sentriesClient.SendHeaderRequest, s.sentriesClient.Penalize)
 	}

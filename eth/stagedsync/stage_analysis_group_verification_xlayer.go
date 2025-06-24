@@ -4,21 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/ledgerwatch/erigon-lib/kv"
-	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
+	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	"github.com/ledgerwatch/erigon/zk/nacos"
 	"github.com/ledgerwatch/log/v3"
 )
-
-// VerificationCheckItem represents a block item that needs verification
-type VerificationCheckItem struct {
-	BlockHeight uint64    // Block height
-	CheckTime   time.Time // Time when verification status should be checked
-}
 
 // AnalysisGroupAPIResponse represents the response from analysis group API
 type AnalysisGroupAPIResponse struct {
@@ -34,8 +27,7 @@ type AnalysisGroupAPIRequest struct {
 	Height uint64 `json:"height"`
 }
 
-// isBlockVerifiedByAnalysisGroup calls the analysis group API to check if a block is verified
-// Returns true if the block is verified by analysis group, false otherwise
+// isBlockVerifiedByAnalysisGroup checks if a block is verified by calling the analysis group API
 func isBlockVerifiedByAnalysisGroup(
 	ctx context.Context,
 	blockHeight uint64,
@@ -94,240 +86,7 @@ func isBlockVerifiedByAnalysisGroup(
 	return isVerified, nil
 }
 
-// GetVerificationCheckItems retrieves a list of blocks that need verification
-// It gets the latest block height and VerifiedBlockHeight from the database
-// Reads creation time for all heights from low to high, and adds VerificationCheckDelay
-// Returns a slice containing block height and check time structures
-func InitVerificationCheckItems(
-	ctx context.Context,
-	tx kv.Tx,
-	verificationCheckDelay time.Duration,
-	logger log.Logger,
-) ([]VerificationCheckItem, error) {
-	// 1. Get the latest block height from database
-	currentHeader := rawdb.ReadCurrentHeader(tx)
-	if currentHeader == nil {
-		return nil, nil
-	}
-	currentBlockHeight := currentHeader.Number.Uint64()
-
-	// 2. Get the VerifiedBlockHeight from database
-	verifiedBlockHeight, err := stages.GetStageProgress(tx, stages.AnalysisGroupVerifiedBlockHeight)
-	if err != nil {
-		logger.Error("Failed to get VerifiedBlockHeight progress", "err", err)
-		return nil, err
-	}
-
-	// 3. Ensure VerifiedBlockHeight <= current block height, otherwise panic
-	if verifiedBlockHeight > currentBlockHeight {
-		panic(fmt.Sprintf("VerifiedBlockHeight(%d) is greater than current block height(%d)",
-			verifiedBlockHeight,
-			currentBlockHeight))
-	}
-
-	// If no blocks need verification, return empty slice
-	if verifiedBlockHeight == currentBlockHeight {
-		return []VerificationCheckItem{}, nil
-	}
-
-	return GetVerificationCheckItems(ctx, tx, verificationCheckDelay, verifiedBlockHeight+1, currentBlockHeight+1, logger)
-}
-
-func GetVerificationCheckItems(
-	ctx context.Context,
-	tx kv.Tx,
-	verificationCheckDelay time.Duration,
-	fromBlockHeight uint64,
-	toBlockHeight uint64, // exclusive
-	logger log.Logger,
-) ([]VerificationCheckItem, error) {
-
-	// Read creation time for all heights from low to high, and add VerificationCheckDelay
-	var verificationItems []VerificationCheckItem
-
-	for blockHeight := fromBlockHeight; blockHeight < toBlockHeight; blockHeight++ {
-		// Read block header
-		header := rawdb.ReadHeaderByNumber(tx, blockHeight)
-		if header == nil {
-			logger.Warn("Failed to read header for block", "blockHeight", blockHeight)
-			continue
-		}
-
-		// Calculate check time: block creation time + VerificationCheckDelay
-		blockTime := time.Unix(int64(header.Time), 0)
-		checkTime := blockTime.Add(verificationCheckDelay)
-
-		// Create verification check item
-		item := VerificationCheckItem{
-			BlockHeight: blockHeight,
-			CheckTime:   checkTime,
-		}
-
-		verificationItems = append(verificationItems, item)
-	}
-
-	logger.Debug("Generated verification check items",
-		"from", fromBlockHeight,
-		"to[exclusive]", toBlockHeight,
-		"itemsCount", len(verificationItems))
-
-	return verificationItems, nil
-}
-
-// AppendVerificationCheckItem appends a new verification check item to the list
-// It ensures the new item's height is greater than the last item in the list
-// Returns the updated list with the new item appended
-func AppendVerificationCheckItem(
-	items []VerificationCheckItem,
-	blockHeight uint64,
-	verificationCheckDelay time.Duration,
-	logger log.Logger,
-) ([]VerificationCheckItem, error) {
-	// 1. Check if the new height is greater than the last item's height
-	if len(items) > 0 {
-		lastItem := items[len(items)-1]
-		if blockHeight <= lastItem.BlockHeight {
-			panic(fmt.Sprintf("new block height %d must be greater than last item height %d",
-				blockHeight, lastItem.BlockHeight))
-		}
-	}
-
-	// 2. Create new verification check item using current time
-	currentTime := time.Now()
-	checkTime := currentTime.Add(verificationCheckDelay)
-
-	newItem := VerificationCheckItem{
-		BlockHeight: blockHeight,
-		CheckTime:   checkTime,
-	}
-
-	// 3. Append the new item to the list
-	updatedItems := append(items, newItem)
-
-	logger.Debug("Appended new verification check item",
-		"blockHeight", blockHeight,
-		"currentTime", currentTime,
-		"checkTime", checkTime,
-		"totalItems", len(updatedItems))
-
-	return updatedItems, nil
-}
-
-// ProcessVerificationChecks processes verification check items and updates the verified block height
-// It finds the first block that passes verification from the analysis group API
-// and updates the VerifiedBlockHeight in the database
-// Returns the cleaned verification items list with items below the verified height removed
-func ProcessVerificationChecks(
-	ctx context.Context,
-	tx kv.RwTx,
-	verificationItems []VerificationCheckItem,
-	verificationConfig ethconfig.AnalysisGroupVerificationConfig,
-	logger log.Logger,
-) ([]VerificationCheckItem, error) {
-	// 1. Get current time and find the highest index of items that are ready for verification
-	currentTime := time.Now()
-	maxReadyIndex := -1
-
-	for i, item := range verificationItems {
-		if !item.CheckTime.After(currentTime) {
-			if i > maxReadyIndex {
-				maxReadyIndex = i
-			}
-		}
-	}
-
-	if maxReadyIndex == -1 {
-		logger.Debug("No verification items ready for checking", "currentTime", currentTime)
-		return verificationItems, nil
-	}
-
-	logger.Debug("Found items ready for verification",
-		"totalItems", len(verificationItems),
-		"maxReadyIndex", maxReadyIndex,
-		"currentTime", currentTime)
-
-	// 2. Traverse ready items from back to front (highest to lowest block height)
-	// Find the first block that passes verification
-	var verifiedBlockHeight uint64
-	verifiedIndex := -1
-
-	for i := maxReadyIndex; i >= 0; i-- {
-		item := verificationItems[i]
-
-		logger.Debug("Checking block verification",
-			"blockHeight", item.BlockHeight,
-			"checkTime", item.CheckTime,
-			"index", i)
-
-		var isVerified bool
-		var err error
-
-		if verificationConfig.SkipAPI {
-			// Skip API call and directly mark as verified
-			isVerified = true
-		} else {
-			// Call analysis group API to check verification
-			isVerified, err = isBlockVerifiedByAnalysisGroup(ctx, item.BlockHeight, verificationConfig.NacosClient, verificationConfig.APIPath, logger)
-			if err != nil {
-				logger.Error("Failed to check block verification",
-					"blockHeight", item.BlockHeight,
-					"err", err)
-				// Continue checking other blocks even if one fails
-				continue
-			}
-		}
-
-		if isVerified {
-			verifiedBlockHeight = item.BlockHeight
-			verifiedIndex = i
-			logger.Info("Found verified block",
-				"blockHeight", verifiedBlockHeight,
-				"checkTime", item.CheckTime,
-				"index", i,
-				"skip", verificationConfig.SkipAPI)
-			break
-		}
-
-		logger.Debug("Block not verified yet",
-			"blockHeight", item.BlockHeight,
-			"index", i)
-	}
-
-	// 3. Update VerifiedBlockHeight in database if a verified block was found
-	if verifiedIndex != -1 {
-		err := stages.SaveStageProgress(tx, stages.AnalysisGroupVerifiedBlockHeight, verifiedBlockHeight)
-		if err != nil {
-			logger.Error("Failed to save VerifiedBlockHeight",
-				"blockHeight", verifiedBlockHeight,
-				"err", err)
-			return verificationItems, fmt.Errorf("failed to save VerifiedBlockHeight: %w", err)
-		}
-
-		logger.Info("Updated VerifiedBlockHeight in database",
-			"blockHeight", verifiedBlockHeight,
-			"skip analysis group api", verificationConfig.SkipAPI)
-
-		// 4. Remove all items with index <= verifiedIndex (including the verified item)
-		// Since verificationItems is sorted by height, this removes all items <= verifiedBlockHeight
-		removedCount := verifiedIndex + 1
-		cleanedItems := verificationItems[removedCount:]
-
-		logger.Info("Cleaned verification items",
-			"verifiedBlockHeight", verifiedBlockHeight,
-			"verifiedIndex", verifiedIndex,
-			"originalCount", len(verificationItems),
-			"removedCount", removedCount,
-			"remainingCount", len(cleanedItems))
-
-		return cleanedItems, nil
-	} else {
-		logger.Debug("No verified blocks found among ready items",
-			"maxReadyIndex", maxReadyIndex)
-		return verificationItems, nil
-	}
-}
-
-// SpawnAnalysisGroupVerificationCheckStage processes verification check items and updates the verified block height
+// SpawnAnalysisGroupVerificationCheckStage processes verification using batch delay logic
 func SpawnAnalysisGroupVerificationCheckStage(
 	ctx context.Context,
 	s *StageState,
@@ -335,42 +94,112 @@ func SpawnAnalysisGroupVerificationCheckStage(
 	verificationConfig ethconfig.AnalysisGroupVerificationConfig,
 	logger log.Logger,
 ) error {
-	// Get verification check items from the sync state
-	err := db.View(ctx, func(tx kv.Tx) error {
-		fromHeight := uint64(0)
-		toHeight := uint64(0)
-		currentHeader := rawdb.ReadCurrentHeader(tx)
-		if currentHeader != nil {
-			toHeight = currentHeader.Number.Uint64() + 1
-		}
-		existItems := s.GetVerificationCheckItems()
-		if len(existItems) > 0 {
-			fromHeight = existItems[len(existItems)-1].BlockHeight + 1
-		}
+	// Get current highest batch number
+	var latestBatchNo uint64
+	var err error
+	err = db.View(ctx, func(tx kv.Tx) error {
+		latestBatchNo, err = stages.GetStageProgress(tx, stages.HighestSeenBatchNumber)
+		return err
+	})
+	if err != nil {
+		logger.Error("Failed to get latest batch number", "err", err)
+		return err
+	}
 
-		items, err := GetVerificationCheckItems(ctx, tx, verificationConfig.CheckDelay, fromHeight, toHeight, logger)
+	// Calculate target batch number for verification: latest batch - batch delay
+	if latestBatchNo < verificationConfig.BatchDelay {
+		logger.Info("Latest batch number is less than batch delay, skipping analysis group verification check stage",
+			"latestBatch", latestBatchNo,
+			"batchDelay", verificationConfig.BatchDelay)
+		return nil
+	}
+	targetBatchNumber := latestBatchNo - verificationConfig.BatchDelay
+
+	logger.Debug("Calculated target batch for verification",
+		"latestBatch", latestBatchNo,
+		"batchDelay", verificationConfig.BatchDelay,
+		"targetBatch", targetBatchNumber)
+
+	// Get the highest block number in the target batch and current verified block height
+	var currentVerifiedBlockHeight uint64
+	var highestBlockInTargetBatch uint64
+	var foundBlockInTargetBatch bool
+	var foundCurrentVerifiedBlockHeight bool
+	err = db.View(ctx, func(tx kv.Tx) error {
+		hermezDb := hermez_db.NewHermezDbReader(tx)
+		highestBlockInTargetBatch, foundBlockInTargetBatch, err = hermezDb.GetHighestBlockInBatch(targetBatchNumber)
 		if err != nil {
+			logger.Error("Failed to get highest block in target batch", "targetBatch", targetBatchNumber, "err", err)
 			return err
 		}
-		s.SetVerificationCheckItems(append(existItems, items...))
+		currentVerifiedBlockHeight, err = stages.GetStageProgress(tx, stages.AnalysisGroupVerifiedBlockHeight)
+		if err == nil {
+			foundCurrentVerifiedBlockHeight = true
+		}
 		return nil
 	})
 	if err != nil {
+		logger.Error("Failed to get highest block in target batch", "targetBatch", targetBatchNumber, "err", err)
 		return err
 	}
-
-	// Process verification checks and update the items
-	var updatedItems []VerificationCheckItem
-	err = db.Update(ctx, func(tx kv.RwTx) error {
-		updatedItems, err = ProcessVerificationChecks(ctx, tx, s.GetVerificationCheckItems(), verificationConfig, logger)
-		return err
-	})
-	if err != nil {
-		logger.Error("Failed to process verification checks", "err", err)
-		return err
+	if !foundBlockInTargetBatch || highestBlockInTargetBatch == 0 {
+		logger.Info("No blocks found in target batch", "targetBatch", targetBatchNumber)
+		return nil
 	}
 
-	// Update the verification check items in the sync state
-	s.SetVerificationCheckItems(updatedItems)
+	logger.Debug("Found highest block in target batch",
+		"targetBatch", targetBatchNumber,
+		"highestBlock", highestBlockInTargetBatch)
+
+	// Only verify if the target block is higher than current verified block
+	if foundCurrentVerifiedBlockHeight && highestBlockInTargetBatch <= currentVerifiedBlockHeight {
+		logger.Debug("Target block is not higher than current verified block",
+			"targetBlock", highestBlockInTargetBatch,
+			"currentVerified", currentVerifiedBlockHeight)
+		return nil
+	}
+
+	// Call analysis group API to verify the block
+	var isVerified bool
+	if verificationConfig.SkipAPI {
+		// Skip API call and directly mark as verified
+		isVerified = true
+		logger.Info("Skipping analysis group API call, marking block as verified",
+			"blockHeight", highestBlockInTargetBatch,
+			"targetBatch", targetBatchNumber)
+	} else {
+		// Call analysis group API to check verification
+		isVerified, err = isBlockVerifiedByAnalysisGroup(ctx, highestBlockInTargetBatch, verificationConfig.NacosClient, verificationConfig.APIPath, logger)
+		if err != nil {
+			logger.Error("Failed to check block verification",
+				"blockHeight", highestBlockInTargetBatch,
+				"err", err)
+			return err
+		}
+	}
+
+	// Update verified block height in database if verification successful
+	if isVerified {
+		err = db.Update(ctx, func(tx kv.RwTx) error {
+			err = stages.SaveStageProgress(tx, stages.AnalysisGroupVerifiedBlockHeight, highestBlockInTargetBatch)
+			return err
+		})
+		if err != nil {
+			logger.Error("Failed to save verified block height",
+				"blockHeight", highestBlockInTargetBatch,
+				"err", err)
+			return err
+		}
+
+		logger.Info("Successfully verified and updated block height",
+			"blockHeight", highestBlockInTargetBatch,
+			"targetBatch", targetBatchNumber,
+			"skipAPI", verificationConfig.SkipAPI)
+	} else {
+		logger.Debug("Block verification failed",
+			"blockHeight", highestBlockInTargetBatch,
+			"targetBatch", targetBatchNumber)
+	}
+
 	return nil
 }

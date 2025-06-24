@@ -336,10 +336,10 @@ var (
 		Usage: "Enable full trace log",
 		Value: true,
 	}
-	VerificationCheckDelay = cli.StringFlag{
-		Name:  "zkevm.verification-check-delay",
-		Usage: "Time delay to wait after block generation before checking verification status on analysis group API",
-		Value: "0s",
+	VerificationBatchDelay = cli.Uint64Flag{
+		Name:  "zkevm.verification-batch-delay",
+		Usage: "Number of batches to delay before verifying the last block of a batch in analysis group verification",
+		Value: 2,
 	}
 	AnalysisGroupServiceName = cli.StringFlag{
 		Name:  "zkevm.analysis-group-service-name",
