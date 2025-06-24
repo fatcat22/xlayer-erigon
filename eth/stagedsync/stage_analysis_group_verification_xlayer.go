@@ -159,47 +159,83 @@ func SpawnAnalysisGroupVerificationCheckStage(
 		return nil
 	}
 
-	// Call analysis group API to verify the block
-	var isVerified bool
+	// Start async verification for the target block
 	if verificationConfig.SkipAPI {
 		// Skip API call and directly mark as verified
-		isVerified = true
-		logger.Info("Skipping analysis group API call, marking block as verified",
-			"blockHeight", highestBlockInTargetBatch,
-			"targetBatch", targetBatchNumber)
-	} else {
-		// Call analysis group API to check verification
-		isVerified, err = isBlockVerifiedByAnalysisGroup(ctx, highestBlockInTargetBatch, verificationConfig.NacosClient, verificationConfig.APIPath, logger)
-		if err != nil {
-			logger.Error("Failed to check block verification",
-				"blockHeight", highestBlockInTargetBatch,
-				"err", err)
-			return err
+		logger.Debug("Skipping analysis group API call for async verification",
+			"blockHeight", highestBlockInTargetBatch)
+		// Update the async verified block height directly
+		if s.state.UpdateAsyncVerifiedBlockHeight(highestBlockInTargetBatch) {
+			logger.Debug("Updated async verified block height (skip API)",
+				"blockHeight", highestBlockInTargetBatch)
 		}
+	} else {
+		// Start async verification
+		asyncVerifyBlockByAnalysisGroup(
+			ctx,
+			highestBlockInTargetBatch,
+			verificationConfig.NacosClient,
+			verificationConfig.APIPath,
+			logger,
+			s.state.asyncVerifiedState,
+		)
 	}
 
-	// Update verified block height in database if verification successful
-	if isVerified {
+	// Check if we have any async verification results to update
+	asyncVerifiedHeight := s.state.GetAsyncVerifiedBlockHeight()
+	if asyncVerifiedHeight > currentVerifiedBlockHeight {
+		// Update verified block height in database
 		err = db.Update(ctx, func(tx kv.RwTx) error {
-			err = stages.SaveStageProgress(tx, stages.AnalysisGroupVerifiedBlockHeight, highestBlockInTargetBatch)
+			err = stages.SaveStageProgress(tx, stages.AnalysisGroupVerifiedBlockHeight, asyncVerifiedHeight)
 			return err
 		})
 		if err != nil {
 			logger.Error("Failed to save verified block height",
-				"blockHeight", highestBlockInTargetBatch,
+				"blockHeight", asyncVerifiedHeight,
 				"err", err)
 			return err
 		}
 
-		logger.Info("Successfully verified and updated block height",
-			"blockHeight", highestBlockInTargetBatch,
+		logger.Info("Successfully updated verified block height from async verification",
+			"blockHeight", asyncVerifiedHeight,
 			"targetBatch", targetBatchNumber,
 			"skipAPI", verificationConfig.SkipAPI)
 	} else {
-		logger.Debug("Block verification failed",
-			"blockHeight", highestBlockInTargetBatch,
-			"targetBatch", targetBatchNumber)
+		logger.Debug("No async verification results to update",
+			"asyncVerifiedHeight", asyncVerifiedHeight,
+			"currentVerifiedBlockHeight", currentVerifiedBlockHeight)
 	}
 
 	return nil
+}
+
+// asyncVerifyBlockByAnalysisGroup verifies a block asynchronously and updates the async verified block height
+func asyncVerifyBlockByAnalysisGroup(
+	ctx context.Context,
+	blockHeight uint64,
+	nacosClient *nacos.XlayerNacosClient,
+	apiPath string,
+	logger log.Logger,
+	asyncState *AsyncVerifiedState,
+) {
+	go func() {
+		isVerified, err := isBlockVerifiedByAnalysisGroup(ctx, blockHeight, nacosClient, apiPath, logger)
+		if err != nil {
+			logger.Error("Async block verification failed",
+				"blockHeight", blockHeight,
+				"err", err)
+			return
+		}
+
+		if isVerified {
+			// Update the async verified block height if verification was successful
+			if asyncState.UpdateVerifiedBlockHeight(blockHeight) {
+				logger.Debug("Updated async verified block height",
+					"blockHeight", blockHeight)
+			}
+		} else {
+			logger.Debug("Async block verification returned false",
+				"blockHeight", blockHeight)
+		}
+	}()
 }

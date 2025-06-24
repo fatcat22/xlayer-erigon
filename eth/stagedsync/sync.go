@@ -40,6 +40,9 @@ type Sync struct {
 	// For X Layer, split db and ac
 	flushWG sync.WaitGroup
 	cache   *smt.SmtCache
+
+	// For asynchronous analysis group verification
+	asyncVerifiedState *AsyncVerifiedState
 }
 
 type Timing struct {
@@ -47,6 +50,35 @@ type Timing struct {
 	isPrune  bool
 	stage    stages.SyncStage
 	took     time.Duration
+}
+
+// AsyncVerifiedState manages the asynchronous verification state
+type AsyncVerifiedState struct {
+	verifiedBlockHeight uint64
+	mutex               sync.Mutex
+}
+
+// NewAsyncVerifiedState creates a new AsyncVerifiedState
+func NewAsyncVerifiedState() *AsyncVerifiedState {
+	return &AsyncVerifiedState{}
+}
+
+// GetVerifiedBlockHeight returns the current verified block height
+func (a *AsyncVerifiedState) GetVerifiedBlockHeight() uint64 {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+	return a.verifiedBlockHeight
+}
+
+// UpdateVerifiedBlockHeight updates the verified block height if the new height is greater
+func (a *AsyncVerifiedState) UpdateVerifiedBlockHeight(newHeight uint64) bool {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+	if newHeight > a.verifiedBlockHeight {
+		a.verifiedBlockHeight = newHeight
+		return true
+	}
+	return false
 }
 
 func (s *Sync) Len() int {
@@ -222,6 +254,8 @@ func New(cfg ethconfig.Sync, stagesList []*Stage, unwindOrder UnwindOrder, prune
 		stagesIdsList: stagesIdsList,
 		// For X Layer, split db and ac
 		cache: smt.CreateNewSmtCache(),
+		// For asynchronous analysis group verification
+		asyncVerifiedState: NewAsyncVerifiedState(),
 	}
 }
 
@@ -647,4 +681,14 @@ func (s *Sync) MockExecFunc(id stages.SyncStage, f ExecFunc) {
 			s.stages[i].Forward = f
 		}
 	}
+}
+
+// GetAsyncVerifiedBlockHeight returns the current async verified block height
+func (s *Sync) GetAsyncVerifiedBlockHeight() uint64 {
+	return s.asyncVerifiedState.GetVerifiedBlockHeight()
+}
+
+// UpdateAsyncVerifiedBlockHeight updates the async verified block height if the new height is greater
+func (s *Sync) UpdateAsyncVerifiedBlockHeight(newHeight uint64) bool {
+	return s.asyncVerifiedState.UpdateVerifiedBlockHeight(newHeight)
 }
