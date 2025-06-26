@@ -354,7 +354,7 @@ var (
 	SkipAnalysisGroupAPI = cli.BoolFlag{
 		Name:  "zkevm.skip-analysis-group-api",
 		Usage: "If true, skip calling analysis group API and directly set block number to AnalysisGroupVerifiedBlockHeight status",
-		Value: false,
+		Value: true,
 	}
 )
 
