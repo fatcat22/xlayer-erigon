@@ -8,57 +8,27 @@ import (
 	"time"
 
 	"github.com/ledgerwatch/log/v3"
-	"github.com/nacos-group/nacos-sdk-go/clients"
-	"github.com/nacos-group/nacos-sdk-go/common/constant"
-	"github.com/nacos-group/nacos-sdk-go/model"
-	"github.com/nacos-group/nacos-sdk-go/vo"
 )
 
 // XlayerNacosClient struct for managing Nacos client and instances
 type XlayerNacosClient struct {
-	namingClient interface{}
-	instance     *model.Instance
-	serviceName  string
-	httpClient   *http.Client
+	baseURL     string
+	serviceName string
+	httpClient  *http.Client
 }
 
 // NewNacosClient creates a nacos NamingClient based on the specified namespace
 // Uses NamingClient and specified service name to call SelectOneHealthyInstance to get an instance
 // Stores NamingClient and instance in XlayerNacosClient struct and returns it
-func NewNacosClient(namespace string, serviceName string) (*XlayerNacosClient, error) {
-	namingClient, err := clients.CreateNamingClient(map[string]interface{}{
-		"serverConfigs": constant.ServerConfig{},
-		"clientConfig": constant.ClientConfig{
-			TimeoutMs:           defaultTimeoutMs,
-			ListenInterval:      defaultListenInterval,
-			NotLoadCacheAtStart: true,
-			NamespaceId:         namespace,
-			LogDir:              "/dev/null",
-			LogLevel:            "error",
-		},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create nacos naming client: %w", err)
-	}
-
-	// Get a healthy instance
-	instance, err := namingClient.SelectOneHealthyInstance(vo.SelectOneHealthInstanceParam{
-		ServiceName: serviceName,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to select healthy instance for service %s: %w", serviceName, err)
-	}
-
+func NewNacosClient(serviceName string) (*XlayerNacosClient, error) {
 	client := &XlayerNacosClient{
-		namingClient: namingClient,
-		instance:     instance,
-		serviceName:  serviceName,
+		serviceName: serviceName,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
 	}
 
-	log.Info("Created XlayerNacosClient", "service", serviceName, "instance", fmt.Sprintf("%s:%d", instance.Ip, instance.Port))
+	log.Info("Created XlayerNacosClient", "service", serviceName)
 	return client, nil
 }
 
@@ -69,37 +39,28 @@ func (c *XlayerNacosClient) Http(method string, apiPath string, body []byte, hea
 	var lastErr error
 
 	for attempt := 0; attempt <= maxRetries; attempt++ {
-		if attempt > 0 {
+		if attempt > 0 || c.baseURL == "" {
 			log.Info("Retrying request with new instance", "attempt", attempt, "service", c.serviceName)
 
-			// Get a new healthy instance
-			if namingClient, ok := c.namingClient.(interface {
-				SelectOneHealthyInstance(param vo.SelectOneHealthInstanceParam) (*model.Instance, error)
-			}); ok {
-				newInstance, err := namingClient.SelectOneHealthyInstance(vo.SelectOneHealthInstanceParam{
-					ServiceName: c.serviceName,
-				})
-				if err != nil {
-					lastErr = fmt.Errorf("failed to select new healthy instance: %w", err)
-					continue
-				}
-
-				c.instance = newInstance
-				log.Info("Updated instance", "new_instance", fmt.Sprintf("%s:%d", newInstance.Ip, newInstance.Port))
+			url, err := GetOneURL(c.serviceName)
+			if err != nil {
+				lastErr = fmt.Errorf("failed to get one url: %w", err)
+				continue
 			}
+			// Build request URL
+			c.baseURL = fmt.Sprintf("http://%s", url)
 		}
 
-		// Build request URL
-		url := fmt.Sprintf("http://%s:%d%s", c.instance.Ip, c.instance.Port, apiPath)
+		queryURL := fmt.Sprintf("%s/%s", c.baseURL, apiPath)
 
 		// Create request
 		var req *http.Request
 		var err error
 
 		if body != nil {
-			req, err = http.NewRequest(method, url, bytes.NewBuffer(body))
+			req, err = http.NewRequest(method, queryURL, bytes.NewBuffer(body))
 		} else {
-			req, err = http.NewRequest(method, url, nil)
+			req, err = http.NewRequest(method, queryURL, nil)
 		}
 
 		if err != nil {
@@ -115,7 +76,7 @@ func (c *XlayerNacosClient) Http(method string, apiPath string, body []byte, hea
 		// Send request
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
-			lastErr = fmt.Errorf("failed to send request to %s: %w", url, err)
+			lastErr = fmt.Errorf("failed to send request to %s: %w", queryURL, err)
 			continue
 		}
 		defer resp.Body.Close()
@@ -129,7 +90,7 @@ func (c *XlayerNacosClient) Http(method string, apiPath string, body []byte, hea
 
 		// Check response status code
 		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-			log.Debug("Request successful", "method", method, "url", url, "status", resp.StatusCode)
+			log.Debug("Request successful", "method", method, "url", queryURL, "status", resp.StatusCode)
 			return respBody, nil
 		}
 
@@ -157,11 +118,6 @@ func (c *XlayerNacosClient) Post(apiPath string, body []byte, headers map[string
 // Delete sends DELETE request
 func (c *XlayerNacosClient) Delete(apiPath string, headers map[string]string) ([]byte, error) {
 	return c.Http("DELETE", apiPath, nil, headers)
-}
-
-// GetCurrentInstance returns current instance information
-func (c *XlayerNacosClient) GetCurrentInstance() *model.Instance {
-	return c.instance
 }
 
 // GetServiceName returns service name
