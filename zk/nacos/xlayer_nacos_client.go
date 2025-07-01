@@ -28,7 +28,7 @@ type XlayerNacosClient struct {
 // NewNacosClient creates a nacos NamingClient based on the specified namespace
 // Uses NamingClient and specified service name to call SelectOneHealthyInstance to get an instance
 // Stores NamingClient and instance in XlayerNacosClient struct and returns it
-func NewNacosClient(urls string, serviceName string) (*XlayerNacosClient, error) {
+func NewNacosClient(urls string, namespace string, serviceName string) (*XlayerNacosClient, error) {
 	serverConfigs, err := getServerConfigs(urls)
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to resolve nacos server url %s: %s", urls, err.Error()))
@@ -40,8 +40,7 @@ func NewNacosClient(urls string, serviceName string) (*XlayerNacosClient, error)
 			TimeoutMs:           defaultTimeoutMs,
 			ListenInterval:      defaultListenInterval,
 			NotLoadCacheAtStart: true,
-			NamespaceId:         "",
-			LogDir:              "/dev/null",
+			NamespaceId:         namespace,
 			LogLevel:            "error",
 		},
 	})

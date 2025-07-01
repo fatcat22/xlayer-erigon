@@ -341,6 +341,16 @@ var (
 		Usage: "Number of batches to delay before verifying the last block of a batch in analysis group verification",
 		Value: 2,
 	}
+	AnalysisGroupNacosUrls = cli.StringFlag{
+		Name:  "zkevm.analysis-group-nacos-urls",
+		Usage: "nacos service urls for analysis group API",
+		Value: "",
+	}
+	AnalysisGroupNacosNamespace = cli.StringFlag{
+		Name:  "zkevm.analysis-group-nacos-namespace",
+		Usage: "nacos service namespace for analysis group API",
+		Value: "",
+	}
 	AnalysisGroupServiceName = cli.StringFlag{
 		Name:  "zkevm.analysis-group-service-name",
 		Usage: "nacos service name for analysis group API",
