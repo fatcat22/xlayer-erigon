@@ -1,7 +1,6 @@
 package nacos
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -10,9 +9,7 @@ import (
 
 	"github.com/ledgerwatch/log/v3"
 	"github.com/nacos-group/nacos-sdk-go/clients"
-	"github.com/nacos-group/nacos-sdk-go/clients/naming_client"
 	"github.com/nacos-group/nacos-sdk-go/common/constant"
-	"github.com/nacos-group/nacos-sdk-go/model"
 	"github.com/nacos-group/nacos-sdk-go/vo"
 )
 
@@ -21,10 +18,6 @@ const (
 	defaultTimeoutMs      = uint64(5000)
 	defaultListenInterval = uint64(10000)
 	defaultWeight         = float64(10)
-)
-
-var (
-	client naming_client.INamingClient
 )
 
 // StartNacosClient start nacos client and register rest service in nacos
@@ -40,7 +33,7 @@ func StartNacosClient(urls string, namespace string, name string, externalAddr s
 		log.Error(fmt.Sprintf("failed to resolve nacos server url %s: %s", urls, err.Error()))
 		return
 	}
-	client, err = clients.CreateNamingClient(map[string]interface{}{
+	client, err := clients.CreateNamingClient(map[string]interface{}{
 		"serverConfigs": serverConfigs,
 		"clientConfig": constant.ClientConfig{
 			TimeoutMs:           defaultTimeoutMs,
@@ -122,24 +115,4 @@ func getServerConfigs(urls string) ([]constant.ServerConfig, error) {
 		})
 	}
 	return configs, nil
-}
-
-// GetOneInstance returns the info of one healthy instance of the service
-func GetOneInstance(serviceName string) (*model.Instance, error) {
-	if client == nil {
-		return nil, errors.New("nacos client is not initialized")
-	}
-	params := vo.SelectOneHealthInstanceParam{ServiceName: serviceName}
-	return client.SelectOneHealthyInstance(params)
-}
-
-// GetOneURL returns the URL address of one healthy instance of the service
-func GetOneURL(serviceName string) (string, error) {
-	instance, err := GetOneInstance(serviceName)
-	if err != nil {
-		return "", err
-	}
-
-	url := fmt.Sprintf("%v:%v", instance.Ip, instance.Port)
-	return url, nil
 }

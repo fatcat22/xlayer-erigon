@@ -2,16 +2,24 @@ package nacos
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"time"
 
 	"github.com/ledgerwatch/log/v3"
+	"github.com/nacos-group/nacos-sdk-go/clients"
+	"github.com/nacos-group/nacos-sdk-go/clients/naming_client"
+	"github.com/nacos-group/nacos-sdk-go/common/constant"
+	"github.com/nacos-group/nacos-sdk-go/model"
+	"github.com/nacos-group/nacos-sdk-go/vo"
 )
 
 // XlayerNacosClient struct for managing Nacos client and instances
 type XlayerNacosClient struct {
+	client naming_client.INamingClient
+
 	baseURL     string
 	serviceName string
 	httpClient  *http.Client
@@ -20,8 +28,32 @@ type XlayerNacosClient struct {
 // NewNacosClient creates a nacos NamingClient based on the specified namespace
 // Uses NamingClient and specified service name to call SelectOneHealthyInstance to get an instance
 // Stores NamingClient and instance in XlayerNacosClient struct and returns it
-func NewNacosClient(serviceName string) (*XlayerNacosClient, error) {
+func NewNacosClient(urls string, serviceName string) (*XlayerNacosClient, error) {
+	serverConfigs, err := getServerConfigs(urls)
+	if err != nil {
+		log.Error(fmt.Sprintf("failed to resolve nacos server url %s: %s", urls, err.Error()))
+		return nil, err
+	}
+	nacosClient, err := clients.CreateNamingClient(map[string]interface{}{
+		"serverConfigs": serverConfigs,
+		"clientConfig": constant.ClientConfig{
+			TimeoutMs:           defaultTimeoutMs,
+			ListenInterval:      defaultListenInterval,
+			NotLoadCacheAtStart: true,
+			NamespaceId:         "",
+			LogDir:              "/dev/null",
+			LogLevel:            "error",
+		},
+	})
+	if err != nil {
+		log.Error(fmt.Sprintf("failed to create nacos client. error: %s", err.Error()))
+		return nil, err
+	}
+
 	client := &XlayerNacosClient{
+		client: nacosClient,
+
+		baseURL:     "",
 		serviceName: serviceName,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
@@ -42,7 +74,7 @@ func (c *XlayerNacosClient) Http(method string, apiPath string, body []byte, hea
 		if attempt > 0 || c.baseURL == "" {
 			log.Info("Retrying request with new instance", "attempt", attempt, "service", c.serviceName)
 
-			url, err := GetOneURL(c.serviceName)
+			url, err := c.getOneURL(c.serviceName)
 			if err != nil {
 				lastErr = fmt.Errorf("failed to get one url: %w", err)
 				continue
@@ -123,4 +155,24 @@ func (c *XlayerNacosClient) Delete(apiPath string, headers map[string]string) ([
 // GetServiceName returns service name
 func (c *XlayerNacosClient) GetServiceName() string {
 	return c.serviceName
+}
+
+// GetOneInstance returns the info of one healthy instance of the service
+func (c *XlayerNacosClient) getOneInstance(serviceName string) (*model.Instance, error) {
+	if c.client == nil {
+		return nil, errors.New("nacos client is not initialized")
+	}
+	params := vo.SelectOneHealthInstanceParam{ServiceName: serviceName}
+	return c.client.SelectOneHealthyInstance(params)
+}
+
+// GetOneURL returns the URL address of one healthy instance of the service
+func (c *XlayerNacosClient) getOneURL(serviceName string) (string, error) {
+	instance, err := c.getOneInstance(serviceName)
+	if err != nil {
+		return "", err
+	}
+
+	url := fmt.Sprintf("%v:%v", instance.Ip, instance.Port)
+	return url, nil
 }

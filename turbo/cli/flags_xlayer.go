@@ -98,7 +98,7 @@ func SetVerificationConfigs(ctx *cli.Context, cfg *ethconfig.Config) {
 			log.Warn("skip analysis group api but service name is set", "service name", serviceName)
 		}
 		var err error
-		cfg.XLayer.AnalysisGroupVerification.NacosClient, err = nacos.NewNacosClient(serviceName)
+		cfg.XLayer.AnalysisGroupVerification.NacosClient, err = nacos.NewNacosClient(ctx.String(utils.NacosURLsFlag.Name), serviceName)
 		if err != nil && !cfg.XLayer.AnalysisGroupVerification.SkipAPI {
 			panic(fmt.Sprintf("failed to create nacos client for analysis group: %s", err))
 		}
