@@ -358,8 +358,8 @@ var (
 	}
 	AnalysisGroupAPIPath = cli.StringFlag{
 		Name:  "zkevm.analysis-group-api-path",
-		Usage: "API path for analysis group verification (e.g., /api/v1/196/validHeight)",
-		Value: "/api/v1/196/validHeight",
+		Usage: "API path for analysis group verification (e.g., api/v1/196/validHeight)",
+		Value: "api/v1/196/validHeight",
 	}
 	SkipAnalysisGroupAPI = cli.BoolFlag{
 		Name:  "zkevm.skip-analysis-group-api",
