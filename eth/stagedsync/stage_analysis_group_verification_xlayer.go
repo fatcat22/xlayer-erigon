@@ -15,7 +15,7 @@ import (
 
 // AnalysisGroupAPIResponse represents the response from analysis group API
 type AnalysisGroupAPIResponse struct {
-	Code string `json:"code"`
+	Code int    `json:"code"`
 	Msg  string `json:"msg"`
 	Data struct {
 		ValidResult string `json:"validResult"`
@@ -66,13 +66,13 @@ func isBlockVerifiedByAnalysisGroup(
 	}
 
 	// Check if API call was successful
-	if apiResponse.Code != "0" {
+	if apiResponse.Code != 0 {
 		logger.Error("Analysis group API returned error code",
 			"blockHeight", blockHeight,
 			"apiPath", apiPath,
 			"code", apiResponse.Code,
 			"msg", apiResponse.Msg)
-		return false, fmt.Errorf("analysis group API error: code=%s, msg=%s", apiResponse.Code, apiResponse.Msg)
+		return false, fmt.Errorf("analysis group API error: code=%d, msg=%s", apiResponse.Code, apiResponse.Msg)
 	}
 
 	// Check verification result
