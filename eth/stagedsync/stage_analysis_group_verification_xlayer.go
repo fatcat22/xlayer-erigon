@@ -121,59 +121,48 @@ func SpawnAnalysisGroupVerificationCheckStage(
 		"targetBatch", targetBatchNumber)
 
 	// Get the highest block number in the target batch and current verified block height
-	var currentVerifiedBlockHeight uint64
-	var highestBlockInTargetBatch uint64
-	var foundBlockInTargetBatch bool
-	var foundCurrentVerifiedBlockHeight bool
+	var currentVerifiedBatchNo uint64
 	err = db.View(ctx, func(tx kv.Tx) error {
-		hermezDb := hermez_db.NewHermezDbReader(tx)
-		highestBlockInTargetBatch, foundBlockInTargetBatch, err = hermezDb.GetHighestBlockInBatch(targetBatchNumber)
-		if err != nil {
-			logger.Error("Failed to get highest block in target batch", "targetBatch", targetBatchNumber, "err", err)
-			return err
-		}
-		currentVerifiedBlockHeight, err = stages.GetStageProgress(tx, stages.AnalysisGroupVerifiedBlockHeight)
-		if err == nil {
-			foundCurrentVerifiedBlockHeight = true
-		}
-		return nil
+		currentVerifiedBatchNo, err = stages.GetStageProgress(tx, stages.AnalysisGroupVerifiedBatchNo)
+		return err
 	})
 	if err != nil {
 		logger.Error("Failed to get highest block in target batch", "targetBatch", targetBatchNumber, "err", err)
 		return err
 	}
-	if !foundBlockInTargetBatch || highestBlockInTargetBatch == 0 {
-		logger.Info("No blocks found in target batch", "targetBatch", targetBatchNumber)
-		return nil
-	}
 
-	logger.Debug("Found highest block in target batch",
-		"targetBatch", targetBatchNumber,
-		"highestBlock", highestBlockInTargetBatch)
-
-	// Only verify if the target block is higher than current verified block
-	if foundCurrentVerifiedBlockHeight && highestBlockInTargetBatch <= currentVerifiedBlockHeight {
+	// Only verify if the target batch is higher than current verified batch
+	if targetBatchNumber <= currentVerifiedBatchNo {
 		logger.Debug("Target block is not higher than current verified block",
-			"targetBlock", highestBlockInTargetBatch,
-			"currentVerified", currentVerifiedBlockHeight)
+			"currentVerified", currentVerifiedBatchNo, "targetBatch", targetBatchNumber)
 		return nil
 	}
 
 	// Start async verification for the target block
 	if verificationConfig.SkipAPI {
 		// Skip API call and directly mark as verified
-		logger.Debug("Skipping analysis group API call for async verification",
-			"blockHeight", highestBlockInTargetBatch)
+		logger.Debug("Skipping analysis group API call for async verification", "targetBatch", targetBatchNumber)
 		// Update the async verified block height directly
-		if s.state.UpdateAsyncVerifiedBlockHeight(highestBlockInTargetBatch) {
-			logger.Debug("Updated async verified block height (skip API)",
-				"blockHeight", highestBlockInTargetBatch)
+		if s.state.UpdateAsyncVerifiedBatchNo(targetBatchNumber) {
+			logger.Debug("Updated async verified block height (skip API)", "targetBatch", targetBatchNumber)
 		}
 	} else {
+		var highestBlockInTargetBatch uint64
+		var foundBlockInTargetBatch bool
+		err = db.View(ctx, func(tx kv.Tx) error {
+			hermezDb := hermez_db.NewHermezDbReader(tx)
+			highestBlockInTargetBatch, foundBlockInTargetBatch, err = hermezDb.GetHighestBlockInBatch(targetBatchNumber)
+			return err
+		})
+		if err != nil || !foundBlockInTargetBatch {
+			logger.Error("Failed to get highest block in target batch", "targetBatch", targetBatchNumber, "err", err, "foundBlockInTargetBatch", foundBlockInTargetBatch)
+			return err
+		}
 		// Start async verification
 		asyncVerifyBlockByAnalysisGroup(
 			ctx,
 			highestBlockInTargetBatch,
+			targetBatchNumber,
 			verificationConfig.NacosClient,
 			verificationConfig.APIPath,
 			logger,
@@ -182,28 +171,26 @@ func SpawnAnalysisGroupVerificationCheckStage(
 	}
 
 	// Check if we have any async verification results to update
-	asyncVerifiedHeight := s.state.GetAsyncVerifiedBlockHeight()
-	if asyncVerifiedHeight > currentVerifiedBlockHeight {
+	asyncVerifiedBatchNo := s.state.GetAsyncVerifiedBatchNo()
+	if asyncVerifiedBatchNo > currentVerifiedBatchNo {
 		// Update verified block height in database
 		err = db.Update(ctx, func(tx kv.RwTx) error {
-			err = stages.SaveStageProgress(tx, stages.AnalysisGroupVerifiedBlockHeight, asyncVerifiedHeight)
-			return err
+			return stages.SaveStageProgress(tx, stages.AnalysisGroupVerifiedBatchNo, asyncVerifiedBatchNo)
 		})
 		if err != nil {
-			logger.Error("Failed to save verified block height",
-				"blockHeight", asyncVerifiedHeight,
+			logger.Error("Failed to save verified batch number",
+				"batchNo", asyncVerifiedBatchNo,
 				"err", err)
 			return err
 		}
 
 		logger.Info("Successfully updated verified block height from async verification",
-			"blockHeight", asyncVerifiedHeight,
 			"targetBatch", targetBatchNumber,
 			"skipAPI", verificationConfig.SkipAPI)
 	} else {
 		logger.Debug("No async verification results to update",
-			"asyncVerifiedHeight", asyncVerifiedHeight,
-			"currentVerifiedBlockHeight", currentVerifiedBlockHeight)
+			"asyncVerifiedBatchNo", asyncVerifiedBatchNo,
+			"currentVerifiedBatchNo", currentVerifiedBatchNo)
 	}
 
 	return nil
@@ -213,6 +200,7 @@ func SpawnAnalysisGroupVerificationCheckStage(
 func asyncVerifyBlockByAnalysisGroup(
 	ctx context.Context,
 	blockHeight uint64,
+	targetBatchNumber uint64,
 	nacosClient *nacos.XlayerNacosClient,
 	apiPath string,
 	logger log.Logger,
@@ -229,13 +217,13 @@ func asyncVerifyBlockByAnalysisGroup(
 
 		if isVerified {
 			// Update the async verified block height if verification was successful
-			if asyncState.UpdateVerifiedBlockHeight(blockHeight) {
-				logger.Debug("Updated async verified block height",
-					"blockHeight", blockHeight)
+			if asyncState.UpdateVerifiedBatchNo(targetBatchNumber) {
+				logger.Debug("Updated async verified batch number",
+					"blockHeight", blockHeight, "targetBatch", targetBatchNumber)
 			}
 		} else {
 			logger.Debug("Async block verification returned false",
-				"blockHeight", blockHeight)
+				"blockHeight", blockHeight, "targetBatch", targetBatchNumber)
 		}
 	}()
 }

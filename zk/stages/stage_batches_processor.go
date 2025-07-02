@@ -14,6 +14,7 @@ import (
 	ethTypes "github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/params"
+	"github.com/ledgerwatch/erigon/turbo/rpchelper"
 	"github.com/ledgerwatch/erigon/zk/datastream/types"
 	txtype "github.com/ledgerwatch/erigon/zk/tx"
 	"github.com/ledgerwatch/erigon/zk/utils"
@@ -102,9 +103,9 @@ func NewBatchesProcessor(
 	miningConfig *params.MiningConfig,
 	unwindFn func(uint64) (uint64, error),
 ) (*BatchesProcessor, error) {
-	highestVerifiedBatch, err := stages.GetStageProgress(tx, stages.L1VerificationsBatchNo)
+	highestVerifiedBatch, err := rpchelper.GetFinalizedBatchNumber(tx)
 	if err != nil {
-		return nil, errors.New("could not retrieve l1 verifications batch no progress")
+		return nil, fmt.Errorf("retrieve batch number by block number error: %v", err)
 	}
 
 	lastForkId, err := stages.GetStageProgress(tx, stages.ForkId)

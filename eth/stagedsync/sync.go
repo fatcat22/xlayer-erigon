@@ -54,8 +54,8 @@ type Timing struct {
 
 // AsyncVerifiedState manages the asynchronous verification state
 type AsyncVerifiedState struct {
-	verifiedBlockHeight uint64
-	mutex               sync.Mutex
+	verifiedBatchNo uint64
+	mutex           sync.Mutex
 }
 
 // NewAsyncVerifiedState creates a new AsyncVerifiedState
@@ -64,18 +64,18 @@ func NewAsyncVerifiedState() *AsyncVerifiedState {
 }
 
 // GetVerifiedBlockHeight returns the current verified block height
-func (a *AsyncVerifiedState) GetVerifiedBlockHeight() uint64 {
+func (a *AsyncVerifiedState) GetVerifiedBatchNo() uint64 {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
-	return a.verifiedBlockHeight
+	return a.verifiedBatchNo
 }
 
-// UpdateVerifiedBlockHeight updates the verified block height if the new height is greater
-func (a *AsyncVerifiedState) UpdateVerifiedBlockHeight(newHeight uint64) bool {
+// UpdateVerifiedBatchNo updates the verified batch number if the new batch number is greater
+func (a *AsyncVerifiedState) UpdateVerifiedBatchNo(newBatchNo uint64) bool {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
-	if newHeight > a.verifiedBlockHeight {
-		a.verifiedBlockHeight = newHeight
+	if newBatchNo > a.verifiedBatchNo {
+		a.verifiedBatchNo = newBatchNo
 		return true
 	}
 	return false
@@ -683,12 +683,12 @@ func (s *Sync) MockExecFunc(id stages.SyncStage, f ExecFunc) {
 	}
 }
 
-// GetAsyncVerifiedBlockHeight returns the current async verified block height
-func (s *Sync) GetAsyncVerifiedBlockHeight() uint64 {
-	return s.asyncVerifiedState.GetVerifiedBlockHeight()
+// GetAsyncVerifiedBatchNo returns the current async verified batch number
+func (s *Sync) GetAsyncVerifiedBatchNo() uint64 {
+	return s.asyncVerifiedState.GetVerifiedBatchNo()
 }
 
 // UpdateAsyncVerifiedBlockHeight updates the async verified block height if the new height is greater
-func (s *Sync) UpdateAsyncVerifiedBlockHeight(newHeight uint64) bool {
-	return s.asyncVerifiedState.UpdateVerifiedBlockHeight(newHeight)
+func (s *Sync) UpdateAsyncVerifiedBatchNo(newBatchNo uint64) bool {
+	return s.asyncVerifiedState.UpdateVerifiedBatchNo(newBatchNo)
 }

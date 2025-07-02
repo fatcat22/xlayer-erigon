@@ -21,6 +21,7 @@ import (
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/params"
+	"github.com/ledgerwatch/erigon/turbo/rpchelper"
 	"github.com/ledgerwatch/erigon/zk"
 	"github.com/ledgerwatch/erigon/zk/datastream/client"
 	"github.com/ledgerwatch/erigon/zk/datastream/types"
@@ -438,9 +439,9 @@ func UnwindBatchesStage(u *stagedsync.UnwindState, tx kv.RwTx, cfg BatchesCfg, c
 	//////////////////////////////////
 	// delete batch connected stuff //
 	//////////////////////////////////
-	highestVerifiedBatch, err := stages.GetStageProgress(tx, stages.L1VerificationsBatchNo)
+	highestVerifiedBatch, err := rpchelper.GetFinalizedBatchNumber(tx)
 	if err != nil {
-		return fmt.Errorf("GetStageProgress: %w", err)
+		return fmt.Errorf("GetBatchNoByL2Block: %v", err)
 	}
 
 	fromBatchPrev, err := hermezDb.GetBatchNoByL2Block(fromBlock - 1)
