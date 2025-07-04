@@ -67,7 +67,7 @@ func getFinalizedBatchNumberAsSequencer(tx kv.Tx) (uint64, error) {
 
 func getFinalizedBatchNumberAsRPC(tx kv.Tx, sequencerRpcUrl string) (uint64, error) {
 	if sequencerRpcUrl == "" {
-		panic("sequencerRpcUrl is not set")
+		return 0, fmt.Errorf("sequencerRpcUrl is not set")
 	}
 
 	response, err := client.JSONRPCCall(sequencerRpcUrl, "zkevm_finalizedBatchNumber")
