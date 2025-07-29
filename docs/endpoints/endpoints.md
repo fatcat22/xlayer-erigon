@@ -185,6 +185,7 @@ If the endpoint is not in the list below, it means this specific endpoint is not
 - zkevm_batchNumber
 - zkevm_batchNumberByBlockNumber
 - zkevm_estimateCounters
+- zkevm_finalizedBatchNumber
 - zkevm_getBatchByNumber
 - zkevm_getBatchCountersByNumber
 - zkevm_getExitRootTable
@@ -201,4 +202,3 @@ If the endpoint is not in the list below, it means this specific endpoint is not
 - zkevm_getRollupAddress
 - zkevm_getRollupManagerAddress
 - zkevm_getVersionHistory
-- zkevm_verifiedBatchNumber
