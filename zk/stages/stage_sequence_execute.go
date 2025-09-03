@@ -145,18 +145,17 @@ func sequencingBatchStep(
 	if err != nil {
 		return err
 	}
-
-	executionAt, err := s.ExecutionAt(sdb.tx)
-	if err != nil {
-		return err
-	}
+	defer sdb.Rollback()
 
 	defer func() {
-		sdb.Rollback()
-
 		if err != nil {
 			log.Error("sequencingBatchStep", "error", err)
 			if !cfg.zk.XLayer.EnableAsyncCommit {
+				return
+			}
+
+			executionAt, e := s.ExecutionAt(sdb.tx)
+			if e != nil {
 				return
 			}
 
@@ -174,6 +173,11 @@ func sequencingBatchStep(
 	}
 
 	if err = cfg.infoTreeUpdater.WarmUp(sdb.tx); err != nil {
+		return err
+	}
+
+	executionAt, err := s.ExecutionAt(sdb.tx)
+	if err != nil {
 		return err
 	}
 
