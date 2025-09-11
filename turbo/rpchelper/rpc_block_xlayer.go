@@ -124,6 +124,7 @@ func getBlockNumberFromCachedFinalizedBatchNumber(tx kv.Tx) (uint64, error) {
 	}
 	if !found {
 		log.Warn("No blocks found in finalized batch, returning 0", "batchNumber", batchNumber)
+		return 0, fmt.Errorf("no blocks found in finalized batch, batchNumber=%d", batchNumber)
 	}
 
 	return blockNumber, nil
