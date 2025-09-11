@@ -9,8 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/ledgerwatch/erigon-lib/common/cmp"
 	"github.com/ledgerwatch/erigon-lib/kv"
-
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	"github.com/ledgerwatch/erigon/zk/sequencer"
@@ -302,9 +302,5 @@ func capFinalizedBatchToLocal(sequencerBatchNum uint64, db kv.RoDB) uint64 {
 		return sequencerBatchNum
 	}
 
-	// Return the minimum of sequencer and local batch numbers
-	if localBatchNum < sequencerBatchNum {
-		return localBatchNum
-	}
-	return sequencerBatchNum
+	return cmp.Min(localBatchNum, sequencerBatchNum)
 }
