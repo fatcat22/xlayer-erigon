@@ -274,32 +274,37 @@ func SetCachedBlockGasLimit(gasLimit uint64) {
 // capFinalizedBatchToLocal caps the sequencer finalized batch number to the locally downloaded batch number.
 // This ensures we don't claim to have finalized batches that haven't been downloaded yet.
 // Returns the minimum of sequencerBatchNumber and locally downloaded batch number.
-func capFinalizedBatchToLocal(sequencerBatchNumber uint64, db kv.RoDB) uint64 {
+func capFinalizedBatchToLocal(sequencerBatchNum uint64, db kv.RoDB) uint64 {
 	// If no database is provided, we can't check local state, so return the sequencer value
 	if db == nil {
 		log.Warn("Database not provided, cannot cap finalized batch to local state")
-		return sequencerBatchNumber
+		return sequencerBatchNum
 	}
 
 	// Create a read-only transaction to check local batch state
 	tx, err := db.BeginRo(context.Background())
 	if err != nil {
 		log.Error("Failed to begin read transaction for batch capping", "err", err)
-		return sequencerBatchNumber
+		return sequencerBatchNum
 	}
 	defer tx.Rollback()
 
-	// Get the latest downloaded batch number from local database
-	hermezDb := hermez_db.NewHermezDbReader(tx)
-	localDownloadedBatch, err := hermezDb.GetLatestDownloadedBatchNo()
+	localLatestBlockNum, err := stages.GetStageProgress(tx, stages.Finish)
 	if err != nil {
-		log.Error("Failed to get latest downloaded batch number", "err", err)
-		return sequencerBatchNumber
+		log.Error("Failed to get latest block number", "err", err)
+		return sequencerBatchNum
+	}
+
+	hermezDb := hermez_db.NewHermezDbReader(tx)
+	localBatchNum, err := hermezDb.GetBatchNoByL2Block(localLatestBlockNum)
+	if err != nil {
+		log.Error("Failed to get batch by block number", "err", err)
+		return sequencerBatchNum
 	}
 
 	// Return the minimum of sequencer and local batch numbers
-	if localDownloadedBatch < sequencerBatchNumber {
-		return localDownloadedBatch
+	if localBatchNum < sequencerBatchNum {
+		return localBatchNum
 	}
-	return sequencerBatchNumber
+	return sequencerBatchNum
 }
